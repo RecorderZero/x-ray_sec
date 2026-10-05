@@ -1,0 +1,95 @@
+# ============================================================
+#  CFG_DDIM 環境還原檔
+#  Python 3.10.19  |  Driver 570  |  CUDA 12.8  |  torch 2.5.1+cu121
+#
+#  使用方式:
+#      conda create -n CFG_DDIM -c conda-forge python=3.10.19 -y
+#      conda activate CFG_DDIM
+#      pip install --upgrade pip
+#      pip install "setuptools<70" wheel "Cython<3"
+#      pip install -r requirements.txt
+#
+#  若 MedPy / scikit-image 在編譯階段失敗,先執行下面兩行再重跑上面最後一行:
+#      pip install numpy==1.23.0
+#      pip install --no-build-isolation MedPy==0.4.0 scikit-image==0.18.3
+# ============================================================
+
+#--extra-index-url https://download.pytorch.org/whl/cu121
+
+# ---------- PyTorch(原本的 1.7.1+cu110 已無法在 Py3.10 使用)----------
+#torch==2.5.1+cu121
+#torchvision==0.20.1+cu121
+#torchaudio==2.5.1+cu121
+
+# ---------- 醫療影像 ----------
+SimpleITK==2.5.2
+nibabel==3.2.1
+pydicom==2.2.2
+dicom2nifti==2.3.0
+MedPy==0.4.0
+batchgenerators==0.23
+
+# ---------- 影像處理 ----------
+opencv-python==4.7.0.68
+scikit-image==0.18.3
+imageio==2.13.1
+tifffile==2021.11.2
+PyWavelets==1.2.0
+Pillow==8.4.0
+
+# ---------- 科學運算 ----------
+numpy==1.23.0
+scipy==1.10.0
+pandas==1.3.4
+scikit-learn==1.2.0
+matplotlib==3.6.3
+networkx==2.6.3
+joblib==1.1.1
+threadpoolctl==3.0.0
+
+# ---------- 訓練輔助 ----------
+torchinfo==1.8.0
+tqdm==4.62.3
+
+# ---------- visdom 視覺化 ----------
+#visdom==0.1.8.9
+torchfile==0.1.0
+pyzmq==24.0.0
+tornado==6.2
+websocket-client==1.2.3
+jsonpatch==1.32
+jsonpointer==2.2
+
+# ---------- 網路 / IO ----------
+requests==2.26.0
+urllib3==1.26.7
+certifi==2021.10.8
+charset-normalizer==2.0.8
+idna==3.3
+blobfile==2.0.1
+pycryptodomex==3.12.0
+xmltodict==0.12.0
+
+# ---------- 傳遞相依 ----------
+cycler==0.11.0
+fonttools==4.28.2
+kiwisolver==1.3.2
+packaging==23.0
+pyparsing==3.0.6
+python-dateutil==2.8.2
+pytz==2021.3
+setuptools-scm==6.3.2
+six==1.16.0
+tomli==1.2.2
+typing_extensions==4.15.0
+filelock==3.4.2
+future==0.18.2
+unittest2==1.1.0
+traceback2==1.4.0
+linecache2==1.0.0
+
+# ---------- 原檔沒有、但你目前環境有(用不到可整段刪除)----------
+torchmetrics
+torcheval
+lightning-utilities
+lxml

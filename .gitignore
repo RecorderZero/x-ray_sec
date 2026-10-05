@@ -1,0 +1,2 @@
+# Model checkpoints are large generated artifacts and are not backed up in Git.
+/past/SourceCode/results/Model/
