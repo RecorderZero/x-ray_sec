@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "task_id": "E1.2",
+  "checkpoint_sha256": "3f61b80a2b2df4f5f1780fe9a7ce639f6a94ddb5057e5f9e88dc300de4786b14",
+  "split_sha256": "dd302f56531bfb639ecaed5ab2af506b71886a9d4cef41b591dc2518bff8ff50",
+  "device": "cuda:0",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "benchmark_timestep": 250,
+  "benchmark_repeats": 3,
+  "guidance_scale": 4.0,
+  "preprocessing": "PIL grayscale; direct bicubic resize 256x256; per-image min-max [0,1]",
+  "results": [
+    {
+      "batch_size": 1,
+      "feasible": true,
+      "seconds_per_reverse_reconstruct_cycle_mean": 0.045926947301874556,
+      "seconds_per_reverse_reconstruct_cycle_std": 0.00024899301727214474,
+      "estimated_seconds_noise_level_500": 22.917546703635402,
+      "peak_vram_bytes": 800794112
+    },
+    {
+      "batch_size": 4,
+      "feasible": true,
+      "seconds_per_reverse_reconstruct_cycle_mean": 0.1498344159917906,
+      "seconds_per_reverse_reconstruct_cycle_std": 0.0003037952744354641,
+      "estimated_seconds_noise_level_500": 74.7673735799035,
+      "peak_vram_bytes": 1709004800
+    },
+    {
+      "batch_size": 8,
+      "feasible": true,
+      "seconds_per_reverse_reconstruct_cycle_mean": 0.2620718359830789,
+      "seconds_per_reverse_reconstruct_cycle_std": 0.0003678888489112853,
+      "estimated_seconds_noise_level_500": 130.77384615555638,
+      "peak_vram_bytes": 2922092032
+    }
+  ],
+  "recommended_batch_size": 8,
+  "formal_n_decision": "start with N=200; increase only after full-pipeline pilot confirms estimate",
+  "interpretation": "The estimate multiplies one reverse+guided-reconstruction cycle by 499; full-run I/O and initialization are excluded."
+}
