@@ -8,30 +8,30 @@
   "benchmark_timestep": 250,
   "benchmark_repeats": 3,
   "guidance_scale": 4.0,
-  "preprocessing": "PIL grayscale; direct bicubic resize 256x256; per-image min-max [0,1]",
+  "preprocessing": "legacy CheXpert: grayscale; histogram equalization; OpenCV INTER_AREA 256x256; JPEG quality 100 round-trip; per-image min-max [0,1]",
   "results": [
     {
       "batch_size": 1,
       "feasible": true,
-      "seconds_per_reverse_reconstruct_cycle_mean": 0.045926947301874556,
-      "seconds_per_reverse_reconstruct_cycle_std": 0.00024899301727214474,
-      "estimated_seconds_noise_level_500": 22.917546703635402,
+      "seconds_per_reverse_reconstruct_cycle_mean": 0.04579844366526231,
+      "seconds_per_reverse_reconstruct_cycle_std": 0.00017169831989745046,
+      "estimated_seconds_noise_level_500": 22.853423388965894,
       "peak_vram_bytes": 800794112
     },
     {
       "batch_size": 4,
       "feasible": true,
-      "seconds_per_reverse_reconstruct_cycle_mean": 0.1498344159917906,
-      "seconds_per_reverse_reconstruct_cycle_std": 0.0003037952744354641,
-      "estimated_seconds_noise_level_500": 74.7673735799035,
+      "seconds_per_reverse_reconstruct_cycle_mean": 0.14965382866406193,
+      "seconds_per_reverse_reconstruct_cycle_std": 0.00028013779980864696,
+      "estimated_seconds_noise_level_500": 74.67726050336691,
       "peak_vram_bytes": 1709004800
     },
     {
       "batch_size": 8,
       "feasible": true,
-      "seconds_per_reverse_reconstruct_cycle_mean": 0.2620718359830789,
-      "seconds_per_reverse_reconstruct_cycle_std": 0.0003678888489112853,
-      "estimated_seconds_noise_level_500": 130.77384615555638,
+      "seconds_per_reverse_reconstruct_cycle_mean": 0.26230709402201074,
+      "seconds_per_reverse_reconstruct_cycle_std": 0.00017606858913565046,
+      "estimated_seconds_noise_level_500": 130.89123991698335,
       "peak_vram_bytes": 2922092032
     }
   ],

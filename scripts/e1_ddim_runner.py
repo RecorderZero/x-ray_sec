@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import io
 import json
 import math
 import sys
@@ -15,6 +16,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import cv2
 from PIL import Image, ImageDraw
 
 
@@ -70,9 +72,18 @@ def load_split(path: Path) -> list[dict[str, str]]:
 
 
 def preprocess(path: Path) -> tuple[torch.Tensor, np.ndarray]:
-    with Image.open(path) as image:
-        image = image.convert("L").resize((256, 256), getattr(Image, "Resampling", Image).BICUBIC)
-        array = np.asarray(image, dtype=np.float32)
+    raw = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+    if raw is None:
+        raise ValueError(f"cannot read image: {path}")
+    equalized = cv2.equalizeHist(raw)
+    resized = cv2.resize(equalized, (256, 256), interpolation=cv2.INTER_AREA)
+    ok, encoded = cv2.imencode(
+        ".jpg", resized, [cv2.IMWRITE_JPEG_QUALITY, 100]
+    )
+    if not ok:
+        raise ValueError(f"cannot encode preprocessed image: {path}")
+    with Image.open(io.BytesIO(encoded.tobytes())) as image:
+        array = np.asarray(image.convert("L"), dtype=np.float32)
     low, high = float(array.min()), float(array.max())
     if high <= low:
         raise ValueError(f"constant image: {path}")
@@ -175,7 +186,7 @@ def run_benchmark(args, rows, diffusion, model_fn, device) -> None:
         "benchmark_timestep": args.benchmark_timestep,
         "benchmark_repeats": args.benchmark_repeats,
         "guidance_scale": args.guidance_scale,
-        "preprocessing": "PIL grayscale; direct bicubic resize 256x256; per-image min-max [0,1]",
+        "preprocessing": "legacy CheXpert: grayscale; histogram equalization; OpenCV INTER_AREA 256x256; JPEG quality 100 round-trip; per-image min-max [0,1]",
         "results": results,
         "recommended_batch_size": recommended,
         "formal_n_decision": "start with N=200; increase only after full-pipeline pilot confirms estimate",
