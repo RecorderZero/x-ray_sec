@@ -125,22 +125,33 @@ artifacts/runs/<task_id>/<run_id>/
 `PROGRESS.md` 檔首所列格式是唯一 canonical template。每輪只在檔尾追加一個條目，不改寫舊紀錄：
 
 ```markdown
-## YYYY-MM-DD · Wn · Track X · <Task ID> 一句話標題
+## YYYY-MM-DD · Wn · Track X · 一句話標題
 
-**做了什麼**
-- 目標、修改檔案與實際測試指令
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：[例如 A1.4]
+* 本輪要解決的核心問題或實現的功能是什麼？
 
-**結果**
-- correctness gate、evidence gate、科學 metrics 與 Achieved/Failed/Inconclusive
+### 2. 執行動作 (Actions Taken)
+* 修改或新增了哪些檔案/程式碼？（標記具體檔名與函式）
+* 下達了哪些測試指令？
 
-**卡住 / 意外**
-- 錯誤、重試次數、run ID 與 log 路徑
+### 3. 執行結果 (Results & Observations)
+* 測試是否通過？（附上客觀 Pass/Fail 數據，如 `PSNR = 28.5 dB`）
+* 是否出現預期外的錯誤？
 
-**⚠ 與 WORKFLOW.md 不符**
-- 衝突或「無」
+### 4. 達標判定 (Assessment)
+* [ ] **已達標 (Achieved)**：完全符合預期，測試 Pass。
+  - 下一步：執行原子化 `git commit`（記錄變更檔案與 feat/fix），並進入下一個 Sub-task。
+  - 圖表保存：若有關鍵實驗結果圖表，保存在 `image/` 或指定目錄中，檔名必須具備可讀性與辨識度。
+* [ ] **未達標 (Failed)**：未通過測試或指標未符標準。
 
-**下一步**
-- 一到三項；不得因結果不好看而自動改假說或資料
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+*(僅在「未達標」時填寫)*
+* **失敗原因分析**：為什麼這次修改無效？根本原因為何？
+* **下輪修改計畫**：根據本次失敗經驗，下一輪 Loop 應該調整什麼方向？
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 發現的衝突。沒有就寫「無」。有的話題給使用者裁決，不要自己改 WORKFLOW.md
 ```
 
 ---
