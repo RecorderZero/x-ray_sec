@@ -11,9 +11,13 @@ import os
 import platform
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import torch
+import cv2
+import PIL
+import pytest
 
 
 MODEL_CONFIG = {
@@ -70,6 +74,11 @@ def main() -> None:
         raise SystemExit(f"checkpoint not found: {checkpoint}")
     sys.path.insert(0, str(source_root))
 
+    # Legacy modules create Visdom clients at import time. Inventory is headless.
+    visdom_module = types.ModuleType("visdom")
+    visdom_module.Visdom = lambda *args, **kwargs: types.SimpleNamespace()
+    sys.modules["visdom"] = visdom_module
+
     from guided_diffusion.script_util import (  # pylint: disable=import-error
         create_model_and_diffusion,
         model_and_diffusion_defaults,
@@ -101,6 +110,9 @@ def main() -> None:
         "platform": platform.platform(),
         "conda_default_env": os.environ.get("CONDA_DEFAULT_ENV", ""),
         "torch": torch.__version__,
+        "pillow": PIL.__version__,
+        "pytest": pytest.__version__,
+        "opencv": cv2.__version__,
         "torch_cuda_build": torch.version.cuda,
         "cuda_available": cuda_available,
         "cudnn": torch.backends.cudnn.version(),
