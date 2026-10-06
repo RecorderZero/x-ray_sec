@@ -155,13 +155,15 @@ artifacts/runs/<task_id>/<run_id>/
 - **提交前安全閘門**：每次 commit 前依序執行：
 
 ```bash
+set -euo pipefail
 git add -- <明確檔案清單>
 scripts/check_staged_files.sh
 git diff --cached --stat
 git diff --cached --check
+git commit ...
 ```
 
-只有四步皆通過才可 commit。`dataset/`、checkpoint、cache、`artifacts/runs/`、大型 per-sample 輸出與 secret 不得以 `git add -f` 繞過。需要版本化的結果只提交小型 summary、manifest、表格與論文圖。
+只有所有命令皆以 exit code 0 完成才可 commit；任一步失敗時 `set -e` 必須立即中止。`dataset/`、checkpoint、cache、`artifacts/runs/`、大型 per-sample 輸出與 secret 不得以 `git add -f` 繞過。需要版本化的結果只提交小型 summary、manifest、表格與論文圖。
 
 1. **單一任務原子性**：一個 Commit 僅對應一個獨立子任務，禁止將多個未經驗證的任務混合提交。
 2. **Comment 格式規範**：Commit message 必須清楚備註本次完成的功能類別（修 bug 或是增加新功能），並具體列出修改或新增的檔案清單：

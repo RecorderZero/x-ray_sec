@@ -1,8 +1,8 @@
 # 研究計畫修訂版：基於既有擴散架構的可逆潛空間保護與安全強化
 
-> 修訂自 proposal_claude.md  
-> 更新日期：2026-10-05  
-> 對象：Privacy-Preserving and Reversible Diffusion Models for Lesion Localization in Chest X-Rays  
+> 修訂自 proposal_claude.md
+> 更新日期：2026-10-05
+> 對象：Privacy-Preserving and Reversible Diffusion Models for Lesion Localization in Chest X-Rays
 > 研究範圍：加解密安全性、可逆正確性、匿名／還原影像品質；不延續病灶定位
 
 ---

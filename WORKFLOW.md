@@ -1,8 +1,8 @@
 # WORKFLOW 修訂版：既有擴散架構的密碼分析與低改動安全強化
 
-> 日期：2026-10-05 至 2026-11-30  
-> 研究設計：[PROPOSAL.md](PROPOSAL.md)  
-> AI 執行規範：[loop_engineering_spec.md](loop_engineering_spec.md)  
+> 日期：2026-10-05 至 2026-11-30
+> 研究設計：[PROPOSAL.md](PROPOSAL.md)
+> AI 執行規範：[loop_engineering_spec.md](loop_engineering_spec.md)
 > 原始 WORKFLOW.md 保留不修改
 
 ---
