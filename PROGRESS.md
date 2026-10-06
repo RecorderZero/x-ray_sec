@@ -1,0 +1,176 @@
+# 實驗日誌
+
+> **寫入規則**：只增不改。新條目加在最下面。
+> 不要刪除或改寫舊條目 —— 錯誤的判斷本身也是紀錄，之後回頭看才知道當時為什麼那樣做。
+> 研究設計的決定寫在 `WORKFLOW.md`，這裡只記「做了什麼、得到什麼」。
+> 標記慣例 `[決定]` `[事實]` `[假設]` `[待辦]` `[推定]` `[結論 ]` `[限制]` `[注意]`。
+> 詳細的設計方法紀錄在`PROPOSAL.md`有需要可以去查看。
+
+## 條目格式
+
+```markdown
+## YYYY-MM-DD · Wn · Track X · 一句話標題
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：[例如 A1.4]
+* 本輪要解決的核心問題或實現的功能是什麼？
+
+### 2. 執行動作 (Actions Taken)
+* 修改或新增了哪些檔案/程式碼？（標記具體檔名與函式）
+* 下達了哪些測試指令？
+
+### 3. 執行結果 (Results & Observations)
+* 測試是否通過？（附上客觀 Pass/Fail 數據，如 `PSNR = 28.5 dB`）
+* 是否出現預期外的錯誤？
+
+### 4. 達標判定 (Assessment)
+* [ ] **已達標 (Achieved)**：完全符合預期，測試 Pass。
+  - 下一步：執行原子化 `git commit`（記錄變更檔案與 feat/fix），並進入下一個 Sub-task。
+  - 圖表保存：若有關鍵實驗結果圖表，保存在 `image/` 或指定目錄中，檔名必須具備可讀性與辨識度。
+* [ ] **未達標 (Failed)**：未通過測試或指標未符標準。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+*(僅在「未達標」時填寫)*
+* **失敗原因分析**：為什麼這次修改無效？根本原因為何？
+* **下輪修改計畫**：根據本次失敗經驗，下一輪 Loop 應該調整什麼方向？
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 發現的衝突。沒有就寫「無」。有的話題給使用者裁決，不要自己改 WORKFLOW.md
+```
+
+---
+
+<!-- 新條目加在這行下面 -->
+
+## 2026-10-06 · W1 · Track A · 前作模型盤點、攻擊者能力分級與 S2 防禦邊界
+
+**做了什麼**
+
+- 交叉檢查前作論文第 4.4、4.6、5.2.2 節、`past/SourceCode/README/CFG_DDIM_README.md`、訓練／推論 shell scripts 與目前保留的 checkpoint。
+- 釐清「三個 diffusion model variants」、「獨立模型角色」、「實際 checkpoint 數量」三種計算口徑。
+- 將 model 可得與不可得時的唯密文、已知明文、選擇明文及選擇密文情境分開。
+- 比較前作 S0/S1、改進方案 S2 與 AEAD-ref 可防禦及不可防禦的攻擊。
+
+**結果**
+
+### 1. 前作模型數量與來源
+
+- [事實] 論文第 5.2.2 節比較三種方法：CFG-DDIM、CLF-DDIM、Traditional DDIM。
+- [事實] 三種方法不必然對應三份獨立權重。`run_uncond_ddim_inference.sh` 直接載入 CFG checkpoint，將 `guidance_scale=0` 作為 Traditional／Unconditional DDIM；因此它是推論模式，而不一定是另一個訓練模型。
+- [事實] CLF-DDIM 除 diffusion U-Net 外，還需要一個另外訓練 20,000 iterations 的 noisy-image classifier。
+- [事實] CFG 與 CLF diffusion model 的訓練腳本設定為 50,000 steps，且原始 CheXpert 與 Deblurred CheXpert 各有一套訓練命令。
+- [事實] 去模糊前處理使用 DiffPIR 與一個 VinDr-CXR unconditional diffusion prior。README 表示此 prior 是以 VinDr-CXR 自行訓練，而非直接使用通用自然影像權重。
+- [推定] 按獨立功能角色計算共有 4 類 learned model：CFG diffusion、CLF diffusion、CLF classifier、VinDr-CXR deblur prior。
+- [推定] 按預期的資料版本／checkpoint instance 計算約為 7 份：CFG 原始／deblurred 2 份、CLF diffusion 原始／deblurred 2 份、CLF classifier 原始／deblurred 2 份、deblur prior 1 份。
+- [事實] 目前 `past/SourceCode` 快照實際只保留 1 份 checkpoint：`results/Model/cfg_chexpert_p_uncond_0.1_v1_2025_05_08/modelchexpert050000.pt`。因此無法只靠目前檔案證明其餘預期 checkpoint 都曾成功完成訓練。
+- [事實] 網路現成的是 guided-diffusion、diffusion-anomaly、DiffPIR 等程式架構與方法。現有論文及原始碼沒有足夠證據證明核心 CheXpert 最終權重是直接下載的 off-the-shelf checkpoint。
+- [注意] 論文中的 `pre-trained model` 應解讀為「進入該流程前已訓練完成」，不能直接推論為「網路下載且未自行訓練」。
+
+### 2. DDIM inversion 與 model 可得性
+
+- [事實] DDIM inversion 是演算法，不是可由論文 PDF 單獨還原的模型。執行 inversion 還需要 denoising U-Net checkpoint、架構、noise schedule、timestep respacing、noise level、影像正規化、label／guidance 設定及 sampler 實作一致。
+- [事實] 只有論文中的架構與超參數，重新訓練只能得到 surrogate model；不同初始化與訓練過程會形成不同的 latent coordinate system。
+- [結論] surrogate inversion 的 latent 不應直接拿來與目標系統 latent 做逐元素除法，也不能據此宣稱已恢復目標 key。
+- [結論] 若掌握目標 checkpoint 與 pipeline，則可將原圖及匿名圖分別 inversion 成近似的 `z` 與 `z_enc`，把 exact-latent attack 降級為含 inversion error 的 noisy-latent attack。
+
+### 3. 攻擊情境分類
+
+| 攻擊者能力 | 分類 | 可以合理測試的內容 |
+|---|---|---|
+| 只有匿名／加密影像，且知道演算法與目標 model | White-box COA | inversion 後的 norm、magnitude、sorted-magnitude、gallery linkage |
+| 有原圖及其對應匿名圖，且有目標 model | White-box KPA | 近似 latent pair、Rademacher sign recovery、Signed Permutation matching、held-out decryption |
+| 可自行挑選原圖並呼叫同一系統加密 | CPA | basis／sparse／constant probes、重複查詢、同 nonce 與跨 nonce transfer |
+| 可修改匿名圖／container 並觀察解密端反應 | CCA／tampering oracle | tag、header、nonce、payload 修改是否 fail closed |
+| 只有匿名影像與論文，沒有目標 model | Black-box COA | 視覺／embedding re-ID、統計 linkage、surrogate attack；通常不能直接恢復 key |
+| 有多組 image pair，但沒有目標 model | Black-box KPA | paired image-to-image recovery、surrogate training、re-ID；不等於目標 latent key recovery |
+
+- [結論]「知道 model」是 white-box／Kerckhoffs 條件，本身不等於 CPA。只有攻擊者可選擇輸入並取得輸出時才是 CPA。
+- [結論] 只有 encrypted image 時是 COA；取得已配對的 original/encrypted image 時是 KPA。
+- [結論]「已知密文攻擊」不是此處需要另立的類別，因為上述攻擊通常都預設攻擊者能看到 ciphertext。
+
+### 4. 前作 S0/S1 的已知弱點
+
+- [事實] S0 Rademacher 為 `z_enc = k ⊙ z`，保留每個座標的絕對值與整體 norm。取得 exact latent pair 時可由乘積符號直接恢復 sign key。
+- [事實] S1 Signed Permutation 為 `z_enc = P(k ⊙ z)`，仍保留 sorted absolute values 與 norm。exact pair 可用 magnitude matching 推測 permutation，再恢復 sign。
+- [假設] 從 anonymous image 重新 inversion 會引入誤差；單一 pair 在接近零或 magnitude 相近的座標上可能不穩，但多 pair correlation／assignment 可提升恢復率。
+- [事實] 密碼衍生流程只取 SHA-256 digest 的前 4 bytes 作為 Rademacher PRNG seed，形成有效 key-space 問題；實驗密碼也曾直接出現在 shell script。
+- [事實] S0/S1 沒有 per-image nonce，重用同一 transform 會讓一組 KPA／CPA 結果跨影像轉移。
+- [事實] S0/S1 沒有 MAC，無法偵測 image、latent、header 或 key-related metadata 被修改。
+- [結論] S0/S1 不能宣稱具備標準 IND-CPA confidentiality，也沒有 ciphertext integrity 或 CCA 防護。
+
+### 5. S2 相對前作的預期改善
+
+S2 定義為：256-bit random master key（password mode 才使用 memory-hard KDF）、HKDF-SHA256 domain separation、CSPRNG、每張影像唯一 nonce、keyed sign/permutation/WHT structured transform，以及涵蓋 version、params、nonce、AAD 與 payload 的 HMAC-SHA256。
+
+| 前作問題／攻擊 | S2 預期效果 | 必要前提 |
+|---|---|---|
+| Rademacher 逐座標除法／符號恢復 | dense mixing 後不再能逐座標直接恢復 | transform 確實完整套用 |
+| Signed Permutation sorted-magnitude matching | WHT 混合座標，破壞原座標 magnitude 對應 | rounds／permutation 設定經實測 |
+| 32-bit seed brute force | random 256-bit master key 排除此弱點 | 不使用低熵 password；secret 不寫入 log |
+| 一組 KPA 恢復共用 transform | per-image nonce/subkey 阻止結果跨影像直接轉移 | nonce 唯一且由系統控制 |
+| CPA basis recovery 後跨影像套用 | 不同 nonce 導出不同 transform，降低 transfer | 攻擊者不能強迫 nonce reuse |
+| ciphertext/header/nonce tampering | HMAC 驗證失敗並在 inversion／generation 前拒絕 | verify-before-decrypt、fail closed |
+| 簡單 CCA error oracle | 未驗證資料不得進入 inverse/generation，可大幅縮小 oracle | 錯誤訊息與 timing 不洩漏細節 |
+
+### 6. S2 仍然不足的地方
+
+- [限制] WHT／signed permutation 屬正交線性 transform，仍精確保留 latent L2 norm；COA/KPA 的 norm linkage 可能成功。
+- [限制] 若相同 transform 被重用，它仍保留 pairwise inner product／distance；nonce reuse 是嚴重失敗，不得只列為一般 limitation。
+- [限制] 若攻擊者能對同一 nonce 做足夠 chosen-plaintext query，仍可能學出該次線性 transform。S2 的重點是阻止其跨 nonce／跨影像轉移，不是取得正式 CPA 證明。
+- [限制] HMAC 提供完整性與來源驗證，但不會自動讓 structured transform 具有 confidentiality；S2 仍不能宣稱 IND-CPA 或 IND-CCA。
+- [限制] password mode 仍可能遭離線字典攻擊；Argon2id／scrypt 只能提高成本。正式模式應優先使用 random 256-bit key。
+- [限制] anonymous preview 仍可能保留病患、解剖、病灶或模型記憶特徵，必須另外做 image/embedding re-ID，不能繼承 HMAC 或 key pipeline 的安全宣稱。
+- [限制] T2 結果高度依賴 inversion fidelity；攻擊失敗時必須區分「方案阻擋攻擊」與「攻擊者無法準確反轉匿名圖」。
+- [限制] S2 是 authenticated obfuscation／低改動安全強化，不是標準加密的替代品。
+
+### 7. AEAD-ref 的定位
+
+- [決定] AES-GCM 或 ChaCha20-Poly1305 作為 confidentiality、integrity 與 byte-exact round-trip 的參考下限。
+- [結論] 若系統需要標準 CPA/CCA 等級安全主張，應以 AEAD 保護原始 bytes 或 latent payload；anonymous image 只能作獨立 preview，並另外評估 re-ID／medical utility。
+- [結論] 不能把 AEAD payload 的安全性轉移宣稱到 anonymous preview，也不能把 S2 的實驗攻擊失敗寫成正式 IND-CPA／IND-CCA 證明。
+
+**卡住 / 意外**
+
+- 現有備份缺少預期的 CLF diffusion、CLF classifier、deblurred CFG 與 VinDr deblur prior checkpoint，因此目前只能直接重現原始 CheXpert CFG checkpoint 的 white-box inversion／attack。
+- 論文對 `pre-trained`、三種 model variant 與實際獨立 checkpoint 的措辭不足以單獨確認權重來源；最終 model inventory 必須以原作者檔案或 checkpoint manifest 補證。
+
+**⚠ 與 WORKFLOW.md 不符**
+
+- `WORKFLOW.md` 的 T2 原定義為「只取得 anonymous image，需自行 inversion」，但未明示攻擊者是否擁有目標 model。後續報告必須將「有目標 model 的 white-box T2」與「只有論文／surrogate 的 black-box T2」分欄，避免混合解讀。
+- S2 測試必須保留 adaptive norm attack；不能因 original magnitude attack 下降便宣稱可抵禦所有 COA/KPA/CPA。
+
+**下一步**
+
+1. 以現有 CFG checkpoint 建立 paired original/anonymous T2 inversion baseline，量測 exact encrypted latent 與 re-inverted latent 的 cosine、RMSE、MaxAbsError。
+2. 對 Rademacher 進行 1/2/4/8/16 pairs 的 weighted sign recovery，並以 held-out images 報 key accuracy、latent cosine 與 image PSNR/SSIM。
+3. 對 Signed Permutation 進行多 pair coordinate-signature matching／one-to-one assignment；若完整 key recovery 失敗，仍報 norm 與 sorted-magnitude gallery linkage。
+
+## 2026-10-06 · W1 · Track E/A · 治理規格與 T2 優先級定案
+
+**做了什麼**
+
+- [決定] 將舊稱 T2 拆為 `T2-WB` 與 `T2-BB`；前一條目所有「有目標 model 的 white-box T2」自本條起統一稱 T2-WB，「沒有目標 model 的 black-box T2」統一稱 T2-BB。
+- [決定] T2-WB 納入 P0 並優先完成；T2-BB 納入 P2，只有在全部 P0 與 T2-WB 完成後才執行。
+- [決定] 任務門檻分成工程正確性與證據完整性兩個硬閘門；攻擊成功率、Top-k、PSNR/SSIM/LPIPS 等科學結果只報告，不以結果是否符合假說決定任務是否完成。
+- [決定] 長任務採唯一 run ID、不可覆寫 run directory、atomic `status.json`、heartbeat、PID／exit code、受限重試與斷路器。
+- [決定] Git 禁止 `git add .`／`git add -A`；dataset、checkpoint、cache、run-level／大型 per-sample 輸出與 secret 不上傳，commit 前執行 `scripts/check_staged_files.sh`。
+
+**結果**
+
+- 更新 `PROPOSAL.md`、`WORKFLOW.md`、`loop_engineering_spec.md`、`.gitignore`。
+- 新增 `scripts/check_staged_files.sh`，預設拒絕超過 90 MiB 的 staged file 與禁傳路徑／憑證名稱。
+- 任務狀態固定為 `Achieved`、`Failed`、`Inconclusive`；T2-WB positive-control inversion 品質不足時只能標記 Inconclusive，不能宣稱防禦成功。
+
+**卡住 / 意外**
+
+- 標準 `apply_patch` 仍受執行環境的 `bwrap: loopback: Failed RTM_NEWADDR` 阻擋，本輪使用暫存副本自動產生 diff 後以本地 `git apply` 套用。
+
+**⚠ 與 WORKFLOW.md 不符**
+
+- 前一條目記錄的 T2 命名已由本條決策取代；實驗內容未刪除。
+
+**下一步**
+
+1. 完成 E0.1 evidence reset 與 E1.1 model/data/environment inventory。
+2. 在正式長任務前實作通用 background runner 與 status schema validator。
+3. 先跑 T2-WB；T2-BB 僅在 P0 全部完成後排程。

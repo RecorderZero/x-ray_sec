@@ -1,2 +1,43 @@
 # Model checkpoints are large generated artifacts and are not backed up in Git.
 /past/SourceCode/results/Model/
+
+# Raw datasets must stay local.
+/dataset/
+
+# Model checkpoints and tensor/array dumps.
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.npy
+*.npz
+
+# Python/tool caches and local runtime state.
+**/__pycache__/
+*.py[cod]
+/.pytest_cache/
+/.mypy_cache/
+/.ruff_cache/
+/.cache/
+/.visdom/
+/.smoke_input/
+
+# Large run-level/per-sample outputs remain local. Keep summaries, manifests,
+# paper tables and figures outside these paths when they should be versioned.
+/artifacts/runs/
+/smoke_results/
+**/per_sample.csv
+**/per_sample.jsonl
+**/per_sample.parquet
+
+# Secrets and local credentials.
+.env
+.env.*
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+secrets.*
+credentials.*
