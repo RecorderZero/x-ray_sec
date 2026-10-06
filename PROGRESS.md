@@ -174,3 +174,35 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 1. 完成 E0.1 evidence reset 與 E1.1 model/data/environment inventory。
 2. 在正式長任務前實作通用 background runner 與 status schema validator。
 3. 先跑 T2-WB；T2-BB 僅在 P0 全部完成後排程。
+
+
+## 2026-10-07 · W1 · Track E · E0/E1 基線建立與 DDIM smoke
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：E0.1、E1.1–E1.5。
+* 重建唯一 canonical preflight，確認 checkpoint／環境，固定 patient-disjoint dev split，完成效能、DDIM 與 artifact schema 基線。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/build_e0_evidence_reset.py`、`scripts/e1_environment_inventory.py`、`scripts/create_dev_split.py`、`scripts/artifact_schema.py`、`scripts/e1_ddim_runner.py` 與 `tests/unit/test_artifact_schema.py`。
+* 產生 `reports/evidence_reset.md`、`canonical_preflight.csv`、`artifacts/environment_baseline.txt`、`model_inventory.csv`、`splits/dev_v1.csv`、`results/E1.2_benchmark.json`、`results/E1.4_ddim_smoke.csv` 與 contact sheet。
+* 以 CFG_DDIM 重跑 d=65,536、N=100 preflight；strict load CFG checkpoint；驗證 20 張 split；執行 batch 1/4/8 benchmark、4 張 noise=500 DDIM smoke 與兩個 schema controls。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] E0 canonical SOT-WHT bit-exact=97/100、norm correlation=1；舊 31/32、98/100 artifacts 已標為 historical，0.9989 cosine 不視為 byte equality。
+* [事實] Python 3.10.19、PyTorch 2.14.0+cu130、RTX 5090；checkpoint strict load 的 missing/unexpected keys 皆為 0，模型 113,998,722 parameters。
+* [事實] dev split 為 20 張／20 位病人，健康與積水各 10 張，split SHA-256=`dd302f56531bfb639ecaed5ab2af506b71886a9d4cef41b591dc2518bff8ff50`。
+* [事實] batch 1/4/8 均可行，峰值 VRAM 約 0.80/1.71/2.92 GB；batch 8 吞吐最佳，正式 N 先設 200，待 full-pipeline pilot 再調整。
+* [事實] DDIM smoke 4/4 無 NaN/Inf/OOM；平均 23.08 秒／張、PSNR=34.0559 dB、image cosine=0.999408，contact sheet 為 768×1144 PNG。科學數值只報告，不作 success gate。
+* [事實] schema positive／negative controls 2/2 通過，可拒絕 duplicate sample ID 與 NaN metric。
+* [意外] 首次 schema 測試因 CFG_DDIM 未裝 pytest 停止，改為直接執行相同測試函式後通過；首次 benchmark 因舊 Pillow 無 `Image.Resampling` 停止，加入版本相容寫法後通過。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：E0.1 與 E1.1–E1.5 的 correctness gates 與指定小型交付均完成。
+* [ ] **未達標 (Failed)**：未通過測試或指標未符標準。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* **失敗原因分析**：兩次首次失敗皆為環境相容性（缺 pytest、舊 Pillow API），不是模型數值或 schema 錯誤。
+* **下輪修改計畫**：維持現有環境、不額外安裝 pytest；runner 保留雙版本 Pillow compatibility。下一輪開始 E2 的 S0/S1 reproduction 與 latent cache smoke。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 原始 CheXpert validation 影像不是 256×256，而學長現存 raw loader 未 resize；本輪固定 grayscale、bicubic 256×256、per-image min-max `[0,1]`。正式 E2 前需把它列為 protocol 決策，並再核對學長實際訓練資料的前處理。
