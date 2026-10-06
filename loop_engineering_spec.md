@@ -152,6 +152,9 @@ artifacts/runs/<task_id>/<run_id>/
 
 ### 6. ⚠ 與 WORKFLOW.md 不符
 - 發現的衝突。沒有就寫「無」。有的話題給使用者裁決，不要自己改 WORKFLOW.md
+
+### 7. 下一步
+* 描述1-3下一步需要完成的事項
 ```
 
 ---

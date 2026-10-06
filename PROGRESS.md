@@ -36,6 +36,9 @@
 
 ### 6. ⚠ 與 WORKFLOW.md 不符
 - 發現的衝突。沒有就寫「無」。有的話題給使用者裁決，不要自己改 WORKFLOW.md
+
+### 7. 下一步
+* 描述1-3下一步需要完成的事項
 ```
 
 ---
@@ -206,3 +209,40 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 6. ⚠ 與 WORKFLOW.md 不符
 - 原始 CheXpert validation 影像不是 256×256，而學長現存 raw loader 未 resize；本輪固定 grayscale、bicubic 256×256、per-image min-max `[0,1]`。正式 E2 前需把它列為 protocol 決策，並再核對學長實際訓練資料的前處理。
+
+
+## 2026-10-07 · W1 · Track E · 學長前處理對齊與 E2 readiness 稽核
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：E1.1、E1.2、E1.4 與 E2 啟動前檢查。
+* 確認學長 checkpoint 的實際訓練資料前處理，修正不一致的 E1 runner，並建立可持續維護的根目錄檔案索引。
+
+### 2. 執行動作 (Actions Taken)
+* 交叉檢查 `chexpert_preproc.py`、`cfg_image_train.py`、`bratsloader.py`、`CFG_DDIM_README.md` 及備份 train/valid CSV 的路徑結構。
+* 將 `scripts/e1_ddim_runner.py::preprocess` 從 direct bicubic 改為 grayscale → histogram equalization → OpenCV INTER_AREA 256×256 → JPEG quality 100 round-trip → per-image min-max `[0,1]`。
+* 更新 `scripts/e1_environment_inventory.py`，加入 Pillow/pytest/OpenCV 版本並隔離 Visdom import side effect。
+* 新增 `tests/unit/test_chexpert_preprocessing.py`、`reports/preprocessing_audit.md` 與根目錄 `README.md`；重新執行 inventory、batch 1/4/8 benchmark、4-image smoke 與完整 unit tests。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 學長前處理腳本預設先 histogram equalization，再用 INTER_AREA 縮成 256×256，輸出 JPEG quality 100；訓練 loader 再做 per-image min-max。
+* [事實] 備份 CSV 的 flattened JPEG 路徑符合該前處理腳本輸出，不是原始 CheXpert 巢狀路徑。
+* [事實] 更新後 unit tests 3/3 passed；checkpoint strict load 仍為 missing/unexpected keys=0。
+* [事實] 更新後 DDIM smoke 4/4 finite、無 OOM/NaN；平均 runtime=23.0635 秒、PSNR=33.8917 dB、image cosine=0.999375。這些數值只報告，不是 success gate。
+* [事實] batch 1/4/8 仍全可行，batch 8 peak VRAM 約 2.92 GB，維持 formal N 起始值 200。
+* [環境] CFG_DDIM 目前為 Pillow 9.0.0、pytest 9.1.1、OpenCV 4.7.0；pytest 可用，但 Pillow 仍沒有 `Image.Resampling`，相容寫法必須保留。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：現行 runner 已對齊可由學長程式、README 與 CSV 證明的訓練前處理，E2 可以從 smoke/pilot 階段開始。
+* [ ] **未達標 (Failed)**：未通過測試或指標未符標準。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* **失敗原因分析**：先前只依 model image_size 與 raw loader 推定 bicubic resize，忽略 checkpoint 實際使用的是離線 `chexpert_preproc.py` 產生的 JPEG。
+* **下輪修改計畫**：E2 全部 runner 共用已凍結 preprocessing，並在 manifest 保存 preprocessing/config hash；不得混用舊 E1 direct-bicubic 結果。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 無。限制是歷史 256×256 訓練影像目錄未保留，因此不能做 byte-for-byte 歷史檔比對；目前結論來自程式、README、CSV 路徑結構、模型 shape 與重新 smoke 的一致證據。
+
+### 7. 下一步
+* 建立 E2.1 formal patient-disjoint split，最低 N=200，凍結 split hash。
+* 實作 E2.2 S0/S1 wrapper 與 legacy positive-control reproduction。
+* 先用 1–4 張執行 E2 latent cache smoke，再依長任務規範啟動正式 cache。
