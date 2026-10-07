@@ -278,8 +278,8 @@ Efficiency：
 | E0.1 | evidence reset | 舊 artifact 標為 historical；現版腳本可重建每個引用數字或將該 claim 撤回 | reports/evidence_reset.md、canonical_preflight.csv |
 | E1.1 | 環境與版本盤點 | 可載入 checkpoint；記錄 Python/PyTorch/CUDA/GPU；無 unexpected keys | artifacts/environment_baseline.txt、model_inventory.csv |
 | E1.2 | 速度與 VRAM benchmark | batch 1/4/8 或可行組合完成；據此決定 formal N | results/E1.2_benchmark.json |
-| E1.3 | 固定 dev split | 20 張、patient-disjoint、全部可讀、清單有 SHA-256 | splits/dev_v1.csv |
-| E1.4 | DDIM smoke | P 路徑 x0→z→xrec 無 NaN/OOM；latent/image 指標完整 | results/E1.4_ddim_smoke.csv、4 張 contact sheet |
+| E1.3 | 固定 dev split | 20 張、patient-disjoint、全部可讀、清單有 SHA-256；hash 不含本機 `local_path` | splits/dev_v1.1.csv |
+| E1.4 | DDIM smoke | P 路徑 x0→z→xrec 無 NaN/OOM；latent/image 指標完整；主線 `guidance_scale=0` | results/E1.4_ddim_smoke.csv、4 張 contact sheet |
 | E1.5 | artifact validator | synthetic run 可產生 manifest、per-sample CSV、summary | tests/unit/test_artifact_schema.py |
 
 G0：E0.1 與 E1.1–E1.5 全過。
@@ -290,9 +290,11 @@ G0：E0.1 與 E1.1–E1.5 全過。
 
 大目標：建立可被後續所有攻擊共用的 S0/S1 與 latent cache。
 
+協定裁決：P／S0／S1／S2a／S2 的 security、correctness、reversibility 主表共用 `guidance_scale=0`；guidance=4 的病灶健康化結果若執行，須另列附表。
+
 | ID | 子任務 | 通過條件 | 交付 |
 |---|---|---|---|
-| E2.1 | formal split | patient-disjoint；最低 200、目標 500–1,000；hash 凍結 | splits/security_v1.csv |
+| E2.1 | formal split | 採 AF-012(a)：重現 `sample_n=16000, random_state=1911` 後排除入選病人的全部影像；從剩餘 train 病人固定隨機抽樣；patient-disjoint；最低 200、目標 500–1,000；hash 凍結 | splits/security_v1.csv、splits/security_v1_manifest.json |
 | E2.2 | S0/S1 wrapper | 對 Ki@13579／seed 42 與前作輸出一致 | tests/test_legacy_repro.py、results/E2.2.json |
 | E2.3 | latent cache | shape 正確、無 NaN/Inf；抽樣重算 MaxAbs ≤ 1e-5 | cache metadata、results/E2.3_DONE.json |
 | E2.4 | metric semantics | 證明 cosine=1 不等於 equality；x0 vs xrec 與前作舊定義分開 | reports/metric_semantics.md |
