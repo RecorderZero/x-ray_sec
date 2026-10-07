@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+HISTORICAL WARNING (2026-10-08): the table below is a 2026-09-10 record, not
+the canonical evidence for the current code. See reports/evidence_reset.md.
+
 =============================================================================
  修補方案設計驗證  ——  W5 開工前必跑（本檔已於 2026-09-10 跑過，結論見下）
 =============================================================================

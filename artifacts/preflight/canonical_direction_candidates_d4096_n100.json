@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "seed": 1911,
+  "environment": {
+    "numpy": "1.23.0",
+    "scipy": "1.10.0"
+  },
+  "limitations": [
+    "CPU synthetic Gaussian data only; no checkpoint or CXR is used.",
+    "NumPy RNG is deterministic test scaffolding, not a production KDF.",
+    "Gallery attacks are diagnostics, not comprehensive security proofs.",
+    "The approximate-CDF test models inversion error as independent noise."
+  ],
+  "sot_wht": {
+    "dimension": 4096,
+    "gallery_size": 100,
+    "rounds": 2,
+    "float32_bit_exact_rate": 1.0,
+    "max_abs_roundtrip_error_float64": 8.881784197001252e-16,
+    "gaussian_ks_statistic": 0.0022745390503501467,
+    "gaussian_ks_pvalue": 0.6636305712822792,
+    "norm_correlation": 0.9999999999999997,
+    "magnitude_gallery_top1": 0.01,
+    "norm_only_gallery_top1": 1.0,
+    "encrypt_ms_per_vector_python": 0.21859752014279366,
+    "interpretation": "SOT removes elementwise magnitude matching but exactly preserves the L2 norm; the scalar norm can therefore link exact latent pairs."
+  },
+  "cdf_torus_pad": {
+    "dimension": 4096,
+    "gallery_size": 100,
+    "max_abs_roundtrip_error_exact_latent": 4.5361936429344496e-11,
+    "median_abs_roundtrip_error_exact_latent": 2.220446049250313e-16,
+    "gaussian_ks_statistic": 0.0015377942329810046,
+    "gaussian_ks_pvalue": 0.9684735839212021,
+    "shifted_input_output_mean_over_fresh_pads": 0.0005212217974013882,
+    "shifted_input_output_std_over_fresh_pads": 1.0027611454832637,
+    "shifted_input_output_ks_pvalue_over_fresh_pads": 0.4102003781643928,
+    "norm_correlation": 0.023533736492529052,
+    "magnitude_gallery_top1": 0.0,
+    "norm_only_gallery_top1": 0.0,
+    "known_pair_reused_pad_max_circular_error": 3.3306690738754696e-16,
+    "known_pair_decrypts_second_message_cosine": 0.9999999999999998,
+    "two_time_pad_mod1_relation_max_circular_error": 3.3306690738754696e-16,
+    "approximate_ciphertext_robustness": {
+      "0.9989": {
+        "ciphertext_cosine_observed": 0.9988948704497499,
+        "decrypted_cosine": 0.8541312870363608,
+        "decrypted_rmse": 0.5398404584605623,
+        "fraction_abs_error_gt_1": 0.0123443603515625,
+        "max_abs_error": 7.864405563265983
+      },
+      "0.9999": {
+        "ciphertext_cosine_observed": 0.9998993896083854,
+        "decrypted_cosine": 0.9349453617323699,
+        "decrypted_rmse": 0.36073773430243417,
+        "fraction_abs_error_gt_1": 0.0039215087890625,
+        "max_abs_error": 7.2081826070111354
+      },
+      "0.99999": {
+        "ciphertext_cosine_observed": 0.9999900051205567,
+        "decrypted_cosine": 0.9803035092062817,
+        "decrypted_rmse": 0.19844097321746917,
+        "fraction_abs_error_gt_1": 0.001068115234375,
+        "max_abs_error": 7.9983593252378915
+      },
+      "0.999999": {
+        "ciphertext_cosine_observed": 0.9999989990152286,
+        "decrypted_cosine": 0.9916147817872819,
+        "decrypted_rmse": 0.12949554892845624,
+        "fraction_abs_error_gt_1": 0.0003814697265625,
+        "max_abs_error": 8.70361387241927
+      }
+    },
+    "encrypt_ms_per_vector_python": 0.11301727965474129,
+    "interpretation": "The ideal transform removes norm and magnitude linkage, but one known pair breaks a reused pad and approximate latent recovery can be strongly amplified by inverse-CDF conditioning and wrap-around."
+  },
+  "kci_reversible_chain_toy": {
+    "dimension": 4096,
+    "steps": 20,
+    "correct_key_max_abs_error": 5.717648576819556e-15,
+    "correct_key_cosine": 0.9999999999999998,
+    "wrong_key_cosine": 0.3878724127363107,
+    "wrong_key_rmse": 2.4709805844502792,
+    "scope_warning": "This validates only algebraic key-noise cancellation in a toy two-state recurrence.  It does not validate O-BELM coefficients, diffusion-model quality, whitening, or the paper's IND-CPA proof."
+  }
+}
