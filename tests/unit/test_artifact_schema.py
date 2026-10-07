@@ -51,3 +51,29 @@ def test_tampered_summary_fails(tmp_path: Path) -> None:
     result = validate_run(run_dir)
     assert result["valid"] is False
     assert "summary metric mean is inconsistent with per_sample.csv" in result["errors"]
+
+
+def test_empty_numeric_fields_fail(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    make_run(run_dir)
+    manifest_path = run_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["numeric_fields"] = []
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    result = validate_run(run_dir)
+    assert result["valid"] is False
+    assert "numeric_fields must be a non-empty list" in result["errors"]
+
+
+def test_missing_numeric_column_and_exit_code_mismatch_fail(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    make_run(run_dir)
+    manifest_path = run_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["numeric_fields"] = ["absent"]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    (run_dir / "exit_code").write_text("7\n", encoding="utf-8")
+    result = validate_run(run_dir)
+    assert result["valid"] is False
+    assert "numeric field absent from per_sample.csv header: absent" in result["errors"]
+    assert "exit_code file differs from manifest exit_code" in result["errors"]

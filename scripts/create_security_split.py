@@ -19,6 +19,13 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
+try:
+    from scripts.env_guard import enforce_active_prefix
+except ModuleNotFoundError:
+    from env_guard import enforce_active_prefix
+
+enforce_active_prefix({"numpy": np, "pandas": pd, "pillow": Image})
+
 from create_dev_split import stable_split_hash, sha256_file
 
 PATIENT_RE = re.compile(r"(patient\d+)")

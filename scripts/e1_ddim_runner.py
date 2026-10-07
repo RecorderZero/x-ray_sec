@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from contextlib import redirect_stderr, redirect_stdout
 import hashlib
 import io
 import json
@@ -22,8 +23,20 @@ import numpy as np
 import torch
 import cv2
 import PIL
+import scipy
+import skimage
 from PIL import Image, ImageDraw
 from skimage.metrics import structural_similarity
+
+try:
+    from scripts.env_guard import enforce_active_prefix
+except ModuleNotFoundError:
+    from env_guard import enforce_active_prefix
+
+enforce_active_prefix({
+    "numpy": np, "scipy": scipy, "scikit-image": skimage,
+    "pillow": PIL, "opencv": cv2, "torch": torch,
+})
 
 
 MODEL_CONFIG = {
@@ -53,6 +66,22 @@ class NullVisdom:
 
     def __getattr__(self, name):
         return lambda *args, **kwargs: None
+
+
+class Tee:
+    """Mirror process output while retaining exact text for run evidence."""
+
+    def __init__(self, terminal, capture: io.StringIO):
+        self.terminal = terminal
+        self.capture = capture
+
+    def write(self, value: str) -> int:
+        self.capture.write(value)
+        return self.terminal.write(value)
+
+    def flush(self) -> None:
+        self.capture.flush()
+        self.terminal.flush()
 
 
 def install_headless_visdom() -> None:
@@ -163,7 +192,7 @@ def write_run_artifacts(
 
     config = {
         key: str(value) if isinstance(value, Path) else value
-        for key, value in vars(args).items()
+        for key, value in vars(args).items() if not key.startswith("_")
     }
     config["model_config"] = MODEL_CONFIG
     config_bytes = (json.dumps(config, sort_keys=True, separators=(",", ":")) + "\n").encode()
@@ -217,7 +246,8 @@ def write_run_artifacts(
         "steps": args.noise_level,
         "packages": {
             "numpy": np.__version__, "opencv": cv2.__version__,
-            "pillow": PIL.__version__,
+            "pillow": PIL.__version__, "scipy": scipy.__version__,
+            "scikit-image": skimage.__version__, "torch": torch.__version__,
         },
         "scheme": "legacy_ddim_P",
         "rounds": 0,
@@ -230,10 +260,9 @@ def write_run_artifacts(
     (run_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
-    (run_dir / "stdout.log").write_text(
-        f"{task_id} completed {len(per_sample_rows)} rows\n", encoding="utf-8"
-    )
-    (run_dir / "stderr.log").write_text("", encoding="utf-8")
+    (run_dir / "stdout.log").write_text(args._stdout_capture.getvalue(), encoding="utf-8")
+    (run_dir / "stderr.log").write_text(args._stderr_capture.getvalue(), encoding="utf-8")
+    (run_dir / "exit_code").write_text("0\n", encoding="utf-8")
     validation = validate_run(run_dir)
     if not validation["valid"]:
         raise RuntimeError(f"invalid run artifacts: {validation['errors']}")
@@ -292,7 +321,7 @@ def run_benchmark(args, rows, diffusion, model_fn, device) -> None:
         "preprocessing": "legacy CheXpert: grayscale; histogram equalization; OpenCV INTER_AREA 256x256; JPEG quality 100 round-trip; per-image min-max [0,1]",
         "results": results,
         "recommended_batch_size": recommended,
-        "formal_n_decision": "start with N=200; increase only after full-pipeline pilot confirms estimate",
+        "formal_n_decision": "user decision 2026-10-08: freeze security_v1 at N=200; consider a new security_v2 only after smoke/pilot passes",
         "interpretation": "The estimate multiplies one reverse+guided-reconstruction cycle by 499; full-run I/O and initialization are excluded.",
     }
     args.benchmark_output.parent.mkdir(parents=True, exist_ok=True)
@@ -413,20 +442,32 @@ def run_smoke(args, rows, diffusion, model_fn, device) -> None:
         x0 = tensor.unsqueeze(0).to(device)
         if device.type == "cuda":
             torch.cuda.reset_peak_memory_stats(device)
-        start = time.perf_counter()
         seed = args.seed + index
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        start = time.perf_counter()
         latent, reconstruction = invert_reconstruct(
             diffusion, model_fn, x0, args.noise_level, args.guidance_scale, seed
         )
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        primary_seconds = time.perf_counter() - start
+
+        start = time.perf_counter()
         latent_repeat, _ = invert_reconstruct(
             diffusion, model_fn, x0, args.noise_level, args.guidance_scale, seed
         )
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        repeat_seconds = time.perf_counter() - start
+
+        start = time.perf_counter()
         reinverted_latent, _ = invert_reconstruct(
             diffusion, model_fn, reconstruction, args.noise_level, args.guidance_scale, seed
         )
         if device.type == "cuda":
             torch.cuda.synchronize(device)
-        elapsed = time.perf_counter() - start
+        reinversion_seconds = time.perf_counter() - start
         tensors = (latent, reconstruction, latent_repeat, reinverted_latent)
         if not all(torch.isfinite(value).all() for value in tensors):
             raise RuntimeError(f"NaN/Inf detected for {row['sample_id']}")
@@ -440,7 +481,9 @@ def run_smoke(args, rows, diffusion, model_fn, device) -> None:
             "seed": seed,
             "noise_level": args.noise_level,
             "guidance_scale": args.guidance_scale,
-            "runtime_seconds": elapsed,
+            "runtime_seconds_primary_cycle": primary_seconds,
+            "runtime_seconds_repeat": repeat_seconds,
+            "runtime_seconds_reinversion": reinversion_seconds,
             "peak_vram_bytes": torch.cuda.max_memory_allocated(device) if device.type == "cuda" else 0,
             "finite": True,
         }
@@ -452,7 +495,10 @@ def run_smoke(args, rows, diffusion, model_fn, device) -> None:
         output_rows.append(record)
         rec_array = reconstruction[0, 0].detach().float().cpu().numpy()
         contact_items.append((row["sample_id"], original_array, rec_array))
-        print(f"completed {row['sample_id']} in {elapsed:.3f}s")
+        print(
+            f"completed {row['sample_id']}: primary={primary_seconds:.3f}s "
+            f"repeat={repeat_seconds:.3f}s reinversion={reinversion_seconds:.3f}s"
+        )
     args.smoke_output.parent.mkdir(parents=True, exist_ok=True)
     with args.smoke_output.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(output_rows[0]), lineterminator="\n")
@@ -461,7 +507,7 @@ def run_smoke(args, rows, diffusion, model_fn, device) -> None:
     save_contact_sheet(contact_items, args.contact_sheet)
     numeric = [
         key for key, value in output_rows[0].items()
-        if key.startswith(("image_", "latent_")) or key in ("runtime_seconds", "peak_vram_bytes")
+        if key.startswith(("image_", "latent_", "runtime_seconds_")) or key == "peak_vram_bytes"
         if isinstance(value, (int, float)) and not isinstance(value, bool)
     ]
     write_run_artifacts("E1.4", args, rows, output_rows, numeric, started_at)
@@ -483,15 +529,20 @@ def main() -> None:
     parser.add_argument("--contact-sheet", type=Path, default=Path("image/E1.4_ddim_smoke_contact_sheet.png"))
     parser.add_argument("--artifacts-root", type=Path, default=Path("artifacts/runs"))
     args = parser.parse_args()
+    args._stdout_capture = io.StringIO()
+    args._stderr_capture = io.StringIO()
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required for E1.2/E1.4")
-    rows = load_split(args.split)
-    device = torch.device("cuda:0")
-    _, diffusion, model_fn = create_runtime(args.source_root, args.checkpoint, device)
-    if args.mode == "benchmark":
-        run_benchmark(args, rows, diffusion, model_fn, device)
-    else:
-        run_smoke(args, rows, diffusion, model_fn, device)
+    with redirect_stdout(Tee(sys.stdout, args._stdout_capture)), redirect_stderr(
+        Tee(sys.stderr, args._stderr_capture)
+    ):
+        rows = load_split(args.split)
+        device = torch.device("cuda:0")
+        _, diffusion, model_fn = create_runtime(args.source_root, args.checkpoint, device)
+        if args.mode == "benchmark":
+            run_benchmark(args, rows, diffusion, model_fn, device)
+        else:
+            run_smoke(args, rows, diffusion, model_fn, device)
 
 
 if __name__ == "__main__":

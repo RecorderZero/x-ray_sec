@@ -31,6 +31,8 @@
 |---|---|---|
 | `scripts/build_e0_evidence_reset.py` | 彙整 d=4,096/d=65,536 與 seed sweep，產生 CSV、舊數字對照及去計時 stable hash。 | preflight 程式或設定改變後。 |
 | `scripts/run_cfg_ddim.sh` | 固定 `PYTHONNOUSERSITE=1` 後在 CFG_DDIM 執行命令，阻止 `~/.local` 套件混入。 | 所有文件化的 CFG_DDIM 指令。 |
+| `scripts/env_guard.py` | 共用 fail-closed 檢查；套件載自 active `sys.prefix` 外或 user-site 啟用時立即中止。 | E1/E2 runner 與 split builder 啟動時。 |
+| `scripts/managed_run.py` | 受控執行命令，保存真實 stdout/stderr/exit code、atomic status、PID、heartbeat 與 task/GPU locks。 | E2.3 起所有長任務的外層 runner。 |
 | `scripts/e1_environment_inventory.py` | strict load checkpoint，記錄 Python、PyTorch、CUDA、GPU、Pillow、pytest、OpenCV、模型參數及 hash。 | 環境、套件或 checkpoint 改變後。 |
 | `scripts/create_dev_split.py` | 從 CheXpert validation CSV 建立 20 位病人互斥 split；stable hash 不含 local path。 | split 版本升級時；不要為改善結果任意重抽。 |
 | `scripts/create_security_split.py` | 重現學長每類 16,000 張抽樣、排除其病人，再建立固定隨機 formal split。 | E2.1 重建或擴大 formal N 時。 |
@@ -46,6 +48,7 @@
 | `canonical_preflight.csv` | E0 唯一 canonical synthetic preflight 摘要；舊 31/32、98/100 不得混用。 |
 | `reports/evidence_reset.md` | 說明哪些舊 claim 被撤回或限制，以及現版 preflight 能支持什麼。 |
 | `reports/preprocessing_audit.md` | 學長實際 CheXpert 前處理的程式證據、與本 runner 的一致性及剩餘限制。 |
+| `reports/compute_budget.md` | E2–F9 各 scheme/attack 的 DDIM cycle 與 N=200/500/1,000 GPU 時數預算；記錄 N=200 裁決。 |
 | `artifacts/environment_baseline.txt` | 當次環境、套件實際來源、GPU、checkpoint hash、freeze hash 與 strict-load 結果。 |
 | `artifacts/environment_freeze.txt` | 由 CFG_DDIM 的 `pip freeze --all` 產生，供 baseline hash 與重建。 |
 | `model_inventory.csv` | 一列式 checkpoint/model inventory，適合程式與試算表讀取。 |
@@ -54,7 +57,7 @@
 | `splits/security_v1.csv` | E2 formal 200 人 split，健康／積水各 100；病人與重建的前作訓練抽樣互斥。 |
 | `splits/security_v1_manifest.json` | formal split seed、抽樣規則、排除人數、hash 與 label counts。 |
 | `results/E1.2_benchmark.json` | batch 1/4/8 的 cycle 時間、估計 noise=500 時間與 peak VRAM；用來決定 batch/N。 |
-| `results/E1.4_ddim_smoke.csv` | 四張 x0→z→xrec 的 runtime、VRAM、finite、image/latent metrics。 |
+| `results/E1.4_ddim_smoke.csv` | 四張 x0→z→xrec 的 primary/repeat/re-inversion 分段 runtime、VRAM、finite、image/latent metrics。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=0 的 S0/S1 wrapper 對 legacy direct-call regression；不含 raw key。 |
 | `image/E1.4_ddim_smoke_contact_sheet.png` | 四列視覺檢查圖；每列是 original、reconstruction、absolute difference。 |
 | `artifacts/preflight/canonical_direction_candidates_d4096_n100.json` | d=4,096、N=100 canonical preflight 原始輸出。 |
@@ -66,7 +69,9 @@
 
 | 檔案 | 驗證內容 |
 |---|---|
-| `tests/unit/test_artifact_schema.py` | valid synthetic artifact 應通過；duplicate ID、NaN/Inf 或摘要不一致應失敗。 |
+| `tests/unit/test_artifact_schema.py` | valid synthetic artifact 應通過；duplicate ID、NaN/Inf、空 numeric fields、缺欄或 exit code 不一致應失敗。 |
+| `tests/unit/test_env_guard.py` | active-prefix 正控制，以及越界套件／啟用 user-site 的 fail-closed 負控制。 |
+| `tests/unit/test_managed_run.py` | 真 stdout 成功控制與 traceback/非零 exit/status=failed 負控制。 |
 | `tests/unit/test_chexpert_preprocessing.py` | 直接載入學長原始前處理函式作 oracle，逐值守住 equalize/INTER_AREA/JPEG/min-max。 |
 | `tests/unit/test_split_hash.py` | 驗證更換 local path 前綴不改變 split hash。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |

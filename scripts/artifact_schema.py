@@ -21,8 +21,9 @@ REQUIRED_MANIFEST = {
 }
 REQUIRED_FILES = (
     "manifest.json", "config.json", "per_sample.csv", "summary.json",
-    "stdout.log", "stderr.log",
+    "stdout.log", "stderr.log", "exit_code",
 )
+REQUIRED_PACKAGES = {"numpy", "scipy", "scikit-image", "pillow", "opencv", "torch"}
 
 
 def write_synthetic_run(run_dir: Path, rows: Iterable[dict[str, Any]]) -> None:
@@ -46,7 +47,8 @@ def write_synthetic_run(run_dir: Path, rows: Iterable[dict[str, Any]]) -> None:
         "git_dirty": False,
         "sample_ids": [row["sample_id"] for row in materialized],
         "python": "test", "pytorch": "test", "cuda": "none", "gpu": "none",
-        "dtype": "float32", "seed_list": [1911], "steps": 1, "packages": {},
+        "dtype": "float32", "seed_list": [1911], "steps": 1,
+        "packages": {name: "test" for name in sorted(REQUIRED_PACKAGES)},
         "scheme": "synthetic", "rounds": 0, "nonce_mode": "none",
         "container_version": "none", "numeric_fields": ["metric"],
         "failure_reason": "", "skip_reason": "",
@@ -57,6 +59,7 @@ def write_synthetic_run(run_dir: Path, rows: Iterable[dict[str, Any]]) -> None:
     (run_dir / "config.json").write_text("{}\n", encoding="utf-8")
     (run_dir / "stdout.log").write_text("synthetic run\n", encoding="utf-8")
     (run_dir / "stderr.log").write_text("", encoding="utf-8")
+    (run_dir / "exit_code").write_text("0\n", encoding="utf-8")
     with (run_dir / "per_sample.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=["sample_id", "metric"], lineterminator="\n")
         writer.writeheader()
@@ -87,8 +90,23 @@ def validate_run(run_dir: Path) -> dict[str, Any]:
     if missing:
         errors.append(f"manifest missing keys: {missing}")
 
+    try:
+        recorded_exit_code = int((run_dir / "exit_code").read_text(encoding="utf-8").strip())
+    except ValueError:
+        errors.append("exit_code file is not an integer")
+    else:
+        if recorded_exit_code != manifest.get("exit_code"):
+            errors.append("exit_code file differs from manifest exit_code")
+
+    packages = manifest.get("packages", {})
+    missing_packages = sorted(REQUIRED_PACKAGES - set(packages))
+    if missing_packages:
+        errors.append(f"manifest packages missing: {missing_packages}")
+
     with (run_dir / "per_sample.csv").open(newline="", encoding="utf-8") as handle:
-        rows = list(csv.DictReader(handle))
+        reader = csv.DictReader(handle)
+        fieldnames = reader.fieldnames
+        rows = list(reader)
     ids = [row.get("sample_id", "") for row in rows]
     if not ids or any(not sample_id for sample_id in ids):
         errors.append("empty or missing sample_id")
@@ -101,7 +119,14 @@ def validate_run(run_dir: Path) -> dict[str, Any]:
     if len(rows) != summary.get("sample_count"):
         errors.append("row count differs from summary sample_count")
 
-    for field in manifest.get("numeric_fields", []):
+    numeric_fields = manifest.get("numeric_fields")
+    if not isinstance(numeric_fields, list) or not numeric_fields:
+        errors.append("numeric_fields must be a non-empty list")
+        numeric_fields = []
+    for field in numeric_fields:
+        if field not in (fieldnames or []):
+            errors.append(f"numeric field absent from per_sample.csv header: {field}")
+            continue
         values: list[float] = []
         for row in rows:
             try:

@@ -23,6 +23,11 @@ import pytest
 import numpy as np
 import scipy
 
+try:
+    from scripts.env_guard import enforce_active_prefix
+except ModuleNotFoundError:
+    from env_guard import enforce_active_prefix
+
 
 MODEL_CONFIG = {
     "image_size": 256,
@@ -79,14 +84,8 @@ def main() -> None:
         "numpy": np, "scipy": scipy, "pillow": PIL, "pytest": pytest,
         "opencv": cv2, "torch": torch,
     }
+    enforce_active_prefix(package_modules)
     prefix = Path(sys.prefix).resolve()
-    outside = {
-        name: str(Path(module.__file__).resolve())
-        for name, module in package_modules.items()
-        if prefix not in Path(module.__file__).resolve().parents
-    }
-    if outside:
-        raise SystemExit(f"packages loaded outside sys.prefix: {outside}")
     freeze = subprocess.run(
         [sys.executable, "-m", "pip", "freeze", "--all"],
         text=True, capture_output=True, check=True,

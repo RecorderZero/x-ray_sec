@@ -13,29 +13,29 @@
     {
       "batch_size": 1,
       "feasible": true,
-      "seconds_per_reverse_reconstruct_cycle_mean": 0.046507513034157455,
-      "seconds_per_reverse_reconstruct_cycle_std": 0.00011564222190536393,
-      "estimated_seconds_noise_level_500": 23.20724900404457,
+      "seconds_per_reverse_reconstruct_cycle_mean": 0.1021885237035652,
+      "seconds_per_reverse_reconstruct_cycle_std": 0.006910639237028179,
+      "estimated_seconds_noise_level_500": 50.99207332807903,
       "peak_vram_bytes": 800794112
     },
     {
       "batch_size": 4,
       "feasible": true,
-      "seconds_per_reverse_reconstruct_cycle_mean": 0.15024955062350878,
-      "seconds_per_reverse_reconstruct_cycle_std": 0.00011006889219065175,
-      "estimated_seconds_noise_level_500": 74.97452576113088,
+      "seconds_per_reverse_reconstruct_cycle_mean": 0.27297010098118335,
+      "seconds_per_reverse_reconstruct_cycle_std": 0.007044955601524528,
+      "estimated_seconds_noise_level_500": 136.2120803896105,
       "peak_vram_bytes": 1709004800
     },
     {
       "batch_size": 8,
       "feasible": true,
-      "seconds_per_reverse_reconstruct_cycle_mean": 0.26540052363028127,
-      "seconds_per_reverse_reconstruct_cycle_std": 0.00019876502684466218,
-      "estimated_seconds_noise_level_500": 132.43486129151034,
+      "seconds_per_reverse_reconstruct_cycle_mean": 0.45472629034581286,
+      "seconds_per_reverse_reconstruct_cycle_std": 0.001921887815883174,
+      "estimated_seconds_noise_level_500": 226.90841888256062,
       "peak_vram_bytes": 2922092032
     }
   ],
   "recommended_batch_size": 8,
-  "formal_n_decision": "start with N=200; increase only after full-pipeline pilot confirms estimate",
+  "formal_n_decision": "user decision 2026-10-08: freeze security_v1 at N=200; consider a new security_v2 only after smoke/pilot passes",
   "interpretation": "The estimate multiplies one reverse+guided-reconstruction cycle by 499; full-run I/O and initialization are excluded."
 }

@@ -11,6 +11,13 @@ from pathlib import Path
 
 from PIL import Image
 
+try:
+    from scripts.env_guard import enforce_active_prefix
+except ModuleNotFoundError:
+    from env_guard import enforce_active_prefix
+
+enforce_active_prefix({"pillow": Image})
+
 
 PATIENT_RE = re.compile(r"/(patient\d+)/")
 HASH_FIELDS = ("sample_id", "patient_id", "label", "source_path", "file_sha256")
