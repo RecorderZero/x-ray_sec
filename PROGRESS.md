@@ -292,3 +292,38 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 請稽核方重跑 AUD-20261008-01 的驗收指令並決定各 finding 是否由 `FIXED?` 轉為 `CLOSED`。
 * 稽核通過後執行 E2.2 S0/S1 wrapper；不直接啟動大型 latent cache。
 * 先針對 T2-WB 設定 inversion positive-control 門檻與 `Inconclusive` 分流，再排程正式攻擊。
+
+
+## 2026-10-08 · W1 · Track E · E2.2 S0/S1 legacy wrapper regression
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：E2.2。
+* 回應稽核：AUD-20261008-02 已判定 PASS 並允許進入 E2.2；AF-016 依使用者裁決先固定 formal N=200，小實驗跑通後才評估另建 `security_v2`。
+* 以 guidance=0、noise level=500 確認 S0/S1 wrapper 與學長 legacy anonymization sampler 一致，且不記錄 raw key material。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/e2_legacy_wrapper.py::legacy_anonymize`、`verify_scheme`，直接呼叫 `ddim_sample_loop_anonymization`，沒有複寫 legacy DDIM schedule。
+* 新增 `tests/test_legacy_repro.py`，檢查 S0 Rademacher、S1 Signed Permutation 的 transform round-trip 與 wrapper/direct-call bit-exact。
+* 產生 `results/E2.2.json`；同步更新 `README.md` 與 `WORKFLOW.md` 的狀態、檔案索引及 formal N 裁決。
+* 驗證指令：`scripts/run_cfg_ddim.sh python -m pytest -q tests/unit tests/test_legacy_repro.py`；`scripts/run_cfg_ddim.sh python -m scripts.e2_legacy_wrapper --checkpoint past/SourceCode/results/Model/cfg_chexpert_p_uncond_0.1_v1_2025_05_08/modelchexpert050000.pt --noise-level 500 --guidance-scale 0 --output results/E2.2.json`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] unit 與 E2.2 regression 共 `12 passed`；S0/S1 的 wrapper 與 direct legacy call 在 output、latent、input 的 MaxAbs 全為 0。
+* [事實] S0/S1 transform round-trip MaxAbs 均為 0；所有 output/latent 皆 finite。
+* [事實] 使用單張 `dev_v1.1_000`、noise level=500、guidance=0；結果檔只記錄 tensor SHA-256 與公開 legacy parameter profile，未寫入 raw key。
+* [事實] 執行時 GPU 另有程序高使用率，因此本輪不報告或解讀 runtime；數值一致性不受此項效能干擾。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：E2.2 指定的 S0/S1 wrapper、legacy 一致性測試與 `results/E2.2.json` 均完成；工程閘門與小型證據閘門通過。
+* [ ] **未達標 (Failed)**：未通過測試或指標未符標準。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 本輪未失敗。E2.3 不直接長跑；先完成 AF-014 的真實 stdout/stderr/exit code、非空 numeric fields、status/heartbeat/lock 與失敗控制，再做 1–4 張 cache smoke。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 無。formal N=200 為 2026-10-08 使用者裁決；未改動既有 `security_v1` 成員。
+
+### 7. 下一步
+* 修正 AF-014 並建立可恢復的 E2 background runner。
+* 執行 E2.3 的 1–4 張 latent cache smoke，驗證 shape、finite 與抽樣重算 MaxAbs ≤ 1e-5。
+* smoke 通過後才對 `security_v1` N=200 排程 formal cache；不啟動 T2-BB。

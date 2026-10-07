@@ -4,9 +4,9 @@
 
 ## 目前狀態
 
-- E0.1、E1.1–E1.5 已依 AUD-20261008-01 修正並重跑；目前狀態為 `FIXED?`，須由稽核方複驗後才能視為關閉。
+- E0.1、E1.1–E1.5 已由 AUD-20261008-02 複驗通過；E2.2 已完成 S0/S1 legacy regression。
 - 目標 checkpoint 可 strict load，missing/unexpected keys 均為 0。
-- E2.1 formal split 已建立；E2.2 之後須等 AF-001–AF-005 經稽核複驗。輸入必須使用已凍結的 legacy CheXpert preprocessing：grayscale → histogram equalization → OpenCV `INTER_AREA` 256×256 → JPEG quality 100 round-trip → per-image min-max `[0,1]`。
+- E2.1 formal split 已建立且通過獨立驗證；formal N 依使用者裁決先維持 200，僅在小實驗跑通後另建新版 split 擴大。輸入必須使用已凍結的 legacy CheXpert preprocessing：grayscale → histogram equalization → OpenCV `INTER_AREA` 256×256 → JPEG quality 100 round-trip → per-image min-max `[0,1]`。
 - 固定 dev split：`dev_v1.1`，20 張、20 位不同病人，健康／積水各 10 張；hash 排除本機路徑。
 - 正式 split：`security_v1`，200 位病人；重現學長抽樣後排除 22,253 位曾入選訓練病人，健康／積水各 100 位。
 - 主線 P/S0/S1/S2a/S2 統一 `guidance_scale=0`；guidance=4 僅可作病灶健康化附表。
@@ -35,6 +35,7 @@
 | `scripts/create_dev_split.py` | 從 CheXpert validation CSV 建立 20 位病人互斥 split；stable hash 不含 local path。 | split 版本升級時；不要為改善結果任意重抽。 |
 | `scripts/create_security_split.py` | 重現學長每類 16,000 張抽樣、排除其病人，再建立固定隨機 formal split。 | E2.1 重建或擴大 formal N 時。 |
 | `scripts/e1_ddim_runner.py` | headless CFG-DDIM benchmark/smoke；直接呼叫 legacy progressive sampler，產出完整 run artifacts 與兩空間指標。 | E1 重驗與 E2 runner 的基礎。 |
+| `scripts/e2_legacy_wrapper.py` | 直接呼叫學長 S0/S1 anonymization sampler，檢查 wrapper/direct bit-exact、finite 與 transform round-trip。 | E2.2 重現與後續 S0/S1 pipeline 共用。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 
@@ -54,6 +55,7 @@
 | `splits/security_v1_manifest.json` | formal split seed、抽樣規則、排除人數、hash 與 label counts。 |
 | `results/E1.2_benchmark.json` | batch 1/4/8 的 cycle 時間、估計 noise=500 時間與 peak VRAM；用來決定 batch/N。 |
 | `results/E1.4_ddim_smoke.csv` | 四張 x0→z→xrec 的 runtime、VRAM、finite、image/latent metrics。 |
+| `results/E2.2.json` | 單張 noise=500、guidance=0 的 S0/S1 wrapper 對 legacy direct-call regression；不含 raw key。 |
 | `image/E1.4_ddim_smoke_contact_sheet.png` | 四列視覺檢查圖；每列是 original、reconstruction、absolute difference。 |
 | `artifacts/preflight/canonical_direction_candidates_d4096_n100.json` | d=4,096、N=100 canonical preflight 原始輸出。 |
 | `artifacts/preflight/canonical_direction_candidates_d65536_n100.json` | d=65,536、N=100 canonical preflight 原始輸出。 |
@@ -69,6 +71,7 @@
 | `tests/unit/test_split_hash.py` | 驗證更換 local path 前綴不改變 split hash。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
 | `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |
+| `tests/test_legacy_repro.py` | E2.2：S0/S1 transform 精確可逆，並以 GPU 比對 wrapper 與 legacy anonymization sampler bit-exact。 |
 
 執行：
 

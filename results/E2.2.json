@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "task_id": "E2.2",
+  "created_at": "2026-10-07T18:37:21.655388+00:00",
+  "sample_id": "dev_v1.1_000",
+  "split_sha256": "7b3e77a86026081bab8c71897536944d7a8795ab795661a56c05caf92a738aa4",
+  "checkpoint_sha256": "3f61b80a2b2df4f5f1780fe9a7ce639f6a94ddb5057e5f9e88dc300de4786b14",
+  "script_sha256": "8809a403aab3dda8cea4b681fdd0ae709845b8757c6827d73028a74a27661439",
+  "source_sampler_sha256": "233376c5e727fc4517b859e0c00e12a61bd09efa54fc305f6ac2f67086c842c5",
+  "command": "/data2/paper/scripts/e2_legacy_wrapper.py --checkpoint past/SourceCode/results/Model/cfg_chexpert_p_uncond_0.1_v1_2025_05_08/modelchexpert050000.pt --noise-level 500 --guidance-scale 0 --output results/E2.2.json",
+  "git_commit": "9bb8bb78d8a1f43d2a12059a7afd9732f64e4898",
+  "git_dirty": true,
+  "python": "3.10.19 | packaged by conda-forge | (main, Jan 26 2026, 23:45:08) [GCC 14.3.0]",
+  "pytorch": "2.14.0+cu130",
+  "cuda": "13.0",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "dtype": "float32",
+  "legacy_key_seed": 42,
+  "noise_level": 500,
+  "guidance_scale": 0.0,
+  "legacy_parameter_profile": "public predecessor password plus seed 42; password precedence",
+  "raw_key_material_recorded": false,
+  "schemes": [
+    {
+      "scheme": "S0",
+      "wrapper_vs_direct_output_max_abs": 0.0,
+      "wrapper_vs_direct_latent_max_abs": 0.0,
+      "wrapper_vs_direct_input_max_abs": 0.0,
+      "transform_roundtrip_max_abs": 0.0,
+      "output_finite": true,
+      "latent_finite": true,
+      "output_sha256": "f7cdc88f8fa08a736cea79e1dd51919ab07a278d403d5cf49867d073f967f858",
+      "latent_sha256": "3a969620df129333a58c8ba097a3f4f5c81dfe0cb5199a9ef5b9fc6c45c2ac87"
+    },
+    {
+      "scheme": "S1",
+      "wrapper_vs_direct_output_max_abs": 0.0,
+      "wrapper_vs_direct_latent_max_abs": 0.0,
+      "wrapper_vs_direct_input_max_abs": 0.0,
+      "transform_roundtrip_max_abs": 0.0,
+      "output_finite": true,
+      "latent_finite": true,
+      "output_sha256": "20e38d5e0b4618c6d7276b2259b34c2762bab884fb0c4ad3d0c313f66258ba75",
+      "latent_sha256": "3a969620df129333a58c8ba097a3f4f5c81dfe0cb5199a9ef5b9fc6c45c2ac87"
+    }
+  ],
+  "status": "passed"
+}

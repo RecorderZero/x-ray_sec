@@ -294,7 +294,7 @@ G0：E0.1 與 E1.1–E1.5 全過。
 
 | ID | 子任務 | 通過條件 | 交付 |
 |---|---|---|---|
-| E2.1 | formal split | 採 AF-012(a)：重現 `sample_n=16000, random_state=1911` 後排除入選病人的全部影像；從剩餘 train 病人固定隨機抽樣；patient-disjoint；最低 200、目標 500–1,000；hash 凍結 | splits/security_v1.csv、splits/security_v1_manifest.json |
+| E2.1 | formal split | 採 AF-012(a)：重現 `sample_n=16000, random_state=1911` 後排除入選病人的全部影像；從剩餘 train 病人固定隨機抽樣；patient-disjoint；本輪 formal N=200；小實驗跑通後若擴大須另建 `security_v2`，不得原地增補；hash 凍結 | splits/security_v1.csv、splits/security_v1_manifest.json |
 | E2.2 | S0/S1 wrapper | 對 Ki@13579／seed 42 與前作輸出一致 | tests/test_legacy_repro.py、results/E2.2.json |
 | E2.3 | latent cache | shape 正確、無 NaN/Inf；抽樣重算 MaxAbs ≤ 1e-5 | cache metadata、results/E2.3_DONE.json |
 | E2.4 | metric semantics | 證明 cosine=1 不等於 equality；x0 vs xrec 與前作舊定義分開 | reports/metric_semantics.md |
