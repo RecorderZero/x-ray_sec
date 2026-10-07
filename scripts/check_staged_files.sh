@@ -7,7 +7,7 @@ failed=0
 
 while IFS= read -r -d '' path; do
     case "$path" in
-        dataset/*|artifacts/runs/*|smoke_results/*|past/SourceCode/results/Model/*|*/__pycache__/*|*.pyc|*.pyo|*/per_sample.csv|*/per_sample.jsonl|*/per_sample.parquet)
+        dataset/*|artifacts/runs/*|smoke_results/*|past/SourceCode/results/Model/*|*/__pycache__/*|*.pyc|*.pyo|*.pt|*.pth|*.ckpt|*.safetensors|*.npy|*.npz|*/per_sample.csv|*/per_sample.jsonl|*/per_sample.parquet)
             echo "ERROR: forbidden generated/data path is staged: $path" >&2
             failed=1
             ;;
@@ -20,6 +20,11 @@ while IFS= read -r -d '' path; do
     size="$(git cat-file -s ":$path" 2>/dev/null || printf '0')"
     if [[ "$size" =~ ^[0-9]+$ ]] && (( size > limit_bytes )); then
         echo "ERROR: staged file exceeds ${limit_bytes} bytes: $path ($size bytes)" >&2
+        failed=1
+    fi
+
+    if git show ":$path" 2>/dev/null | LC_ALL=C grep -aEq -- '-----BEGIN ([A-Z0-9 ]+ )?PRIVATE KEY-----'; then
+        echo "ERROR: private-key material is staged: $path" >&2
         failed=1
     fi
 done < <(git diff --cached --name-only --diff-filter=ACMR -z)

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "split": "splits/security_v1.csv",
+  "split_sha256": "5843da54d027cbe5b7d518349a374f859b5d2c0e07b9b66ea5f89c9530a94490",
+  "seed": 1911,
+  "selection": "AF-012 option (a)",
+  "legacy_sample_n_per_class": 16000,
+  "legacy_random_state": 1911,
+  "legacy_sample_rows": 32000,
+  "legacy_csv_sha256": "1503f075cfe359d22c2ca5a9e15f7dead4d543a189774d0fdff67d1ce6fd1b16",
+  "raw_csv_sha256": "449292c6df0fc3140add2444b7788121c1f32694d9d1a6b1493171a45a615a95",
+  "raw_legacy_non_path_rows_identical": true,
+  "legacy_sample_path_sha256": "39c2c5183537aedee7dd756ab17a23c11e7d0e8e4534414455aeac2d313c0ceb",
+  "excluded_patient_count": 22253,
+  "formal_patient_count": 200,
+  "label_counts": {
+    "0": 100,
+    "1": 100
+  },
+  "patient_disjoint_from_reproduced_training_sample": true,
+  "hash_fields": [
+    "sample_id",
+    "patient_id",
+    "label",
+    "source_path",
+    "file_sha256"
+  ]
+}

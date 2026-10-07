@@ -11,6 +11,8 @@ import os
 import platform
 import subprocess
 import sys
+import site
+from datetime import datetime, timezone
 import types
 from pathlib import Path
 
@@ -18,6 +20,8 @@ import torch
 import cv2
 import PIL
 import pytest
+import numpy as np
+import scipy
 
 
 MODEL_CONFIG = {
@@ -66,7 +70,29 @@ def main() -> None:
     parser.add_argument(
         "--inventory-output", type=Path, default=Path("model_inventory.csv")
     )
+    parser.add_argument(
+        "--freeze-output", type=Path, default=Path("artifacts/environment_freeze.txt")
+    )
     args = parser.parse_args()
+
+    package_modules = {
+        "numpy": np, "scipy": scipy, "pillow": PIL, "pytest": pytest,
+        "opencv": cv2, "torch": torch,
+    }
+    prefix = Path(sys.prefix).resolve()
+    outside = {
+        name: str(Path(module.__file__).resolve())
+        for name, module in package_modules.items()
+        if prefix not in Path(module.__file__).resolve().parents
+    }
+    if outside:
+        raise SystemExit(f"packages loaded outside sys.prefix: {outside}")
+    freeze = subprocess.run(
+        [sys.executable, "-m", "pip", "freeze", "--all"],
+        text=True, capture_output=True, check=True,
+    ).stdout
+    args.freeze_output.parent.mkdir(parents=True, exist_ok=True)
+    args.freeze_output.write_text(freeze, encoding="utf-8")
 
     source_root = args.source_root.resolve()
     checkpoint = args.checkpoint.resolve()
@@ -104,12 +130,21 @@ def main() -> None:
         torch.cuda.get_device_properties(0).total_memory if cuda_available else 0
     )
     environment = {
-        "schema_version": 1,
+        "schema_version": 2,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "timestamp_timezone": "Asia/Taipei",
+        "sys_prefix": str(prefix),
+        "python_no_user_site": os.environ.get("PYTHONNOUSERSITE", ""),
+        "site_enable_user_site": site.ENABLE_USER_SITE,
         "python": sys.version.replace("\n", " "),
         "platform": platform.platform(),
         "conda_default_env": os.environ.get("CONDA_DEFAULT_ENV", ""),
+        "packages": {name: {"version": module.__version__, "file": str(Path(module.__file__).resolve())} for name, module in package_modules.items()},
+        "pip_freeze_path": str(args.freeze_output),
+        "pip_freeze_sha256": hashlib.sha256(freeze.encode("utf-8")).hexdigest(),
         "torch": torch.__version__,
+        "numpy": np.__version__,
+        "scipy": scipy.__version__,
         "pillow": PIL.__version__,
         "pytest": pytest.__version__,
         "opencv": cv2.__version__,

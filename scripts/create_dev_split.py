@@ -13,6 +13,7 @@ from PIL import Image
 
 
 PATIENT_RE = re.compile(r"/(patient\d+)/")
+HASH_FIELDS = ("sample_id", "patient_id", "label", "source_path", "file_sha256")
 
 
 def sha256_file(path: Path) -> str:
@@ -23,11 +24,19 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def stable_split_hash(records: list[dict[str, object]]) -> str:
+    """Hash sample identity/content only; local mount paths are intentionally excluded."""
+    canonical = "\n".join(
+        ",".join(str(record[key]) for key in HASH_FIELDS) for record in records
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv", type=Path, required=True)
     parser.add_argument("--image-root", type=Path, required=True)
-    parser.add_argument("--output", type=Path, default=Path("splits/dev_v1.csv"))
+    parser.add_argument("--output", type=Path, default=Path("splits/dev_v1.1.csv"))
     parser.add_argument("--patients", type=int, default=20)
     args = parser.parse_args()
     if args.patients < 2 or args.patients % 2:
@@ -80,7 +89,7 @@ def main() -> None:
     for index, (label, patient_id, row, local_path) in enumerate(selected):
         records.append(
             {
-                "sample_id": f"dev_v1_{index:03d}",
+                "sample_id": f"dev_v1.1_{index:03d}",
                 "patient_id": patient_id,
                 "label": label,
                 "label_name": "pleural_effusion" if label else "no_finding",
@@ -91,10 +100,7 @@ def main() -> None:
                 "file_sha256": sha256_file(local_path),
             }
         )
-    canonical = "\n".join(
-        ",".join(str(record[key]) for key in sorted(record)) for record in records
-    ).encode("utf-8")
-    split_sha256 = hashlib.sha256(canonical).hexdigest()
+    split_sha256 = stable_split_hash(records)
     for record in records:
         record["split_sha256"] = split_sha256
 

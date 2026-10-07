@@ -1,11 +1,45 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "timestamp_utc": "2026-10-07T16:53:07.966452+00:00",
   "timestamp_timezone": "Asia/Taipei",
+  "sys_prefix": "/home/user/anaconda3/envs/CFG_DDIM",
+  "python_no_user_site": "1",
+  "site_enable_user_site": false,
   "python": "3.10.19 | packaged by conda-forge | (main, Jan 26 2026, 23:45:08) [GCC 14.3.0]",
   "platform": "Linux-6.14.0-28-generic-x86_64-with-glibc2.39",
   "conda_default_env": "CFG_DDIM",
+  "packages": {
+    "numpy": {
+      "version": "1.23.0",
+      "file": "/home/user/anaconda3/envs/CFG_DDIM/lib/python3.10/site-packages/numpy/__init__.py"
+    },
+    "scipy": {
+      "version": "1.10.0",
+      "file": "/home/user/anaconda3/envs/CFG_DDIM/lib/python3.10/site-packages/scipy/__init__.py"
+    },
+    "pillow": {
+      "version": "8.4.0",
+      "file": "/home/user/anaconda3/envs/CFG_DDIM/lib/python3.10/site-packages/PIL/__init__.py"
+    },
+    "pytest": {
+      "version": "9.1.1",
+      "file": "/home/user/anaconda3/envs/CFG_DDIM/lib/python3.10/site-packages/pytest/__init__.py"
+    },
+    "opencv": {
+      "version": "4.7.0",
+      "file": "/home/user/anaconda3/envs/CFG_DDIM/lib/python3.10/site-packages/cv2/__init__.py"
+    },
+    "torch": {
+      "version": "2.14.0+cu130",
+      "file": "/home/user/anaconda3/envs/CFG_DDIM/lib/python3.10/site-packages/torch/__init__.py"
+    }
+  },
+  "pip_freeze_path": "artifacts/environment_freeze.txt",
+  "pip_freeze_sha256": "afe7a82e895a79b4bf6de52d064803ca61bbed89d3eab97e6f5636395ae1daee",
   "torch": "2.14.0+cu130",
-  "pillow": "9.0.0",
+  "numpy": "1.23.0",
+  "scipy": "1.10.0",
+  "pillow": "8.4.0",
   "pytest": "9.1.1",
   "opencv": "4.7.0",
   "torch_cuda_build": "13.0",
@@ -13,8 +47,8 @@
   "cudnn": 92400,
   "gpu_name": "NVIDIA GeForce RTX 5090",
   "gpu_total_memory_bytes": 33668726784,
-  "git_head": "6a5573e85663e4c3f79c617b5c42d235f703e2c0",
-  "git_status_porcelain": "M PROGRESS.md\n M artifacts/environment_baseline.txt\n M image/E1.4_ddim_smoke_contact_sheet.png\n M loop_engineering_spec.md\n M results/E1.2_benchmark.json\n M results/E1.4_ddim_smoke.csv\n M scripts/e1_ddim_runner.py\n M scripts/e1_environment_inventory.py\n?? README.md\n?? artifacts/preflight/\n?? past/Documents/\n?? \"past/Privacy-Preserving and Reversible Diffusion Models for Lesion Localization in Chest X-Rays.docx\"\n?? \"past/Privacy-Preserving and Reversible Diffusion Models for Lesion Localization in Chest X-Rays.pdf\"\n?? past/Readme.txt\n?? \"past/\\345\\217\\243\\350\\251\\246\\347\\260\\241\\345\\240\\261.pdf\"\n?? \"past/\\345\\217\\243\\350\\251\\246\\347\\260\\241\\345\\240\\261.pptx\"\n?? refpaper/\n?? reports/preprocessing_audit.md\n?? tests/unit/test_chexpert_preprocessing.py",
+  "git_head": "5d1c97a769c41e3d43d288e6f7eb1d737d3c5f08",
+  "git_status_porcelain": "M PROGRESS.md\n M attack/defense_design_check.py\n M canonical_preflight.csv\n M reports/evidence_reset.md\n M scripts/artifact_schema.py\n M scripts/build_e0_evidence_reset.py\n M scripts/check_staged_files.sh\n M scripts/create_dev_split.py\n M scripts/e1_ddim_runner.py\n M scripts/e1_environment_inventory.py\n M tests/unit/test_artifact_schema.py\n M tests/unit/test_chexpert_preprocessing.py\n?? AUDIT.md\n?? artifacts/environment_freeze.txt\n?? artifacts/preflight/\n?? attack/validate_sot_bitexact_sweep.py\n?? audit/\n?? past/Documents/\n?? \"past/Privacy-Preserving and Reversible Diffusion Models for Lesion Localization in Chest X-Rays.docx\"\n?? \"past/Privacy-Preserving and Reversible Diffusion Models for Lesion Localization in Chest X-Rays.pdf\"\n?? past/Readme.txt\n?? \"past/\\345\\217\\243\\350\\251\\246\\347\\260\\241\\345\\240\\261.pdf\"\n?? \"past/\\345\\217\\243\\350\\251\\246\\347\\260\\241\\345\\240\\261.pptx\"\n?? refpaper/\n?? scripts/create_security_split.py\n?? scripts/run_cfg_ddim.sh\n?? splits/dev_v1.1.csv\n?? splits/security_v1.csv\n?? splits/security_v1_manifest.json\n?? tests/unit/test_split_hash.py\n?? tests/unit/test_staged_guard.py",
   "checkpoint": "/data2/paper/past/SourceCode/results/Model/cfg_chexpert_p_uncond_0.1_v1_2025_05_08/modelchexpert050000.pt",
   "checkpoint_sha256": "3f61b80a2b2df4f5f1780fe9a7ce639f6a94ddb5057e5f9e88dc300de4786b14",
   "checkpoint_bytes": 456175779,
