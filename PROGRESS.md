@@ -3,7 +3,7 @@
 > **寫入規則**：只增不改。新條目加在最下面。
 > 不要刪除或改寫舊條目 —— 錯誤的判斷本身也是紀錄，之後回頭看才知道當時為什麼那樣做。
 > 研究設計的決定寫在 `WORKFLOW.md`，這裡只記「做了什麼、得到什麼」。
-> 標記慣例 `[決定]` `[事實]` `[假設]` `[待辦]` `[推定]` `[結論 ]` `[限制]` `[注意]`。
+> 標記慣例 `[決定]` `[事實]` `[假設]` `[待辦]` `[推定]` `[結論]` `[限制]` `[注意]`。
 > 詳細的設計方法紀錄在`PROPOSAL.md`有需要可以去查看。
 
 ## 條目格式
@@ -246,3 +246,49 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 建立 E2.1 formal patient-disjoint split，最低 N=200，凍結 split hash。
 * 實作 E2.2 S0/S1 wrapper 與 legacy positive-control reproduction。
 * 先用 1–4 張執行 E2 latent cache smoke，再依長任務規範啟動正式 cache。
+
+## 2026-10-08 · W1 · Track E · AUD-20261008-01 稽核修正與使用者裁決落地
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：E0.1、E1.1–E1.5、E2.1。
+* 回應稽核：AUD-20261008-01 的 AF-001～AF-012；`AUDIT.md` 保持唯讀，finding 是否關閉仍由稽核方裁定。
+* 落實使用者裁決：AF-011 主線採 `guidance_scale=0`；AF-012 採方案 (a)。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-001] 已修正（待稽核複驗）｜commit `1579c96`｜`scripts/e1_ddim_runner.py::invert_reconstruct` 改為直接呼叫學長 `ddim_sample_loop_known_progressive`；新增 `tests/integration/test_legacy_ddim_equivalence.py`｜驗證：`scripts/run_cfg_ddim.sh python -m pytest -q tests/integration/test_legacy_ddim_equivalence.py`。
+* [AF-002] 已修正（待稽核複驗）｜commits `44a05a8`、`1579c96`｜manifest 補齊 WORKFLOW §3.2 欄位，validator 依 manifest 宣告的任意 numeric fields 驗證；E1.2/E1.4 寫入本機 `artifacts/runs/<task>/<run_id>/` 並立即 validate；補缺欄與竄改 summary negative tests。
+* [AF-003] 已修正（待稽核複驗）｜commit `1579c96`｜新增 image SSIM、L∞、uint8 pixel equality、float32 bit-exact，以及 latent same-seed repeat／xrec re-inversion 的 cosine、MSE、RMSE、MaxAbs、bit-exact rate。
+* [AF-004] 已裁決並修正（待稽核複驗）｜commit `44a05a8`｜[事實] pytest 與 Pillow 由使用者自行安裝；Pillow 9.0.0 仍無法正常運作後，使用者已回復 Pillow 8.4.0。新增 `scripts/run_cfg_ddim.sh` 固定 `PYTHONNOUSERSITE=1`，inventory 記錄套件版本／`__file__`／site flag／freeze hash，套件若載自 `sys.prefix` 外則 fail closed。
+* [AF-005] 已修正（待稽核複驗）｜commit `9eb4ccc`｜重建 d=4,096、d=65,536、seeds 0–99 × R=1/2/4；報告對照 97/100 與 98/100 的不同 estimand，加入 KS，舊 Householder 表標 historical，stable hash 排除 timing。
+* [AF-006] 已修正（待稽核複驗）｜本輪 commits 均使用類型／任務依據／變更檔案／驗證結果與 `Refs:` body；未改寫已推送的歷史 commit。
+* [AF-007] 已修正（待稽核複驗）｜commit `44a05a8`｜guard 新增 `*.pt/*.pth/*.ckpt/*.safetensors/*.npy/*.npz` 與 private-key header 掃描；暫存 repo tests 通過。
+* [AF-008] 已修正（待稽核複驗）｜commit `44a05a8`｜unit test 直接載入學長 `ChexpertResNormPipeline._preprocess_image` 與 `train_util.visualize` 作 oracle，不再複寫 runner 邏輯。
+* [AF-009] 已更正（待稽核複驗）｜[更正] 舊條目所稱「舊 Pillow 缺 `Image.Resampling`」及「runner 保留雙版本 compatibility」沒有足夠紀錄支持，現行 runner 也未使用 `Image.Resampling`；首次失敗當下的完整 interpreter／trace 未保存，不能再把根因寫成既定事實。可確認的是使用者曾自行安裝 pytest/Pillow、Pillow 9.0.0 仍失敗，最後回復 8.4.0。
+* [AF-010] 已修正（待稽核複驗）｜commit `44a05a8`｜split hash 限定 `(sample_id, patient_id, label, source_path, file_sha256)`，升版 `dev_v1.1`；更換 `local_path` 前綴的 unit test 通過。
+* [AF-011] 使用者已裁決並落地｜commit `1579c96`｜P/S0/S1/S2a/S2 的 security、correctness、reversibility 主表共用 guidance=0；guidance=4 只能另作病灶健康化附表。
+* [AF-012] 使用者已裁決並落地｜commits `44a05a8`、`1579c96`｜以學長備份 train.csv 重現每類 16,000 張、`random_state=1911` 抽樣，排除入選的 22,253 位病人後，從 raw train 剩餘病人固定隨機抽取 200 位。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] CFG_DDIM 現為 Pillow 8.4.0、numpy 1.23.0、scipy 1.10.0、pytest 9.1.1，皆載自 `/home/user/anaconda3/envs/CFG_DDIM`；預設與 wrapper 執行目前解析到同一組套件，wrapper 仍作為正式入口。
+* [事實] unit tests `8 passed`；GPU legacy equivalence integration `1 passed`，latent 與 reconstruction 均 bit-exact。
+* [事實] E1.2 run `E1.2_20261007T165702Z_9c001b5b` 與 E1.4 run `E1.4_20261007T170153Z_3ca0e32a` 均由 `validate_run` 回傳 `valid=True`。
+* [事實] guidance=0 的 E1.4 四張 smoke 全部 finite；平均 PSNR=40.6402 dB、SSIM=0.983468、image L∞=0.056579、uint8 pixel equality=0.183086。科學數值只報告，不作成功門檻。
+* [事實] same-seed latent repeat 的 MaxAbs=0、bit-exact rate=1；但 `xrec → inversion` 與原 latent 的平均 cosine=0.905725、RMSE=0.421704、MaxAbs=2.470699。
+* [事實] E0 現版重建：d=4,096 gallery 100/100；d=65,536 gallery 97/100；d=65,536 seeds 0–99 在 R=1/2/4 都是 98/100。`canonical_preflight.csv` 與報告重跑後 SHA-256 不變。
+* [事實] `security_v1` 為 200 張／200 位病人、健康與積水各 100；split SHA-256=`5843da54d027cbe5b7d518349a374f859b5d2c0e07b9b66ea5f89c9530a94490`，與重建的前作訓練抽樣病人交集為空。
+
+### 4. 達標判定 (Assessment)
+* [ ] **已達標 (Achieved)**：不自行宣稱。實作方狀態為 `FIXED?`，須由稽核方複驗 AF-001～AF-012 後更新 `AUDIT.md`。
+* [x] **未達標 (Failed)**：G0 尚未正式通過；原因是 finding 尚未由稽核方關閉，且 T2-WB 的 image re-inversion positive control 顯示明顯 latent 誤差。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* **失敗原因分析**：前一輪把「程式可跑」誤當成完整證據閘門，並自行重寫 legacy DDIM schedule；環境與 split hash 也缺乏來源隔離。這些工程缺口已修正。剩餘的低 re-inversion fidelity 是量測結果，不可用換 seed、換樣本或換 metric 隱藏。
+* **下輪修改計畫**：先交由稽核方複驗。若 AF-001～AF-005 關閉，再進 E2.2；T2-WB 後續必須把 exact-latent T1 與 image re-inversion T2-WB 分欄，positive control 不足時依 WORKFLOW 標 `Inconclusive`。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 無。AF-011 與 AF-012 的使用者裁決已同步寫入 `PROPOSAL.md`、`WORKFLOW.md`；`AUDIT.md` 未修改。
+
+### 7. 下一步
+* 請稽核方重跑 AUD-20261008-01 的驗收指令並決定各 finding 是否由 `FIXED?` 轉為 `CLOSED`。
+* 稽核通過後執行 E2.2 S0/S1 wrapper；不直接啟動大型 latent cache。
+* 先針對 T2-WB 設定 inversion positive-control 門檻與 `Inconclusive` 分流，再排程正式攻擊。

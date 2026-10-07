@@ -4,10 +4,12 @@
 
 ## 目前狀態
 
-- E0.1、E1.1–E1.5 已完成。
+- E0.1、E1.1–E1.5 已依 AUD-20261008-01 修正並重跑；目前狀態為 `FIXED?`，須由稽核方複驗後才能視為關閉。
 - 目標 checkpoint 可 strict load，missing/unexpected keys 均為 0。
-- E2 可開始；輸入必須使用已凍結的 legacy CheXpert preprocessing：grayscale → histogram equalization → OpenCV `INTER_AREA` 256×256 → JPEG quality 100 round-trip → per-image min-max `[0,1]`。
-- 固定 dev split：20 張、20 位不同病人，健康／積水各 10 張。
+- E2.1 formal split 已建立；E2.2 之後須等 AF-001–AF-005 經稽核複驗。輸入必須使用已凍結的 legacy CheXpert preprocessing：grayscale → histogram equalization → OpenCV `INTER_AREA` 256×256 → JPEG quality 100 round-trip → per-image min-max `[0,1]`。
+- 固定 dev split：`dev_v1.1`，20 張、20 位不同病人，健康／積水各 10 張；hash 排除本機路徑。
+- 正式 split：`security_v1`，200 位病人；重現學長抽樣後排除 22,253 位曾入選訓練病人，健康／積水各 100 位。
+- 主線 P/S0/S1/S2a/S2 統一 `guidance_scale=0`；guidance=4 僅可作病灶健康化附表。
 - 主要環境：`CFG_DDIM`、Python 3.10.19、PyTorch 2.14.0+cu130、RTX 5090。
 
 ## 核心規劃與紀錄
@@ -20,15 +22,19 @@
 | `PROGRESS.md` | 只增不改的實驗日誌；所有新條目使用最新七段式格式。 |
 | `loop_engineering_spec.md` | loop、安全閘門、長任務狀態機、重試與 Git 規則。 |
 | `.gitignore` | 排除 dataset、checkpoint、cache、run-level/per-sample 大型輸出與 secrets。 |
+| `AUDIT.md` | 稽核方的 finding 與複驗紀錄；實作方唯讀，回覆追加於 `PROGRESS.md`。 |
+| `audit/README.md` | 稽核程式與輸出索引；由稽核方維護。 |
 
 ## E0/E1 可重現程式
 
 | 檔案 | 主要功能 | 何時使用 |
 |---|---|---|
-| `scripts/build_e0_evidence_reset.py` | 把 canonical synthetic preflight JSON 轉成小型 CSV 與證據重整報告。 | preflight 程式或設定改變後。 |
+| `scripts/build_e0_evidence_reset.py` | 彙整 d=4,096/d=65,536 與 seed sweep，產生 CSV、舊數字對照及去計時 stable hash。 | preflight 程式或設定改變後。 |
+| `scripts/run_cfg_ddim.sh` | 固定 `PYTHONNOUSERSITE=1` 後在 CFG_DDIM 執行命令，阻止 `~/.local` 套件混入。 | 所有文件化的 CFG_DDIM 指令。 |
 | `scripts/e1_environment_inventory.py` | strict load checkpoint，記錄 Python、PyTorch、CUDA、GPU、Pillow、pytest、OpenCV、模型參數及 hash。 | 環境、套件或 checkpoint 改變後。 |
-| `scripts/create_dev_split.py` | 從 CheXpert validation CSV 建立 20 位病人互斥 split，逐圖驗證並雜湊。 | split 版本升級時；不要為改善結果任意重抽。 |
-| `scripts/e1_ddim_runner.py` | headless CFG-DDIM benchmark 與四張 inversion/reconstruction smoke；內含凍結的 legacy preprocessing。 | E1 重驗與 E2 runner 的基礎。 |
+| `scripts/create_dev_split.py` | 從 CheXpert validation CSV 建立 20 位病人互斥 split；stable hash 不含 local path。 | split 版本升級時；不要為改善結果任意重抽。 |
+| `scripts/create_security_split.py` | 重現學長每類 16,000 張抽樣、排除其病人，再建立固定隨機 formal split。 | E2.1 重建或擴大 formal N 時。 |
+| `scripts/e1_ddim_runner.py` | headless CFG-DDIM benchmark/smoke；直接呼叫 legacy progressive sampler，產出完整 run artifacts 與兩空間指標。 | E1 重驗與 E2 runner 的基礎。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 
@@ -39,13 +45,19 @@
 | `canonical_preflight.csv` | E0 唯一 canonical synthetic preflight 摘要；舊 31/32、98/100 不得混用。 |
 | `reports/evidence_reset.md` | 說明哪些舊 claim 被撤回或限制，以及現版 preflight 能支持什麼。 |
 | `reports/preprocessing_audit.md` | 學長實際 CheXpert 前處理的程式證據、與本 runner 的一致性及剩餘限制。 |
-| `artifacts/environment_baseline.txt` | 當次執行環境、GPU、checkpoint hash、strict-load 結果與 model config。 |
+| `artifacts/environment_baseline.txt` | 當次環境、套件實際來源、GPU、checkpoint hash、freeze hash 與 strict-load 結果。 |
+| `artifacts/environment_freeze.txt` | 由 CFG_DDIM 的 `pip freeze --all` 產生，供 baseline hash 與重建。 |
 | `model_inventory.csv` | 一列式 checkpoint/model inventory，適合程式與試算表讀取。 |
-| `splits/dev_v1.csv` | 20 張固定 dev images；含 sample/patient/label、來源路徑、每檔 hash 與 split hash。 |
+| `splits/dev_v1.csv` | 歷史 dev split；hash 含 local path，不再作新 run 預設。 |
+| `splits/dev_v1.1.csv` | 現行 20 張固定 dev images；成員同 v1，stable split hash 排除 local path。 |
+| `splits/security_v1.csv` | E2 formal 200 人 split，健康／積水各 100；病人與重建的前作訓練抽樣互斥。 |
+| `splits/security_v1_manifest.json` | formal split seed、抽樣規則、排除人數、hash 與 label counts。 |
 | `results/E1.2_benchmark.json` | batch 1/4/8 的 cycle 時間、估計 noise=500 時間與 peak VRAM；用來決定 batch/N。 |
 | `results/E1.4_ddim_smoke.csv` | 四張 x0→z→xrec 的 runtime、VRAM、finite、image/latent metrics。 |
 | `image/E1.4_ddim_smoke_contact_sheet.png` | 四列視覺檢查圖；每列是 original、reconstruction、absolute difference。 |
-| `artifacts/preflight/canonical_direction_candidates_d65536_n100.json` | canonical preflight 完整原始輸出，可由現版 attack script重建；目前保留本機。 |
+| `artifacts/preflight/canonical_direction_candidates_d4096_n100.json` | d=4,096、N=100 canonical preflight 原始輸出。 |
+| `artifacts/preflight/canonical_direction_candidates_d65536_n100.json` | d=65,536、N=100 canonical preflight 原始輸出。 |
+| `artifacts/preflight/canonical_sot_seed_sweep_d65536_n100.json` | seeds 0–99、R=1/2/4 bit-exact sweep 原始輸出。 |
 | `artifacts/preflight/direction_candidates_cpu*.json` | 舊抽樣數的 historical preflight，只供追溯，不是正式引用來源。 |
 
 ## 測試
@@ -53,12 +65,15 @@
 | 檔案 | 驗證內容 |
 |---|---|
 | `tests/unit/test_artifact_schema.py` | valid synthetic artifact 應通過；duplicate ID、NaN/Inf 或摘要不一致應失敗。 |
-| `tests/unit/test_chexpert_preprocessing.py` | runner 輸入必須逐值符合 legacy equalize/resize/JPEG/min-max chain。 |
+| `tests/unit/test_chexpert_preprocessing.py` | 直接載入學長原始前處理函式作 oracle，逐值守住 equalize/INTER_AREA/JPEG/min-max。 |
+| `tests/unit/test_split_hash.py` | 驗證更換 local path 前綴不改變 split hash。 |
+| `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
+| `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |
 
 執行：
 
 ```bash
-conda run -n CFG_DDIM python -m pytest -q tests/unit
+scripts/run_cfg_ddim.sh python -m pytest -q tests/unit
 ```
 
 ## 攻擊與設計驗證程式
@@ -70,7 +85,8 @@ conda run -n CFG_DDIM python -m pytest -q tests/unit
 | `attack/attack_poc.py` | 早期攻擊 proof-of-concept；主要供歷史追溯。 |
 | `attack/attack_tier1_real.py` | 對真實 latent 執行 Tier-1 linkage/attack。 |
 | `attack/attack_trackA_latent.py` | Track A latent-level invariants、KPA/CPA 相關實驗。 |
-| `attack/defense_design_check.py` | 檢查候選防禦的代數性質與 round-trip。 |
+| `attack/defense_design_check.py` | 歷史候選防禦檢查；docstring 表格非 canonical，須搭配 evidence reset 解讀。 |
+| `attack/validate_sot_bitexact_sweep.py` | 重建指定維度、seed 區間與 R 的 float32 bit-exact 計數。 |
 | `attack/validate_direction_candidates.py` | E0 CPU synthetic preflight：SOT-WHT、CDF torus pad、KCI toy chain。 |
 | `attack/validate_direction_candidates.py.orig` | 該腳本的歷史備份，不應當作目前執行入口。 |
 | `attack/verify_cpa.py` | 驗證固定線性 transform 在 chosen-plaintext queries 下的恢復。 |
