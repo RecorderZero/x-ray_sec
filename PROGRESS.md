@@ -327,3 +327,38 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 修正 AF-014 並建立可恢復的 E2 background runner。
 * 執行 E2.3 的 1–4 張 latent cache smoke，驗證 shape、finite 與抽樣重算 MaxAbs ≤ 1e-5。
 * smoke 通過後才對 `security_v1` N=200 排程 formal cache；不啟動 T2-BB。
+
+
+## 2026-10-08 · W1 · Track E · AUD-20261008-02 未關閉 finding 修復
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md`：E1.1、E1.2、E1.4、E1.5 與 E2.3 長任務前置條件。
+* 回應稽核：AUD-20261008-02 的 AF-006、AF-013、AF-014、AF-015、AF-016；`AUDIT.md` 保持唯讀，關閉狀態仍由稽核方裁定。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-006] 已修正（待複驗）｜commit `625f16d` 的 message 逐一列出 14 個實際變更路徑、任務依據、驗證與 `Refs`。
+* [AF-013] 已修正（待複驗）｜commit `625f16d`｜新增 `scripts/env_guard.py::enforce_active_prefix`，並接入 `e1_ddim_runner.py`、environment inventory、dev/security split builders；驗證移除 `PYTHONNOUSERSITE` 的直接 conda run 會在載模前拒絕 `~/.local` 套件。
+* [AF-014] 已修正（待複驗）｜commit `625f16d`｜`artifact_schema.py::validate_run` 要求非空 numeric fields、欄位存在、exit-code 檔一致及完整 packages；E1 runner 保存真實 stdout/stderr/exit code；新增 `managed_run.py` 的 atomic status、PID、heartbeat、task/GPU lock 與失敗狀態。
+* [AF-015] 已修正（待複驗）｜commit `625f16d`｜`run_smoke` 拆分 `runtime_seconds_primary_cycle`、`runtime_seconds_repeat`、`runtime_seconds_reinversion` 並於每段 GPU synchronize。
+* [AF-016] 已回覆（待複驗）｜commit `625f16d`｜新增 `reports/compute_budget.md`；依使用者裁決 formal N=200，擴大只能另建 `security_v2`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `scripts/run_cfg_ddim.sh python -m pytest -q tests/unit tests/integration/test_legacy_ddim_equivalence.py tests/test_legacy_repro.py` 得 `20 passed in 52.68s`。
+* [事實] `env -u PYTHONNOUSERSITE conda run ... e1_ddim_runner.py --help` 以 exit 1 中止，列出越界 NumPy、SciPy、Pillow 路徑；正式 wrapper 正常。
+* [事實] AF-014 intentional failure control 留下真實 traceback、`exit_code=1` 與 `status.state=failed`；正常 E1.2/E1.4 新 run 均由 validator 判定 `valid=True`。
+* [事實] E1.4 四張 primary cycle 平均 `23.149s`；repeat `29.606s`；re-inversion `28.869s`。後兩者受同卡其他程序競爭，不作效能結論。
+* [事實] N=200 每個完整 cycle 預估 `0.922 GPU-hours`；14-cycle core 約 `12.91 GPU-hours`，加 25% operational reserve 約 `16.14 GPU-hours`，再加兩 cycle contingency 上限約 `18.45 GPU-hours`。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：五筆 finding 的實作方驗收條件均完成；狀態為 `FIXED?`，等待稽核方重跑並在 `AUDIT.md` 關閉。
+* [ ] **未達標 (Failed)**：未通過測試或指標未符標準。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 本輪未失敗。正式 E2.3 仍先執行 1–4 張 managed cache smoke；只有 smoke 的 schema、重算與 lifecycle controls 全過才排程 N=200。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 無。N=200 與 `security_v2` 規則是使用者裁決；未修改 `security_v1` 成員或 hash。
+
+### 7. 下一步
+* 請稽核方複驗 AF-006、AF-013～AF-016 並決定是否 CLOSED。
+* 複驗通過後建立 E2.3 latent cache runner 與 1–4 張 smoke，不直接啟動 N=200。
