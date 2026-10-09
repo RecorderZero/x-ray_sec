@@ -14,7 +14,7 @@ cd /data2/paper && scripts/run_cfg_ddim.sh python -m scripts.e2_metric_semantics
 **摘要**
 
 1. `[事實]` 前作評估程式的「Cosine Sim」計算的是**輸出影像（像素空間）**的 cosine，不是 latent 的 cosine（§1）；論文的 0.9989 確實由該程式產生則是 `[假設]`（§1.3）。
-2. `[事實]` 在本專案 dev 的 20 張影像上，兩張**不同病人**的 X 光 cosine 中位數就有 0.884；同一張圖加雜訊到 PSNR 30.6 dB，cosine 為 0.9987（§2）。0.9989 這個數字等於「PSNR 約 30–32 dB」，沒有提供 PSNR 以外的資訊。
+2. `[事實]` 在本專案 dev 的 20 張影像上，兩張**不同病人**的 X 光 cosine 中位數就有 0.884；同一張圖加雜訊到 PSNR 30.6 dB，cosine 為 0.9987（§2）。`[推定]` 在加性、與影像近似正交的誤差下（§2.3），0.9989 這個數字只對應「PSNR 約 30–32 dB」，沒有提供 PSNR 以外的資訊；誤差不屬此類時不成立（§3.4 有 cosine = 1 但只有 10.8 dB 的反例）。
 3. `[事實]` cosine = 1 只代表兩個向量平行，不代表相等；本報告給出 cosine = 1 但 PSNR 只有 10.8 dB 的例子（§3）。
 4. 論文用語不得把 0.9989 寫成 latent 一致性、零失真或無損（§4）。
 
@@ -136,6 +136,7 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 ### 3.3 影像指標
 
 * 主指標：**PSNR**（峰值 1，−10·log10 MSE）、**SSIM**（`skimage` `data_range=1.0`）、**L∞**、**uint8 pixel equality**（`rint(clip(x,0,1)·255)` 相等的比例）、**float32 bit-exact rate**（`e2_anonymization_runner.py:101-120` `image_pair_metrics`；`e1_ddim_runner.py:313-335`）。MSE、RMSE、MAE 照常記錄；影像 cosine 只作診斷。
+* **不 clip**：PSNR、SSIM、L∞、MSE、MAE、cosine 與 float32 bit-exact 都直接用生成輸出計算，**沒有**先 clip 到 [0,1]；只有 uint8 pixel equality 先 `clip(·,0,1)` 再量化。生成輸出會略微超出 [0,1]（`clip_denoised` 只限制 x0 預測在 [−1,1]），所以與「先 clip 再算」的慣例相比，PSNR 會有小差異（稽核方在 E2.5 逐張比對中觀察到 ≤ 0.042 dB，AUD-20261010-03 §3）。本專案維持不 clip 的定義（使用者 2026-10-10 裁決：只註明、不修改），E2.5 與之後的結果都沿用此定義。
 * **一律並列兩種參照**：「對 x0」與「對 P 輸出」。只報其中一種不得下可逆性結論。
 * 主路徑採前作的 PNG 交接（`legacy_png_handoff`），float 交接只作上限對照。可逆性判定以影像端端到端指標為準（`reports/t2wb_protocol.md` §2）。
 * 影像 cosine 若出現，必須同列 PSNR 與 L∞。前作表格中的 MaxAbsError 0.676–0.928（`05_experiments.tex:306-317`）和 cosine 0.998 同時存在，正是 cosine 看不到局部大誤差的例子（見下）。
@@ -156,7 +157,7 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 * 第一列說明 cosine 對正的整體縮放完全無感（亮度、對比被改了一半，cosine 仍是 1）。
 * 最後一列說明另一個方向的盲點：99.78% 的像素逐位元相同，只有 0.22% 的像素錯得離譜（MaxAbs 0.71，和前作表中 0.71417 同量級），cosine 仍是 0.9988，和前作的 0.9989 同等級。`[事實]` 區塊大小是**事後選定**（讓平均 cosine 約 0.9989），僅作說明，不是前作誤差的模型。
 * `[事實]` 前作式的 float32 `np.dot` 在 y = 0.9·x 上算出 1.0000039（大於 1），在 y = 0.5·x 上算出 0.99999988（JSON `legacy_float32_cosine`）。cosine 的小數第 6 位以後在 float32 下沒有意義，「接近 1.0000」不能當作逐位元相等的證據。
-* `[事實]` 對照真實的 S1 量測（稽核方，§5）：影像 cosine 0.9985 對應 30.2 dB，和 §2.3 的雜訊基準（30 dB → 0.9985）一致，cosine 沒有給出 PSNR 以外的資訊。
+* `[事實]` 對照真實的 S1 量測（§5）：影像 cosine 0.9985 對應 30.2 dB，和 §2.3 的雜訊基準（30 dB → 0.9985）一致。`[推定]` 在這組實際的 DDIM／PNG 誤差上，cosine 也沒有給出 PSNR 以外的資訊。
 
 ### 3.5 各方向等權的 latent 距離無法預測影像可逆性
 
@@ -198,7 +199,7 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 
 ## 5. E2.5 dev 實測（本專案實作方量測）
 
-* 來源：`results/E2.5_roundtrip_per_sample.csv`、`paper_assets/tables/table_baseline_correctness.csv`；managed run `E2.5_20261009T191319376995Z_f990c7d7`（`scripts/e2_roundtrip_runner.py`，commit `4156be7`）；輸入為 E2.3 dev cache `E2.3_20261009T190608331743Z_6edaf199`。dev_v1.1 20 張；學長加密流程；生成 guidance −1；T=500；batch 1。數值為平均與 bootstrap 95% CI（B=10,000，seed 1911）。
+* 來源：`results/E2.5_roundtrip_per_sample.csv`、`paper_assets/tables/table_baseline_correctness.csv`；managed run `E2.5_20261009T191319376995Z_f990c7d7`（`scripts/e2_roundtrip_runner.py`，commit `4156be7`）；輸入為 E2.3 dev cache `E2.3_20261009T190608331743Z_6edaf199`。dev_v1.1 20 張；學長加密流程；生成 guidance −1；T=500；batch 1。數值為平均與 bootstrap 95% CI（B=10,000，seed 1911）。影像指標未先 clip 到 [0,1]（uint8 pixel equality 除外，見 §3.3）。
 * 標記：`[事實]`。科學數值只報告，不是通過條件。
 
 | 路徑／量測 | P（恆等金鑰） | S0 Rademacher | S1 Signed Perm |
@@ -209,14 +210,14 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 | T2-WB／M1 PNG 還原對 x0：PSNR | 37.71 [37.25, 38.07] dB | 31.47 [30.60, 32.30] dB | 31.30 [30.75, 31.89] dB |
 | 同上：SSIM／L∞／uint8 相等比例 | 0.975／0.232／15.3% | 0.927／0.558／8.7% | 0.898／0.416／8.0% |
 | M1 PNG 還原對 P 輸出：PSNR | 43.09 dB | 30.75 dB | 30.20 dB |
-| 同上：影像 cosine（前作舊定義的對應量） | 0.9999 | 0.9986 | 0.9985 |
+| 同上：影像 cosine（前作 Cosine_Sim 公式的類比量） | 0.9999 | 0.9986 | 0.9985 |
 | M1 float 還原對 x0：PSNR（上限對照） | 37.62 dB | 38.70 dB | 39.40 dB |
 | 解密後 latent 對 z（PNG）：cosine／RMSE | 0.299／1.123 | 0.990／0.135 | 0.990／0.137 |
 | 同上：低頻 32×32 cosine／\|z\| Pearson | 0.974／0.434 | 0.996／0.976 | 0.996／0.976 |
 | 解密後 latent 對 z（float）：cosine | 0.292 | 0.9999 | 0.9999 |
 
-* `[事實]` 前作的比較方式（還原圖對 base 輸出）在本專案得到 S1 30.20 dB／影像 cosine 0.9985，與論文 30.23 dB／0.998978 同等級；但同一批還原圖**對原圖 x0** 只有 31.3 dB、L∞ 0.42，uint8 相等比例 8%。
-* `[事實]` T1（保存精確 latent）時 S0/S1 的還原與 P 逐位元相同（42.23 dB）：損失全部來自 DDIM 反演＋生成本身。M1 的額外損失主要來自 PNG 儲存（S0/S1 float 交接 38.7–39.4 dB，PNG 交接 31.3–31.5 dB）。
+* `[事實]` 「還原圖對 P 輸出」只是前作比較方式的**類比**：前作實際比較的是 base 與加解密兩條路徑第 3 步的偽健康 `samples`（§1.2、§6 第 2 點），本專案沒有重現那一對影像。這個類比量在本專案得到 S1 30.20 dB／影像 cosine 0.9985，與論文 30.23 dB／0.998978 同等級；但同一批還原圖**對原圖 x0** 只有 31.3 dB、L∞ 0.42，uint8 相等比例 8%。
+* `[事實]` T1（保存精確 latent）時，S0/S1 的 transform 逐位元可逆（60/60），生成器的輸入與 P 完全相同，所以輸出也相同（42.23 dB）。這是依構造成立：runner 在 transform 逐位元可逆時直接沿用 P 的輸出（`scripts/e2_roundtrip_runner.py` 的 `t1_reused_p_output=1`，60/60 列），不是另外生成後比對的結果。T1 的損失因此全部來自 DDIM 反演＋生成本身。M1 的額外損失主要來自 PNG 儲存（S0/S1 float 交接 38.7–39.4 dB，PNG 交接 31.3–31.5 dB）。
 * `[事實]` 對正交的 S0/S1/P 而言，攻擊者視角（ẑ_ano 對 z_ano）與合法解密（ẑ 對 z）的全域 latent 指標相同（兩者差一個相同的正交變換），因此 S0/S1 的 T2-WB 攻擊者能取得與解密者同等保真度的 \|z\|（Pearson 0.976）。這是 A4 T2-WB magnitude 攻擊的前提，攻擊本身待 A4 實測。
 * 本節數字與稽核方以獨立程式量測的結果（下表）在四捨五入內一致。
 
@@ -234,12 +235,12 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 | 還原圖對 x0 PSNR：float 交接 | 37.6 dB | 38.7 dB | 39.4 dB |
 | 還原圖對 x0 PSNR／SSIM：PNG 交接 | 37.7 dB／0.975 | 31.5 dB／0.928 | 31.3 dB／0.898 |
 | 還原圖對 x0 L∞：PNG 交接 | 0.23 | 0.56 | 0.42 |
-| 還原圖對 P 輸出 PSNR：PNG 交接（前作的比較方式） | 43.1 dB | 30.8 dB | 30.2 dB |
-| 同上，影像 cosine（前作的 Cosine_Sim） | 0.9999 | 0.9986 | 0.9985 |
+| 還原圖對 P 輸出 PSNR：PNG 交接（前作比較方式的類比；前作實際比較的是偽健康輸出） | 43.1 dB | 30.8 dB | 30.2 dB |
+| 同上，影像 cosine（前作 Cosine_Sim 公式的類比量） | 0.9999 | 0.9986 | 0.9985 |
 
-* `[事實]`（稽核方）以學長的程式與參數重現前作可逆性數字：**S1 對 base 輸出 30.2 dB、影像 cosine 0.9985；前作論文為 30.23 dB、0.9989**。
+* `[事實]`（稽核方）以學長的程式與參數，在「還原圖對 P 輸出」這個類比量上得到 **S1 30.2 dB、影像 cosine 0.9985**，與前作論文的 30.23 dB、0.9989 同等級。稽核方已在 AUD-20261010-03 AF-023 第 2 點更正：這不是重現前作比較的同一對影像（前作比的是偽健康輸出）。
 * `[事實]`（稽核方）S0/S1 解密後 latent 與原始 latent 的真實 cosine 約 0.990（PNG）／0.9999（float）；對應影像只有約 31 dB，所以「零失真」不成立。影像劣化主要來自 PNG 儲存（float 交接 38.7–39.4 dB，PNG 交接 31.3–31.5 dB）。
-* 本專案 §2.3 的雜訊基準（30 dB → 0.9985、30.6 dB → 0.9987）與 S1 的 0.9985／30.2 dB 一致：`[事實]` 這個影像 cosine 的大小可由 PSNR 預測。
+* `[事實]` 本專案 §2.3 的雜訊基準（30 dB → 0.9985、30.6 dB → 0.9987）與 S1 的 0.9985／30.2 dB 一致。`[推定]` 在這類誤差下，這個影像 cosine 的大小可由 PSNR 預測。
 
 ---
 
