@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Reproducible E1 CFG-DDIM benchmark and four-image smoke test."""
+"""Reproducible E1 CFG-DDIM benchmark and four-image smoke test.
+
+E1 runs the predecessor's inference / lesion-localization flow
+(``ddim_sample_loop_known_progressive``: t=0 q_sample noise, inversion
+t=1..T-1).  It is not the encryption pipeline used for P/S0/S1 in E2
+(see ``scripts/e2_anonymization_runner.py``; AF-017).
+"""
 
 from __future__ import annotations
 
@@ -30,8 +36,10 @@ from skimage.metrics import structural_similarity
 
 try:
     from scripts.env_guard import enforce_active_prefix
+    from scripts.run_artifacts import finalize_run, open_run
 except ModuleNotFoundError:
     from env_guard import enforce_active_prefix
+    from run_artifacts import finalize_run, open_run
 
 enforce_active_prefix({
     "numpy": np, "scipy": scipy, "scikit-image": skimage,
@@ -56,6 +64,13 @@ MODEL_CONFIG = {
     "rescale_timesteps": False,
     "timestep_respacing": "ddim1000",
 }
+
+# AF-017: E1 uses the predecessor's inference / lesion-localization flow
+# (cfg_image_sample.py), not the encryption pipeline used for P/S0/S1 in E2.
+E1_PIPELINE = "legacy_inference:ddim_sample_loop_known_progressive"
+# AF-019: an independent t=0 q_sample noise for the "unknown noise" re-inversion;
+# neither an attacker nor the legitimate decryptor knows the original draw.
+UNKNOWN_NOISE_SEED_OFFSET = 1_000_000
 
 
 class NullVisdom:
@@ -187,87 +202,29 @@ def write_run_artifacts(
     numeric_fields: list[str],
     started_at: str,
 ) -> Path:
-    """Write and immediately validate a complete WORKFLOW 3.2 run directory."""
-    from artifact_schema import validate_run
-
+    """Write a complete WORKFLOW 3.2 run directory (standalone or managed)."""
     config = {
         key: str(value) if isinstance(value, Path) else value
         for key, value in vars(args).items() if not key.startswith("_")
     }
     config["model_config"] = MODEL_CONFIG
-    config_bytes = (json.dumps(config, sort_keys=True, separators=(",", ":")) + "\n").encode()
-    config_hash = hashlib.sha256(config_bytes).hexdigest()
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    run_id = f"{task_id}_{timestamp}_{config_hash[:8]}"
-    run_dir = args.artifacts_root / task_id / run_id
-    run_dir.mkdir(parents=True, exist_ok=False)
-    (run_dir / "config.json").write_bytes(config_bytes)
-    with (run_dir / "per_sample.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(per_sample_rows[0]), lineterminator="\n")
-        writer.writeheader()
-        writer.writerows(per_sample_rows)
-    numeric_means = {
-        field: float(np.mean([float(row[field]) for row in per_sample_rows]))
-        for field in numeric_fields
-    }
-    summary = {
-        "schema_version": 2,
-        "task_id": task_id,
-        "run_id": run_id,
-        "sample_count": len(per_sample_rows),
-        "numeric_means": numeric_means,
-    }
-    (run_dir / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n", encoding="utf-8"
-    )
-    finished_at = datetime.now(timezone.utc).isoformat()
+    context = open_run(task_id, config, args.artifacts_root, started_at=started_at)
     manifest = {
-        "schema_version": 2,
-        "task_id": task_id,
-        "run_id": run_id,
-        "config_hash": config_hash,
-        "git_commit": git_value("rev-parse", "HEAD"),
-        "git_dirty": bool(git_value("status", "--porcelain=v1")),
         "dataset_split_hash": split_rows[0]["split_sha256"],
         "checkpoint_hash": sha256_file(args.checkpoint),
-        "expected_samples": len(per_sample_rows),
-        "sample_ids": [str(row["sample_id"]) for row in per_sample_rows],
-        "command": " ".join(sys.argv),
-        "started_at": started_at,
-        "finished_at": finished_at,
-        "exit_code": 0,
-        "script_sha256": sha256_file(Path(__file__)),
-        "python": sys.version.replace("\n", " "),
-        "pytorch": torch.__version__,
-        "cuda": torch.version.cuda or "none",
-        "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none",
-        "dtype": "float32",
         "seed_list": [int(row.get("seed", args.seed)) for row in per_sample_rows],
         "steps": args.noise_level,
-        "packages": {
-            "numpy": np.__version__, "opencv": cv2.__version__,
-            "pillow": PIL.__version__, "scipy": scipy.__version__,
-            "scikit-image": skimage.__version__, "torch": torch.__version__,
-        },
-        "scheme": "legacy_ddim_P",
+        "scheme": "P",
+        "pipeline": E1_PIPELINE,
+        "guidance_scale": args.guidance_scale,
         "rounds": 0,
         "nonce_mode": "none",
         "container_version": "none",
-        "numeric_fields": numeric_fields,
-        "failure_reason": "",
-        "skip_reason": "",
     }
-    (run_dir / "manifest.json").write_text(
-        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    return finalize_run(
+        context, Path(__file__), per_sample_rows, numeric_fields, manifest,
+        args._stdout_capture.getvalue(), args._stderr_capture.getvalue(),
     )
-    (run_dir / "stdout.log").write_text(args._stdout_capture.getvalue(), encoding="utf-8")
-    (run_dir / "stderr.log").write_text(args._stderr_capture.getvalue(), encoding="utf-8")
-    (run_dir / "exit_code").write_text("0\n", encoding="utf-8")
-    validation = validate_run(run_dir)
-    if not validation["valid"]:
-        raise RuntimeError(f"invalid run artifacts: {validation['errors']}")
-    print(f"validated run artifacts: {run_dir}")
-    return run_dir
 
 
 def run_benchmark(args, rows, diffusion, model_fn, device) -> None:
@@ -468,7 +425,16 @@ def run_smoke(args, rows, diffusion, model_fn, device) -> None:
         if device.type == "cuda":
             torch.cuda.synchronize(device)
         reinversion_seconds = time.perf_counter() - start
-        tensors = (latent, reconstruction, latent_repeat, reinverted_latent)
+
+        start = time.perf_counter()
+        reinverted_unknown_latent, _ = invert_reconstruct(
+            diffusion, model_fn, reconstruction, args.noise_level, args.guidance_scale,
+            seed + UNKNOWN_NOISE_SEED_OFFSET,
+        )
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        reinversion_unknown_seconds = time.perf_counter() - start
+        tensors = (latent, reconstruction, latent_repeat, reinverted_latent, reinverted_unknown_latent)
         if not all(torch.isfinite(value).all() for value in tensors):
             raise RuntimeError(f"NaN/Inf detected for {row['sample_id']}")
         record = {
@@ -483,13 +449,18 @@ def run_smoke(args, rows, diffusion, model_fn, device) -> None:
             "guidance_scale": args.guidance_scale,
             "runtime_seconds_primary_cycle": primary_seconds,
             "runtime_seconds_repeat": repeat_seconds,
-            "runtime_seconds_reinversion": reinversion_seconds,
+            "runtime_seconds_reinversion_shared_noise": reinversion_seconds,
+            "runtime_seconds_reinversion_unknown_noise": reinversion_unknown_seconds,
             "peak_vram_bytes": torch.cuda.max_memory_allocated(device) if device.type == "cuda" else 0,
             "finite": True,
         }
         record.update(metrics(x0, reconstruction, latent))
         record.update(pair_metrics("latent_repeat", latent, latent_repeat))
-        record.update(pair_metrics("latent_reinversion", latent, reinverted_latent))
+        # AF-019: sharing the original t=0 noise is an optimistic upper bound.
+        record.update(pair_metrics("latent_reinversion_shared_noise", latent, reinverted_latent))
+        record.update(pair_metrics(
+            "latent_reinversion_unknown_noise", latent, reinverted_unknown_latent
+        ))
         if not all(math.isfinite(float(value)) for key, value in record.items() if key.startswith(("image_", "latent_"))):
             raise RuntimeError(f"non-finite metric for {row['sample_id']}")
         output_rows.append(record)
@@ -497,7 +468,8 @@ def run_smoke(args, rows, diffusion, model_fn, device) -> None:
         contact_items.append((row["sample_id"], original_array, rec_array))
         print(
             f"completed {row['sample_id']}: primary={primary_seconds:.3f}s "
-            f"repeat={repeat_seconds:.3f}s reinversion={reinversion_seconds:.3f}s"
+            f"repeat={repeat_seconds:.3f}s reinversion={reinversion_seconds:.3f}s "
+            f"reinversion_unknown={reinversion_unknown_seconds:.3f}s"
         )
     args.smoke_output.parent.mkdir(parents=True, exist_ok=True)
     with args.smoke_output.open("w", newline="", encoding="utf-8") as handle:
