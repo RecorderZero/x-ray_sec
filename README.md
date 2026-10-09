@@ -41,6 +41,7 @@
 | `scripts/e2_legacy_wrapper.py` | 直接呼叫學長 anonymization sampler 的 anonymize／deanonymize；`P` 為恆等金鑰（全 +1 Rademacher），與 S0/S1 只差在金鑰（AF-017）；`legacy_invert`／`apply_legacy_key`／`legacy_generate` 讓 cached x_T 可重用，並以 test 證明與完整 legacy sampler bit-exact（生成固定 guidance=-1，與學長原始碼字面一致）；CLI 檢查 wrapper/direct、guidance 0 等價、deanonymize 與 transform round-trip 皆 bit-exact。 | E2.2 重現與後續 S0/S1 pipeline 共用。 |
 | `scripts/run_artifacts.py` | 共用 run 目錄寫入：standalone 時自建目錄、寫 log/exit code 並立即驗證；在 `managed_run.py` 下改寫入 `EXPERIMENT_RUN_DIR`，由 managed_run 擁有 log 並在結束後驗證。 | E1/E2 runner 寫出 manifest、per-sample、summary。 |
 | `scripts/e2_anonymization_runner.py` | 學長**加密流程**（`ddim_sample_loop_anonymization`）上的 P/S0/S1 實驗：`benchmark` 量 inversion（null=True）與生成（guidance −1／0）每步成本；`p-smoke` 以恆等金鑰 P 跑 4 張 dev 圖的輸出、重算、re-inversion 與 M1（float／學長 PNG 交接）端到端還原（AF-017、AF-019）；`cache` 為 E2.3 latent cache（batch 1，`latents.npy` 存於 run 目錄，seed 1911 抽樣以 batch 1 重算，MaxAbs ≤ 1e-5）。 | E2.3 起 P/S0/S1 共用；長任務經 `managed_run.py --validate-artifacts`。 |
+| `scripts/e2_metric_semantics.py` | E2.4（AF-022）：CPU、seed 1911，量測像素空間 cosine 基準（不同病人、加雜訊至指定 PSNR、去均值、cosine 對 PSNR 表）與「cosine=1 不等於相等」反例，並與稽核方數字比對。 | 指標語意報告的數字來源。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 
@@ -51,6 +52,7 @@
 | `canonical_preflight.csv` | E0 唯一 canonical synthetic preflight 摘要；舊 31/32、98/100 不得混用。 |
 | `reports/evidence_reset.md` | 說明哪些舊 claim 被撤回或限制，以及現版 preflight 能支持什麼。 |
 | `reports/preprocessing_audit.md` | 學長實際 CheXpert 前處理的程式證據、與本 runner 的一致性及剩餘限制。 |
+| `reports/metric_semantics.md` | E2.4（AF-022）：前作「Cosine Sim 0.9989」在論文（latent）與程式（輸出影像、base 對解密輸出）的差異與行號；像素 cosine 基準；本專案 latent／影像指標定義與「對 x0／對 P 輸出」並列；論文用語規範。 |
 | `reports/t2wb_protocol.md` | AF-019：可逆性以影像端端到端為主指標、latent 只作診斷；加密流程 P smoke 事實；T2-WB 攻擊的 P 正控制／負控制定義，以及 `Inconclusive` 判定門檻提案（待使用者裁決）。 |
 | `reports/compute_budget.md` | E2–F9 各 scheme/attack 在加密流程上的 forward／generation 半週期矩陣（實測 batch 1/4/8 成本、guidance −1）與 N=200/500/1,000 GPU 時數；記錄 N=200 裁決。 |
 | `artifacts/environment_baseline.txt` | 當次環境、套件實際來源、GPU、checkpoint hash、freeze hash 與 strict-load 結果。 |
@@ -65,6 +67,7 @@
 | `results/AF021_anonymization_benchmark.json` | 加密流程 batch 1/4/8 的 inversion／生成（guidance −1 與 0）每步每張成本與半週期估計；`compute_budget.md` 的依據。 |
 | `results/AF017_P_anonymization_smoke.csv` | 恆等金鑰 P 在加密流程上的 4 張 smoke：P 輸出、inversion 重算、re-inversion（float／PNG）latent 指標與低／高頻、\|z\| 診斷，以及 M1 端到端影像指標。 |
 | `image/AF017_P_anonymization_smoke.png` | 上述 4 張的 original、P 輸出、M1 float、M1 PNG 與固定色階 0–0.1 差異圖。 |
+| `results/E2.4_metric_semantics.json` | E2.4 像素 cosine 基準與反例的數值（dev_v1.1 20 張、190 對），含與稽核方的 `cross_check`。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `image/E1.4_ddim_smoke_contact_sheet.png` | 四列視覺檢查圖；每列是 original、reconstruction、absolute difference。 |
 | `artifacts/preflight/canonical_direction_candidates_d4096_n100.json` | d=4,096、N=100 canonical preflight 原始輸出。 |

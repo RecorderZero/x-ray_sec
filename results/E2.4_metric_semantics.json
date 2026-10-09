@@ -1,0 +1,465 @@
+{
+  "schema_version": 1,
+  "task_id": "E2.4",
+  "created_at": "2026-10-09T18:38:28.708788+00:00",
+  "command": "scripts/run_cfg_ddim.sh python -m scripts.e2_metric_semantics",
+  "script_sha256": "60afa8da189fa3fde06171f55a5780294a7be7659f63da2ff19a208ef85251c1",
+  "git_commit": "a3a9a60e20060ae5d6e695ad9adbb7c12cf73c7d",
+  "git_dirty_tracked_files": false,
+  "split": "splits/dev_v1.1.csv",
+  "split_sha256": "7b3e77a86026081bab8c71897536944d7a8795ab795661a56c05caf92a738aa4",
+  "sample_ids": [
+    "dev_v1.1_000",
+    "dev_v1.1_001",
+    "dev_v1.1_002",
+    "dev_v1.1_003",
+    "dev_v1.1_004",
+    "dev_v1.1_005",
+    "dev_v1.1_006",
+    "dev_v1.1_007",
+    "dev_v1.1_008",
+    "dev_v1.1_009",
+    "dev_v1.1_010",
+    "dev_v1.1_011",
+    "dev_v1.1_012",
+    "dev_v1.1_013",
+    "dev_v1.1_014",
+    "dev_v1.1_015",
+    "dev_v1.1_016",
+    "dev_v1.1_017",
+    "dev_v1.1_018",
+    "dev_v1.1_019"
+  ],
+  "n_images": 20,
+  "n_distinct_patients": 20,
+  "seed": 1911,
+  "numpy_version": "1.23.0",
+  "python_version": "3.10.19",
+  "pixel_scale": {
+    "description": "preprocess() output: float32 in [0,1] (per-image min-max), 256x256 flattened to 65536; metrics in float64; no mean subtraction unless stated; peak=1 for PSNR",
+    "legacy_equivalent": "evaluation_metrics.py:175-190 flattens raw float32 samples[i] (1x256x256), no mean subtraction, mean over samples",
+    "min": 0.0,
+    "max": 1.0,
+    "mean_of_image_means": 0.5013208078356929,
+    "mean_of_image_mean_squares": 0.33361355938911025
+  },
+  "a_different_patient_pixel_cosine": {
+    "n": 190,
+    "min": 0.7392302389648915,
+    "p05": 0.8075518234163495,
+    "median": 0.884415702760365,
+    "mean": 0.8803470849507066,
+    "p95": 0.9383144629804158,
+    "max": 0.9674684433055758,
+    "n_pairs": 190,
+    "pair_psnr_db": {
+      "n": 190,
+      "min": 7.601672961071745,
+      "p05": 8.916733648259733,
+      "median": 11.126732346685115,
+      "mean": 11.232424350375387,
+      "p95": 13.85796063825441,
+      "max": 16.63364272396722
+    },
+    "legacy_float32_vs_float64_max_abs_diff": 4.753496553711045e-06
+  },
+  "b_same_image_plus_gaussian_noise": {
+    "primary_exact_scaled_unclipped": {
+      "30.6": {
+        "target_psnr_db": 30.6,
+        "clipped_to_unit_range": false,
+        "achieved_psnr_db_mean": 30.600000000000005,
+        "achieved_psnr_db_min": 30.6,
+        "achieved_psnr_db_max": 30.600000000000005,
+        "cosine_mean": 0.9986972044204684,
+        "cosine_min": 0.9986914515982535,
+        "cosine_max": 0.998701627336091,
+        "cosine_image0": 0.9986914515982535,
+        "psnr_db_image0": 30.6,
+        "cosine_per_image": [
+          0.9986914515982535,
+          0.9986974806927195,
+          0.9986925746287565,
+          0.998701627336091,
+          0.9986984422990002,
+          0.9986964930603535,
+          0.9987001110849244,
+          0.9986980958801659,
+          0.9986950539996964,
+          0.998699450219634,
+          0.9986971181647721,
+          0.998698002376954,
+          0.9986971292015097,
+          0.9986996318847943,
+          0.9986994679762465,
+          0.9986965597423988,
+          0.9986966804033222,
+          0.9986945220415598,
+          0.9986964878721352,
+          0.9986977079460787
+        ],
+        "orthogonal_noise_theory_cosine_mean": 0.9986971979877108,
+        "orthogonal_noise_theory_max_abs_dev": 9.934186530058398e-07
+      },
+      "26.2": {
+        "target_psnr_db": 26.2,
+        "clipped_to_unit_range": false,
+        "achieved_psnr_db_mean": 26.2,
+        "achieved_psnr_db_min": 26.200000000000003,
+        "achieved_psnr_db_max": 26.200000000000003,
+        "cosine_mean": 0.996424324976952,
+        "cosine_min": 0.9964088456611692,
+        "cosine_max": 0.9964368727391413,
+        "cosine_image0": 0.9964088456611692,
+        "psnr_db_image0": 26.200000000000003,
+        "cosine_per_image": [
+          0.9964088456611692,
+          0.9964291388396495,
+          0.9964152115827374,
+          0.9964336129116406,
+          0.9964302768591146,
+          0.9964198272312661,
+          0.9964368727391413,
+          0.9964266069750932,
+          0.996416726539653,
+          0.996430880986276,
+          0.9964220729013972,
+          0.9964283147663174,
+          0.9964248413581634,
+          0.9964278290658645,
+          0.9964303249692299,
+          0.9964190633039164,
+          0.9964190757385794,
+          0.9964155225773329,
+          0.996422514260186,
+          0.9964289402723141
+        ],
+        "orthogonal_noise_theory_cosine_mean": 0.9964240342068569,
+        "orthogonal_noise_theory_max_abs_dev": 5.57813573642818e-06
+      }
+    },
+    "variant_clipped_to_unit_range": {
+      "30.6": {
+        "target_psnr_db": 30.6,
+        "clipped_to_unit_range": true,
+        "achieved_psnr_db_mean": 30.600000000000005,
+        "achieved_psnr_db_min": 30.6,
+        "achieved_psnr_db_max": 30.600000000000005,
+        "cosine_mean": 0.9986959505642286,
+        "cosine_min": 0.9986902604565382,
+        "cosine_max": 0.9987005310154032,
+        "cosine_image0": 0.9986902604565382,
+        "psnr_db_image0": 30.6,
+        "cosine_per_image": [
+          0.9986902604565382,
+          0.9986964056700494,
+          0.9986916502240851,
+          0.9987005310154032,
+          0.9986972252081788,
+          0.9986947961911271,
+          0.9986988791221203,
+          0.9986969705342009,
+          0.9986939809720964,
+          0.9986984031393622,
+          0.9986955894998166,
+          0.9986968045209655,
+          0.998695749368744,
+          0.9986979262259057,
+          0.9986986928992708,
+          0.9986949437893801,
+          0.9986950590256436,
+          0.9986932747366772,
+          0.9986953834474669,
+          0.9986964852375411
+        ],
+        "orthogonal_noise_theory_cosine_mean": 0.9986971979877108,
+        "orthogonal_noise_theory_max_abs_dev": 1.8497308237330756e-06
+      },
+      "26.2": {
+        "target_psnr_db": 26.2,
+        "clipped_to_unit_range": true,
+        "achieved_psnr_db_mean": 26.2,
+        "achieved_psnr_db_min": 26.200000000000003,
+        "achieved_psnr_db_max": 26.200000000000003,
+        "cosine_mean": 0.9964141371448726,
+        "cosine_min": 0.9963983419799592,
+        "cosine_max": 0.9964251106991823,
+        "cosine_image0": 0.9963983419799592,
+        "psnr_db_image0": 26.200000000000003,
+        "cosine_per_image": [
+          0.9963983419799592,
+          0.9964186421286205,
+          0.9964056617590509,
+          0.9964251106991823,
+          0.9964199491823615,
+          0.9964080121304929,
+          0.9964250140125842,
+          0.9964171338256267,
+          0.9964077098531472,
+          0.9964217331508236,
+          0.9964122673589759,
+          0.996417410969433,
+          0.9964143004411172,
+          0.9964163566682566,
+          0.9964218906296833,
+          0.9964083932911274,
+          0.9964090729966112,
+          0.9964055190741887,
+          0.9964123550625721,
+          0.9964178676836412
+        ],
+        "orthogonal_noise_theory_cosine_mean": 0.9964240342068569,
+        "orthogonal_noise_theory_max_abs_dev": 1.2767080182274348e-05
+      }
+    },
+    "noise_model": "i.i.d. N(0,1) per pixel, rng seeds [1911, round(10*PSNR), image_index]"
+  },
+  "c_different_patient_mean_removed_cosine": {
+    "n": 190,
+    "min": -0.06352777544781628,
+    "p05": 0.21792905131375925,
+    "median": 0.5323349881215402,
+    "mean": 0.5148088862964473,
+    "p95": 0.7507920327498065,
+    "max": 0.8685291589941734,
+    "n_pairs": 190
+  },
+  "d_cosine_one_without_equality": {
+    "identity_control": {
+      "cosine_mean": 1.0,
+      "max_abs_mean": 0.0,
+      "uint8_pixel_equality_rate_mean": 1.0,
+      "float32_bit_exact_rate_mean": 1.0,
+      "psnr_db_mean": null,
+      "psnr_db_min": null,
+      "psnr_db_max": null,
+      "cosine_min": 0.9999999999999999,
+      "cosine_max": 1.0000000000000002,
+      "max_abs_max": 0.0,
+      "any_pair_equal": true
+    },
+    "rescaling_y_equals_a_times_x": {
+      "0.5": {
+        "scale_a": 0.5,
+        "image0": {
+          "cosine": 1.0,
+          "one_minus_cosine": 0.0,
+          "legacy_float32_cosine": 0.9999998807907104,
+          "psnr_db": 10.806649579942867,
+          "max_abs": 0.5,
+          "mse": 0.08304912134595886,
+          "uint8_pixel_equality_rate": 0.0047607421875,
+          "float32_bit_exact_rate": 0.0013885498046875,
+          "arrays_equal": false
+        },
+        "over_20_images": {
+          "cosine_mean": 1.0,
+          "max_abs_mean": 0.5,
+          "uint8_pixel_equality_rate_mean": 0.00345001220703125,
+          "float32_bit_exact_rate_mean": 0.000739288330078125,
+          "psnr_db_mean": 10.788170264513024,
+          "psnr_db_min": 10.772902190098197,
+          "psnr_db_max": 10.806649579942867,
+          "cosine_min": 0.9999999999999999,
+          "cosine_max": 1.0000000000000002,
+          "max_abs_max": 0.5,
+          "any_pair_equal": false
+        }
+      },
+      "0.9": {
+        "scale_a": 0.9,
+        "image0": {
+          "cosine": 1.0000000000000004,
+          "one_minus_cosine": -4.440892098500626e-16,
+          "legacy_float32_cosine": 1.0000039339065552,
+          "psnr_db": 24.786049666663246,
+          "max_abs": 0.09999999999999998,
+          "mse": 0.003321964853838353,
+          "uint8_pixel_equality_rate": 0.02447509765625,
+          "float32_bit_exact_rate": 0.0013885498046875,
+          "arrays_equal": false
+        },
+        "over_20_images": {
+          "cosine_mean": 0.9999999999999989,
+          "max_abs_mean": 0.1,
+          "uint8_pixel_equality_rate_mean": 0.018384552001953124,
+          "float32_bit_exact_rate_mean": 0.000739288330078125,
+          "psnr_db_mean": 24.767570351233406,
+          "psnr_db_min": 24.752302276818575,
+          "psnr_db_max": 24.786049666663246,
+          "cosine_min": 0.9999999999999905,
+          "cosine_max": 1.0000000000000113,
+          "max_abs_max": 0.09999999999999998,
+          "any_pair_equal": false
+        }
+      }
+    },
+    "localized_corruption_negative_patch": {
+      "description": "12x12 patch at rows/cols 120.. replaced by 1 - x (0.2197% of the pixels)",
+      "selection_note": "patch side chosen post hoc so that the mean cosine is ~0.9989 (the predecessor's reported value); an illustration of cosine ~ 0.999 with MaxAbs ~ 0.7, not a model of the predecessor's actual error",
+      "image0": {
+        "cosine": 0.9984714131500025,
+        "one_minus_cosine": 0.0015285868499974598,
+        "legacy_float32_cosine": 0.9984712600708008,
+        "psnr_db": 29.935444337513477,
+        "max_abs": 0.7490196228027344,
+        "mse": 0.0010149755165842845,
+        "uint8_pixel_equality_rate": 0.997802734375,
+        "float32_bit_exact_rate": 0.997802734375,
+        "arrays_equal": false
+      },
+      "over_20_images": {
+        "cosine_mean": 0.9987889538035521,
+        "max_abs_mean": 0.7074509978294372,
+        "uint8_pixel_equality_rate_mean": 0.997802734375,
+        "float32_bit_exact_rate_mean": 0.997802734375,
+        "psnr_db_mean": 32.00906914049861,
+        "psnr_db_min": 27.082426257475774,
+        "psnr_db_max": 39.62421086515633,
+        "cosine_min": 0.9970565224041597,
+        "cosine_max": 0.9998369054561526,
+        "max_abs_max": 0.9921568632125854,
+        "any_pair_equal": false
+      }
+    }
+  },
+  "e_cosine_vs_psnr_table_unclipped_noise": {
+    "rows": [
+      {
+        "target_psnr_db": 10.0,
+        "achieved_psnr_db_mean": 10.0,
+        "cosine_mean": 0.8771097165400639,
+        "cosine_min": 0.8764108338761424,
+        "cosine_max": 0.8778625615429679,
+        "orthogonal_noise_theory_cosine_mean": 0.8771427551736964
+      },
+      {
+        "target_psnr_db": 15.0,
+        "achieved_psnr_db_mean": 15.0,
+        "cosine_mean": 0.9557572685648237,
+        "cosine_min": 0.9553870875377845,
+        "cosine_max": 0.9560443669462967,
+        "orthogonal_noise_theory_cosine_mean": 0.9557290771380662
+      },
+      {
+        "target_psnr_db": 20.0,
+        "achieved_psnr_db_mean": 20.0,
+        "cosine_mean": 0.9853398211668027,
+        "cosine_min": 0.9852408799983673,
+        "cosine_max": 0.9853986967160168,
+        "orthogonal_noise_theory_cosine_mean": 0.9853412844374514
+      },
+      {
+        "target_psnr_db": 25.0,
+        "achieved_psnr_db_mean": 25.0,
+        "cosine_mean": 0.9952944835797481,
+        "cosine_min": 0.9952753260347708,
+        "cosine_max": 0.9953067890095376,
+        "orthogonal_noise_theory_cosine_mean": 0.9952939816371218
+      },
+      {
+        "target_psnr_db": 30.0,
+        "achieved_psnr_db_mean": 30.0,
+        "cosine_mean": 0.9985048026485016,
+        "cosine_min": 0.9984978169966152,
+        "cosine_max": 0.9985092824798752,
+        "orthogonal_noise_theory_cosine_mean": 0.9985046158980074
+      },
+      {
+        "target_psnr_db": 35.0,
+        "achieved_psnr_db_mean": 35.0,
+        "cosine_mean": 0.9995264261296821,
+        "cosine_min": 0.9995244055087852,
+        "cosine_max": 0.9995282849395799,
+        "orthogonal_noise_theory_cosine_mean": 0.9995263918641106
+      },
+      {
+        "target_psnr_db": 40.0,
+        "achieved_psnr_db_mean": 40.0,
+        "cosine_mean": 0.99985015575365,
+        "cosine_min": 0.9998494865888244,
+        "cosine_max": 0.999850667227681,
+        "orthogonal_noise_theory_cosine_mean": 0.9998501591778408
+      }
+    ],
+    "different_patient_median_cosine": 0.884415702760365,
+    "note": "rows with cosine above the different-patient median carry no PSNR information in the cosine itself"
+  },
+  "cross_check": {
+    "auditor_json": "audit/out/e2_legacy_cosine_semantics.json",
+    "auditor_json_sha256": "0ac04a7602c6e725b22192f4c2c3e5e05c189f3c0a550bcf83d96ee1db4b330b",
+    "protocol_note": "(a) and (c) use the same 190 pairs and should agree to float precision. (b) differs by protocol: the auditor used image 0 only, Gaussian sigma 0.03/0.05 with clipping to [0,1] (achieved 30.58/26.22 dB); this script reports the mean over 20 images with noise scaled to the PSNR target (exact, unclipped = primary; clipped variant and the image-0 clipped value are given for comparison).",
+    "a_different_patients_pixel_cosine": {
+      "median": {
+        "this_script": 0.884415702760365,
+        "auditor": 0.884415702760365,
+        "abs_diff": 0.0
+      },
+      "min": {
+        "this_script": 0.7392302389648915,
+        "auditor": 0.7392302389648915,
+        "abs_diff": 0.0
+      },
+      "max": {
+        "this_script": 0.9674684433055758,
+        "auditor": 0.9674684433055758,
+        "abs_diff": 0.0
+      },
+      "n_pairs": {
+        "this_script": 190,
+        "auditor": 190
+      }
+    },
+    "c_mean_removed_cosine_median": {
+      "this_script": 0.5323349881215402,
+      "auditor": 0.5323349881215402,
+      "abs_diff": 0.0
+    },
+    "b_same_image_plus_noise": [
+      {
+        "auditor_sigma": 0.03,
+        "auditor_psnr_db_image0": 30.57895580182422,
+        "auditor_cosine_image0": 0.9986845257992137,
+        "psnr_db_diff_vs_this_script_clipped_mean20": 0.021044198175786732,
+        "cosine_vs_this_script_unclipped_mean20": {
+          "this_script": 0.9986972044204684,
+          "auditor": 0.9986845257992137,
+          "abs_diff": 1.2678621254647027e-05
+        },
+        "cosine_vs_this_script_clipped_mean20": {
+          "this_script": 0.9986959505642286,
+          "auditor": 0.9986845257992137,
+          "abs_diff": 1.1424765014811378e-05
+        },
+        "cosine_vs_this_script_clipped_image0": {
+          "this_script": 0.9986902604565382,
+          "auditor": 0.9986845257992137,
+          "abs_diff": 5.734657324452108e-06
+        },
+        "this_script_clipped_image0_psnr_db": 30.6
+      },
+      {
+        "auditor_sigma": 0.05,
+        "auditor_psnr_db_image0": 26.220544231733353,
+        "auditor_cosine_image0": 0.9964139763719579,
+        "psnr_db_diff_vs_this_script_clipped_mean20": 0.020544231733353513,
+        "cosine_vs_this_script_unclipped_mean20": {
+          "this_script": 0.996424324976952,
+          "auditor": 0.9964139763719579,
+          "abs_diff": 1.0348604994048216e-05
+        },
+        "cosine_vs_this_script_clipped_mean20": {
+          "this_script": 0.9964141371448726,
+          "auditor": 0.9964139763719579,
+          "abs_diff": 1.607729146479997e-07
+        },
+        "cosine_vs_this_script_clipped_image0": {
+          "this_script": 0.9963983419799592,
+          "auditor": 0.9964139763719579,
+          "abs_diff": 1.5634391998697872e-05
+        },
+        "this_script_clipped_image0_psnr_db": 26.200000000000003
+      }
+    ]
+  }
+}
