@@ -196,11 +196,31 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 
 ---
 
-## 5. E2.5 dev 實測（待 E2.5 完成後填入）
+## 5. E2.5 dev 實測（本專案實作方量測）
 
-主實作者會在此補上 P／S0／S1 的 T1 與 T2-WB 數字（latent 與影像並列、「對 x0」與「對 P 輸出」分開）。
+* 來源：`results/E2.5_roundtrip_per_sample.csv`、`paper_assets/tables/table_baseline_correctness.csv`；managed run `E2.5_20261009T191319376995Z_f990c7d7`（`scripts/e2_roundtrip_runner.py`，commit `4156be7`）；輸入為 E2.3 dev cache `E2.3_20261009T190608331743Z_6edaf199`。dev_v1.1 20 張；學長加密流程；生成 guidance −1；T=500；batch 1。數值為平均與 bootstrap 95% CI（B=10,000，seed 1911）。
+* 標記：`[事實]`。科學數值只報告，不是通過條件。
 
-### 稽核方量測：前作加密流程的真實 latent cosine 與影像 cosine（暫列，非本專案實作方量測）
+| 路徑／量測 | P（恆等金鑰） | S0 Rademacher | S1 Signed Perm |
+|---|---|---|---|
+| transform-only：D(E(z)) MaxAbs／bit-exact | 0／100% | 0／100% | 0／100% |
+| 匿名影像對 x0：PSNR／SSIM | 42.23 dB／0.985（= P 輸出） | 5.34 dB／0.018 | 5.43 dB／0.012 |
+| T1（精確 latent）還原對 x0：PSNR／SSIM／L∞ | 42.23 [41.90, 42.53] dB／0.985／0.102 | 同 P（逐位元相同） | 同 P（逐位元相同） |
+| T2-WB／M1 PNG 還原對 x0：PSNR | 37.71 [37.25, 38.07] dB | 31.47 [30.60, 32.30] dB | 31.30 [30.75, 31.89] dB |
+| 同上：SSIM／L∞／uint8 相等比例 | 0.975／0.232／15.3% | 0.927／0.558／8.7% | 0.898／0.416／8.0% |
+| M1 PNG 還原對 P 輸出：PSNR | 43.09 dB | 30.75 dB | 30.20 dB |
+| 同上：影像 cosine（前作舊定義的對應量） | 0.9999 | 0.9986 | 0.9985 |
+| M1 float 還原對 x0：PSNR（上限對照） | 37.62 dB | 38.70 dB | 39.40 dB |
+| 解密後 latent 對 z（PNG）：cosine／RMSE | 0.299／1.123 | 0.990／0.135 | 0.990／0.137 |
+| 同上：低頻 32×32 cosine／\|z\| Pearson | 0.974／0.434 | 0.996／0.976 | 0.996／0.976 |
+| 解密後 latent 對 z（float）：cosine | 0.292 | 0.9999 | 0.9999 |
+
+* `[事實]` 前作的比較方式（還原圖對 base 輸出）在本專案得到 S1 30.20 dB／影像 cosine 0.9985，與論文 30.23 dB／0.998978 同等級；但同一批還原圖**對原圖 x0** 只有 31.3 dB、L∞ 0.42，uint8 相等比例 8%。
+* `[事實]` T1（保存精確 latent）時 S0/S1 的還原與 P 逐位元相同（42.23 dB）：損失全部來自 DDIM 反演＋生成本身。M1 的額外損失主要來自 PNG 儲存（S0/S1 float 交接 38.7–39.4 dB，PNG 交接 31.3–31.5 dB）。
+* `[事實]` 對正交的 S0/S1/P 而言，攻擊者視角（ẑ_ano 對 z_ano）與合法解密（ẑ 對 z）的全域 latent 指標相同（兩者差一個相同的正交變換），因此 S0/S1 的 T2-WB 攻擊者能取得與解密者同等保真度的 \|z\|（Pearson 0.976）。這是 A4 T2-WB magnitude 攻擊的前提，攻擊本身待 A4 實測。
+* 本節數字與稽核方以獨立程式量測的結果（下表）在四捨五入內一致。
+
+### 稽核方獨立量測（交叉驗證用）
 
 * 來源：AUDIT.md「AUD-20261010-01 · §4」；原始數據 `audit/out/e2_legacy_decrypt_latent_cosine.json`（腳本 `audit/e2_legacy_decrypt_latent_cosine.py`；dev_v1.1 全部 20 張；直接呼叫學長函式；guidance −1；T=500；20 張平均）。本報告已把表中各列的平均值與該 JSON 的 `summary` 逐項核對，除 P 的 PNG 交接 latent cos（JSON 0.2985，表寫 0.299）與低頻 cos（JSON 0.9735，表寫 0.974）有 0.001 的四捨五入差異外，其餘相符；下表照 AUDIT.md 原文引用。
 * 標記：`[事實]`（稽核方量測）。

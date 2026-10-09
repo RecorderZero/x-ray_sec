@@ -401,3 +401,52 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 請稽核方複驗 AF-017、AF-020、AF-021，並確認 AF-019 的部分修正方向；請使用者裁決 T2-WB `Inconclusive` 門檻。
 * 稽核通過後執行 E2.3：以 `ddim_anonymization_forward` 對 `security_v1` 建立 latent cache（先 1–4 張 smoke，含 batch 組成的 bit-exact 檢查）。
 * 接著完成 E2.4 metric semantics 報告與 E2.5 dev 20 張 P／S0／S1 的 T1 與 T2-WB（M1 PNG 交接）round-trip，用以關閉 AF-019。
+
+## 2026-10-10 · W1 · Track E · E2.3–E2.5 完成：latent cache、指標語意、P/S0/S1 dev round-trip
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：E2.3、E2.4、E2.5，即 G0 剩餘項目。
+* 回應稽核：AUD-20261009-03 的 AF-022；AUD-20261008-03 的 AF-019（E2.5 部分）；AUD-20261010-02 使用者裁決（T2-WB `Inconclusive` 規則）落地。AUD-20261010-01 已關閉 AF-017、AF-020、AF-021，並建議可開始 E2.3。
+
+### 2. 執行動作 (Actions Taken)
+* [裁決落地] commit `e6051ff`｜`reports/t2wb_protocol.md` §3／§4 改為各方案專屬正控制：攻擊成功照實報告，未成功才看該方案以正確金鑰解密後的 latent linkage；新增 §5 latent 方向敏感度診斷。
+* [E2.3] commits `a3a9a60`、`068d75b`、`b12ca19`｜`scripts/e2_legacy_wrapper.py` 新增 `legacy_invert`、`apply_legacy_key`、`legacy_generate`，test 證明 cached x_T 路徑與完整 legacy sampler 在 P/S0/S1 anonymize、deanonymize 下都 bit-exact；`scripts/e2_anonymization_runner.py` 新增 `cache` 模式；`scripts/run_artifacts.py` 改為在 run 開始時記錄 git 狀態｜指令：`scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id E2.3 --validate-artifacts -- python -m scripts.e2_anonymization_runner cache --checkpoint <ckpt> --split splits/security_v1.csv --batch-size 1 --recompute-count 20 --done-output results/E2.3_DONE.json`（dev 另以 `--split splits/dev_v1.1.csv --recompute-count 5 --done-output results/E2.3_dev_v1.1_cache.json`）。
+* [AF-022] 已修正（待稽核複驗）｜commit `905580a`，§5 於本條 docs commit 補齊｜`scripts/e2_metric_semantics.py`、`results/E2.4_metric_semantics.json`、`reports/metric_semantics.md`。由實作方指派的 subagent 撰寫，實作方審閱並修正一處通過條件用語｜指令：`scripts/run_cfg_ddim.sh python -m scripts.e2_metric_semantics`。
+* [E2.5／AF-019] commits `4156be7`、`5590937`｜新增 `scripts/e2_roundtrip_runner.py`：從 E2.3 dev cache 出發，分報 transform-only、T1、T2-WB／M1（學長 PNG 交接為主、float 交接為上限）；影像對 x0 與對 P 輸出並列；latent 另報攻擊者視角與解密後保真度；以 bootstrap 95% CI 彙整｜指令：`scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id E2.5 --validate-artifacts -- python -m scripts.e2_roundtrip_runner --checkpoint <ckpt> --latent-cache artifacts/runs/E2.3/E2.3_20261009T190608331743Z_6edaf199`。
+* [加速診斷] commit `3a53335`｜`scripts/perf_probe.py`、`results/perf_probe_batch1.json`，回應使用者的加速詢問；非正式實驗。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `scripts/run_cfg_ddim.sh python -m pytest -q tests/unit tests/integration tests/test_legacy_repro.py` 在各 commit 前通過；本條時點 unit 23 passed、`tests/test_legacy_repro.py` 20 passed。
+* [事實] E2.3：managed runs `E2.3_20261009T183736363217Z_84cf642a`（security_v1，200 張）與 `E2.3_20261009T190608331743Z_6edaf199`（dev_v1.1，20 張）皆 state=succeeded、artifact_validation valid；shape (N,1,256,256)、全部 finite；seed 1911 抽樣以 batch 1 重算 20/20 與 5/5 逐位元相同（MaxAbs=0 ≤ 1e-5）。
+* [事實] batch 組成會改變結果：smoke 以 batch 4 建 cache、batch 1 重算，MaxAbs=6.93e-4、0/4 bit-exact，runner 正確判 failed；batch 1 建 cache 則 4/4 bit-exact。
+* [注意] E2.3 兩個正式 run 的 manifest `git_commit` 記為 `905580a`：run 期間提交了 E2.4，而舊版 `run_artifacts` 在結束時才讀 git。runner 的 `script_sha256=2906b142…` 與 run 開始時的 `a3a9a60` 相同。`068d75b` 已改為開始時記錄。
+* [事實] E2.4：dev_v1.1 不同病人像素 cosine 中位數 0.8844（190 對）、去均值後 0.5323；同圖加雜訊到 PSNR 30.6／26.2 dB 時 cosine 0.998697／0.996424；`y=0.5·x` 時 cosine=1 但 PSNR 10.79 dB。與稽核方 `audit/out/e2_legacy_cosine_semantics.json` 比對差 ≤ 1.3e-5（協定差異已記錄）；連跑兩次除 created_at 外相同。
+* [事實] E2.5（managed run `E2.5_20261009T191319376995Z_f990c7d7`，60 rows valid；20 張平均 [95% CI]）：
+  * transform round-trip 60/60 逐位元相同；T1 還原對 x0 為 42.23 dB，P/S0/S1 逐位元相同。
+  * M1 PNG 還原對 x0：P 37.71 [37.25, 38.07]、S0 31.47 [30.60, 32.30]、S1 31.30 [30.75, 31.89] dB；SSIM 0.975／0.927／0.898；L∞ 0.232／0.558／0.416。
+  * 對 P 輸出：43.09／30.75／30.20 dB，影像 cosine 0.9999／0.9986／0.9985。
+  * M1 float 還原對 x0：37.62／38.70／39.40 dB。
+  * 解密後 latent cos（PNG）0.299／0.990／0.990，\|z\| Pearson 0.434／0.976／0.976。
+  * 與稽核方 AUD-20261010-01 §4 的獨立量測在四捨五入內一致。
+* [事實] 對正交的 P/S0/S1 而言，攻擊者視角（ẑ_ano 對 z_ano）與合法解密（ẑ 對 z）的全域 latent 指標逐值相同，因此 S0/S1 的 T2-WB 攻擊者能取得與解密者同等保真度的 \|z\|（Pearson 0.976）。
+* [觀察] `image/E2.5_roundtrip_grid.png` 中，dev_v1.1_000 的 S0 匿名影像仍可見胸廓與肺野的粗略輪廓（與 S0 保留 \|z\| 一致）；僅目視、n=2，留給 A3.3／P3.1 量化。
+* [觀察] P 的 T1 還原中，dev_v1.1_012 的 L∞ 達 0.607（PSNR 40.6 dB），其餘 ≤ 0.204：DDIM 反演＋生成本身也會有局部大誤差，與加密無關。
+* [事實] 加速診斷：CUDA Graphs（以快取同一 CPU 運算的 monkey-patch 讓 legacy `timestep_embedding` 可被 capture）與 2／3 個 batch 1 行程並行，latent SHA-256 都與單行程 eager 相同；CUDA graph 約快 8%，並行吞吐約 1.23×／1.30×（保守）。
+* [限制] 量測期間 GPU 與 ollama runner（6.3 GB，約 19:32 UTC 起）及稽核腳本 `audit/e2_wht_smoke.py` 共用，單行程 eager 為 37–40 ms/step（獨占時 15.5 ms/step）。上述比例與 E2.5 後半段的 runtime 欄位只能參考。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：E2.3、E2.4、E2.5 的工程閘門（bit-exact test、finite、shape、重算 MaxAbs、cache hash 驗證）與證據閘門（managed run、manifest、per-sample、summary、split／checkpoint／script hash）皆通過。G0 的子任務 E0.1、E1.1–E1.5、E2.1–E2.5 全部有交付物；G0 是否正式通過、AF-019／AF-022 是否關閉，由稽核方判定。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 未失敗。唯一的負結果是 batch 4 cache 的重算檢查不過；依據是 E2.3 預先登記的 1e-5 判準，因此改用 batch 1，沒有放寬判準。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- [決定]（實作方，可由使用者推翻）正式 pass 固定 batch 1。N=200 預算上限從 batch 8 估計的 15.82 改為 22.29 GPU-hours（`reports/compute_budget.md`）。若要以 batch 8／並行／CUDA Graphs 加速，需先在獨占 GPU 上重測並經使用者同意。
+- WORKFLOW E2.5 的交付物 `table_baseline_correctness.csv` 依 §3.1 建議放在 `paper_assets/tables/`。
+- GPU 目前與其他專案（ollama）及稽核腳本共用，WORKFLOW §8 的長任務排程需考慮此競爭；runtime／效能表必須在獨占 GPU 上量測。
+
+### 7. 下一步
+* 請稽核方複驗 E2.3–E2.5、AF-019（E2.5 部分）、AF-022，並判定 G0。
+* 進入 Week 2：A3.1 key-space audit、A3.2 小空間 brute force、A3.3 S0/S1 不變量、A3.4 T1 gallery（以 `security_v1` cache 做 P 正控制與 shuffle 負控制）。
+* A4 T2-WB 依 `reports/t2wb_protocol.md` §4 實作，需先為 security_v1 產生 S0/S1 匿名影像與 re-inversion（N=200，約 2.6 GPU-hours）。

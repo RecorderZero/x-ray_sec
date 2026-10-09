@@ -5,7 +5,9 @@
 ## 目前狀態
 
 - E0.1、E1.1–E1.5 已由 AUD-20261008-02 複驗通過；E2.2 已完成 S0/S1 legacy regression，並補上恆等金鑰 P（AF-017）。
-- 2026-10-09 起 P/S0/S1 一律走學長**加密流程**（`ddim_sample_loop_anonymization`）；E1 的推論流程結果只作病灶定位流程的歷史基線。AF-017、AF-020、AF-021 已修正待稽核複驗；AF-019 需待 E2.5／A4 完成。
+- 2026-10-09 起 P/S0/S1 一律走學長**加密流程**（`ddim_sample_loop_anonymization`）；E1 的推論流程結果只作病灶定位流程的歷史基線。AF-017、AF-020、AF-021 已由 AUD-20261010-01 關閉；AF-019 的 E2.5 部分已完成，A4 T2-WB 部分待 Week 2。
+- E2.3 latent cache 已凍結（`security_v1` 200 張、`dev_v1.1` 20 張，batch 1，抽樣重算全部 bit-exact）；E2.4 指標語意報告與 E2.5 dev round-trip 已完成，G0 的子任務全部有交付物。
+- T2-WB `Inconclusive` 規則依使用者 2026-10-10 裁決：攻擊成功照實報告；未成功時才看各方案專屬的正控制（`reports/t2wb_protocol.md` §4）。
 - 目標 checkpoint 可 strict load，missing/unexpected keys 均為 0。
 - E2.1 formal split 已建立且通過獨立驗證；formal N 依使用者裁決先維持 200，僅在小實驗跑通後另建新版 split 擴大。輸入必須使用已凍結的 legacy CheXpert preprocessing：grayscale → histogram equalization → OpenCV `INTER_AREA` 256×256 → JPEG quality 100 round-trip → per-image min-max `[0,1]`。
 - 固定 dev split：`dev_v1.1`，20 張、20 位不同病人，健康／積水各 10 張；hash 排除本機路徑。
