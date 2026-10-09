@@ -29,6 +29,9 @@ except ModuleNotFoundError:
     from managed_run import MANAGED_RUN_ENV
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
 @dataclass(frozen=True)
 class RunContext:
     task_id: str
@@ -52,6 +55,30 @@ def sha256_file(path: Path) -> str:
 def git_value(*arguments: str) -> str:
     result = subprocess.run(["git", *arguments], text=True, capture_output=True, check=False)
     return result.stdout.strip() if result.returncode == 0 else "unavailable"
+
+
+def git_dirty() -> bool:
+    """Uncommitted changes to tracked files; untracked files (e.g. AUDIT.md) are ignored."""
+    return bool(git_value("status", "--porcelain=v1", "--untracked-files=no"))
+
+
+def imported_project_modules() -> dict[str, str]:
+    """SHA-256 of every imported Python module that lives inside the repository.
+
+    Covers the entry script, shared helpers (e.g. ``scripts/e2_legacy_wrapper.py``)
+    and the predecessor's ``past/SourceCode`` modules actually loaded by the run.
+    """
+    modules: dict[str, str] = {}
+    for module in list(sys.modules.values()):
+        location = getattr(module, "__file__", None)
+        # Some extension modules report a bare relative name (e.g. torch's "_ops.py").
+        if not location or not Path(location).is_absolute():
+            continue
+        resolved = Path(location).resolve()
+        if resolved.suffix != ".py" or PROJECT_ROOT not in resolved.parents or not resolved.is_file():
+            continue
+        modules[str(resolved.relative_to(PROJECT_ROOT))] = sha256_file(resolved)
+    return dict(sorted(modules.items()))
 
 
 def open_run(
@@ -82,7 +109,7 @@ def open_run(
     # commits made while a long run is in progress are not misattributed.
     return RunContext(
         task_id, run_id, run_dir, config_hash, bool(managed_dir), started_at,
-        git_value("rev-parse", "HEAD"), bool(git_value("status", "--porcelain=v1")),
+        git_value("rev-parse", "HEAD"), git_dirty(),
     )
 
 
@@ -144,6 +171,7 @@ def finalize_run(
         "finished_at": datetime.now(timezone.utc).isoformat(),
         "exit_code": 0,
         "script_sha256": sha256_file(script_path),
+        "imported_project_modules": imported_project_modules(),
         "python": sys.version.replace("\n", " "),
         "pytorch": torch.__version__,
         "cuda": torch.version.cuda or "none",

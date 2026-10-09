@@ -50,5 +50,257 @@
     }
   ],
   "cuda_graph_note": "graph mode requires monkey-patching guided_diffusion.unet_v1.timestep_embedding so the CPU-computed freqs are cached on device (same CPU expression as the predecessor); past/ is not modified",
-  "concurrency_timing_note": "concurrent wall_seconds were measured by the shell and include process start-up and model loading; eager_single wall_seconds is measured inside the process after loading, so concurrency throughput ratios are conservative"
+  "concurrency_timing_note": "concurrent wall_seconds were measured by the shell and include process start-up and model loading; eager_single wall_seconds is measured inside the process after loading, so concurrency throughput ratios are conservative",
+  "raw_runs": {
+    "eager1": {
+      "mode": "eager",
+      "noise_level": 200,
+      "wall_seconds": 29.408268283004873,
+      "per_image": [
+        {
+          "sample_id": "dev_v1.1_000",
+          "seconds": 7.7582762140082195,
+          "latent_sha256": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05"
+        },
+        {
+          "sample_id": "dev_v1.1_001",
+          "seconds": 7.7981617510085925,
+          "latent_sha256": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8"
+        },
+        {
+          "sample_id": "dev_v1.1_002",
+          "seconds": 7.258204014971852,
+          "latent_sha256": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a"
+        },
+        {
+          "sample_id": "dev_v1.1_003",
+          "seconds": 6.593084043008275,
+          "latent_sha256": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+        }
+      ]
+    },
+    "eager2a": {
+      "mode": "eager",
+      "noise_level": 200,
+      "wall_seconds": 40.07926847599447,
+      "per_image": [
+        {
+          "sample_id": "dev_v1.1_000",
+          "seconds": 9.965246133040637,
+          "latent_sha256": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05"
+        },
+        {
+          "sample_id": "dev_v1.1_001",
+          "seconds": 10.091499415924773,
+          "latent_sha256": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8"
+        },
+        {
+          "sample_id": "dev_v1.1_002",
+          "seconds": 10.066118372022174,
+          "latent_sha256": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a"
+        },
+        {
+          "sample_id": "dev_v1.1_003",
+          "seconds": 9.955850427038968,
+          "latent_sha256": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+        }
+      ]
+    },
+    "eager2b": {
+      "mode": "eager",
+      "noise_level": 200,
+      "wall_seconds": 40.03254761500284,
+      "per_image": [
+        {
+          "sample_id": "dev_v1.1_000",
+          "seconds": 10.010647332994267,
+          "latent_sha256": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05"
+        },
+        {
+          "sample_id": "dev_v1.1_001",
+          "seconds": 10.090924885938875,
+          "latent_sha256": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8"
+        },
+        {
+          "sample_id": "dev_v1.1_002",
+          "seconds": 10.063982318970375,
+          "latent_sha256": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a"
+        },
+        {
+          "sample_id": "dev_v1.1_003",
+          "seconds": 9.866442124010064,
+          "latent_sha256": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+        }
+      ]
+    },
+    "eager3a": {
+      "mode": "eager",
+      "noise_level": 200,
+      "wall_seconds": 58.09713631798513,
+      "per_image": [
+        {
+          "sample_id": "dev_v1.1_000",
+          "seconds": 13.314910924993455,
+          "latent_sha256": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05"
+        },
+        {
+          "sample_id": "dev_v1.1_001",
+          "seconds": 14.301943672006018,
+          "latent_sha256": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8"
+        },
+        {
+          "sample_id": "dev_v1.1_002",
+          "seconds": 15.222479963907972,
+          "latent_sha256": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a"
+        },
+        {
+          "sample_id": "dev_v1.1_003",
+          "seconds": 15.257341779069975,
+          "latent_sha256": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+        }
+      ]
+    },
+    "eager3b": {
+      "mode": "eager",
+      "noise_level": 200,
+      "wall_seconds": 58.110421752906404,
+      "per_image": [
+        {
+          "sample_id": "dev_v1.1_000",
+          "seconds": 13.347802095930092,
+          "latent_sha256": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05"
+        },
+        {
+          "sample_id": "dev_v1.1_001",
+          "seconds": 14.319575780071318,
+          "latent_sha256": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8"
+        },
+        {
+          "sample_id": "dev_v1.1_002",
+          "seconds": 15.222573440056294,
+          "latent_sha256": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a"
+        },
+        {
+          "sample_id": "dev_v1.1_003",
+          "seconds": 15.219908775994554,
+          "latent_sha256": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+        }
+      ]
+    },
+    "eager3c": {
+      "mode": "eager",
+      "noise_level": 200,
+      "wall_seconds": 58.0877080160426,
+      "per_image": [
+        {
+          "sample_id": "dev_v1.1_000",
+          "seconds": 13.3480914470274,
+          "latent_sha256": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05"
+        },
+        {
+          "sample_id": "dev_v1.1_001",
+          "seconds": 14.328186474973336,
+          "latent_sha256": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8"
+        },
+        {
+          "sample_id": "dev_v1.1_002",
+          "seconds": 15.225181429996155,
+          "latent_sha256": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a"
+        },
+        {
+          "sample_id": "dev_v1.1_003",
+          "seconds": 15.185792509000748,
+          "latent_sha256": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+        }
+      ]
+    },
+    "seq_eager": {
+      "mode": "eager",
+      "noise_level": 200,
+      "wall_seconds": 31.53544286696706,
+      "per_image": [
+        {
+          "sample_id": "dev_v1.1_000",
+          "seconds": 7.786129273008555,
+          "latent_sha256": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05"
+        },
+        {
+          "sample_id": "dev_v1.1_001",
+          "seconds": 7.8967364319832996,
+          "latent_sha256": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8"
+        },
+        {
+          "sample_id": "dev_v1.1_002",
+          "seconds": 7.963959277025424,
+          "latent_sha256": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a"
+        },
+        {
+          "sample_id": "dev_v1.1_003",
+          "seconds": 7.888056626892649,
+          "latent_sha256": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+        }
+      ]
+    },
+    "seq_eager-patched": {
+      "mode": "eager-patched",
+      "noise_level": 200,
+      "wall_seconds": 30.49840220902115,
+      "per_image": [
+        {
+          "sample_id": "dev_v1.1_000",
+          "seconds": 7.5868180639809,
+          "latent_sha256": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05"
+        },
+        {
+          "sample_id": "dev_v1.1_001",
+          "seconds": 7.616584895993583,
+          "latent_sha256": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8"
+        },
+        {
+          "sample_id": "dev_v1.1_002",
+          "seconds": 7.6394537090091035,
+          "latent_sha256": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a"
+        },
+        {
+          "sample_id": "dev_v1.1_003",
+          "seconds": 7.654974128003232,
+          "latent_sha256": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+        }
+      ]
+    },
+    "seq_graph": {
+      "mode": "graph",
+      "noise_level": 200,
+      "wall_seconds": 28.965661796974018,
+      "per_image": [
+        {
+          "sample_id": "dev_v1.1_000",
+          "seconds": 7.402785049052909,
+          "latent_sha256": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05"
+        },
+        {
+          "sample_id": "dev_v1.1_001",
+          "seconds": 7.186502765049227,
+          "latent_sha256": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8"
+        },
+        {
+          "sample_id": "dev_v1.1_002",
+          "seconds": 7.167641964973882,
+          "latent_sha256": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a"
+        },
+        {
+          "sample_id": "dev_v1.1_003",
+          "seconds": 7.208247989998199,
+          "latent_sha256": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+        }
+      ]
+    }
+  },
+  "reference_latent_sha256": {
+    "dev_v1.1_000": "cb3316946d947c02c47e57bd7b9ded39c683b10cee23e9d9dde81ebb2d13ea05",
+    "dev_v1.1_001": "20cf08f7729a092de4772c763c33e5e2ef0fc351243b7489e1a6c40e2318fdc8",
+    "dev_v1.1_002": "b0e0b51ad8c6bfb2970739ae80a04373bcce4acff0f327485e7046093e00721a",
+    "dev_v1.1_003": "a54615426ecf6d28f54fc626edc0db4f4e714bac507c0df1c8443f83acec3311"
+  },
+  "raw_runs_note": "per-process outputs of scripts/perf_probe.py copied from the implementer's scratch directory (AF-023 item 7); every per-image latent_sha256 equals reference_latent_sha256 (eager single process)"
 }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from scripts import run_artifacts
@@ -10,7 +11,13 @@ from scripts.artifact_schema import validate_run
 
 def test_standalone_run_is_valid_and_records_start_commit(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("EXPERIMENT_RUN_DIR", raising=False)
-    monkeypatch.setattr(run_artifacts, "git_value", lambda *args: "start" if args[0] == "rev-parse" else "")
+    calls: list[tuple[str, ...]] = []
+
+    def fake_git(*args: str) -> str:
+        calls.append(args)
+        return "start" if args[0] == "rev-parse" else ""
+
+    monkeypatch.setattr(run_artifacts, "git_value", fake_git)
     context = run_artifacts.open_run("UNIT", {"a": 1}, tmp_path)
     # A commit made while the run is in progress must not be recorded.
     monkeypatch.setattr(run_artifacts, "git_value", lambda *args: "later" if args[0] == "rev-parse" else "")
@@ -23,9 +30,16 @@ def test_standalone_run_is_valid_and_records_start_commit(tmp_path: Path, monkey
         context, Path(__file__), rows, ["metric"], manifest_fields, "out\n", ""
     )
     assert validate_run(run_dir)["valid"] is True
-    manifest = (run_dir / "manifest.json").read_text(encoding="utf-8")
-    assert '"git_commit": "start"' in manifest
-    assert '"git_dirty": false' in manifest
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["git_commit"] == "start"
+    assert manifest["git_dirty"] is False
+    # AF-023(5): untracked files must not make every run look dirty.
+    assert ("status", "--porcelain=v1", "--untracked-files=no") in calls
+    modules = manifest["imported_project_modules"]
+    assert modules["scripts/run_artifacts.py"] == run_artifacts.sha256_file(
+        run_artifacts.PROJECT_ROOT / "scripts/run_artifacts.py"
+    )
+    assert all(not name.startswith(("/", "..")) for name in modules)
 
 
 def test_managed_run_dir_is_adopted(tmp_path: Path, monkeypatch) -> None:
