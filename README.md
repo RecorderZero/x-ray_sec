@@ -41,6 +41,7 @@
 | `scripts/e2_legacy_wrapper.py` | 直接呼叫學長 anonymization sampler 的 anonymize／deanonymize；`P` 為恆等金鑰（全 +1 Rademacher），與 S0/S1 只差在金鑰（AF-017）；`legacy_invert`／`apply_legacy_key`／`legacy_generate` 讓 cached x_T 可重用，並以 test 證明與完整 legacy sampler bit-exact（生成固定 guidance=-1，與學長原始碼字面一致）；CLI 檢查 wrapper/direct、guidance 0 等價、deanonymize 與 transform round-trip 皆 bit-exact。 | E2.2 重現與後續 S0/S1 pipeline 共用。 |
 | `scripts/run_artifacts.py` | 共用 run 目錄寫入：standalone 時自建目錄、寫 log/exit code 並立即驗證；在 `managed_run.py` 下改寫入 `EXPERIMENT_RUN_DIR`，由 managed_run 擁有 log 並在結束後驗證。 | E1/E2 runner 寫出 manifest、per-sample、summary。 |
 | `scripts/e2_anonymization_runner.py` | 學長**加密流程**（`ddim_sample_loop_anonymization`）上的 P/S0/S1 實驗：`benchmark` 量 inversion（null=True）與生成（guidance −1／0）每步成本；`p-smoke` 以恆等金鑰 P 跑 4 張 dev 圖的輸出、重算、re-inversion 與 M1（float／學長 PNG 交接）端到端還原（AF-017、AF-019）；`cache` 為 E2.3 latent cache（batch 1，`latents.npy` 存於 run 目錄，seed 1911 抽樣以 batch 1 重算，MaxAbs ≤ 1e-5）。 | E2.3 起 P/S0/S1 共用；長任務經 `managed_run.py --validate-artifacts`。 |
+| `scripts/e2_roundtrip_runner.py` | E2.5：從 E2.3 cache 出發，對 P/S0/S1 分報 transform-only、T1（精確 latent）與 T2-WB／M1（學長 PNG 交接為主、float 交接為上限）；影像指標對 x0 與對 P 輸出兩種基準，latent 另報攻擊者視角（ẑ_ano vs z_ano）與解密後保真度（各方案專屬正控制量）；bootstrap 95% CI。 | E2.5 dev round-trip；之後 S2a/S2 沿用同一路徑定義。 |
 | `scripts/e2_metric_semantics.py` | E2.4（AF-022）：CPU、seed 1911，量測像素空間 cosine 基準（不同病人、加雜訊至指定 PSNR、去均值、cosine 對 PSNR 表）與「cosine=1 不等於相等」反例，並與稽核方數字比對。 | 指標語意報告的數字來源。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
@@ -86,6 +87,7 @@
 | `tests/unit/test_managed_run.py` | 真 stdout 成功控制與 traceback/非零 exit/status=failed 負控制；`--validate-artifacts` 的有效 artifacts 正控制，以及 NaN、缺 manifest 兩個負控制。 |
 | `tests/unit/test_chexpert_preprocessing.py` | 直接載入學長原始前處理函式作 oracle，逐值守住 equalize/INTER_AREA/JPEG/min-max。 |
 | `tests/unit/test_split_hash.py` | 驗證更換 local path 前綴不改變 split hash。 |
+| `tests/unit/test_roundtrip_runner.py` | E2.5 runner 的 cache 載入檢查：有效 cache 正控制；split hash、樣本順序、latent hash 被竄改時拒絕；bootstrap 摘要可重現。 |
 | `tests/unit/test_run_artifacts.py` | 共用 run 目錄寫入：standalone run 通過 validator 且 git commit 取自 run 開始時；managed 模式沿用 `EXPERIMENT_RUN_DIR`。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
 | `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |
