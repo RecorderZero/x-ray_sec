@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "task_id": "PERF_PROBE",
+  "created_at": "2026-10-09T20:05:44.946553+00:00",
+  "script": "scripts/perf_probe.py",
+  "git_commit": "5590937f632ae85625d2fc9bcfb1290dd362a465",
+  "setup": "dev_v1.1 first 4 images, legacy anonymization inversion, noise_level 200, batch 1",
+  "contention_warning": "GPU shared during measurement with an ollama runner (6.3 GB) and an auditor script (audit/e2_wht_smoke.py); eager single-process ran at ~37-40 ms/step vs 15.5 ms/step measured exclusively in AF021_ANON_BENCH. Ratios are indicative only; re-measure on an exclusive GPU before relying on them.",
+  "concurrency": {
+    "eager_single": {
+      "processes": 1,
+      "images_total": 4,
+      "wall_seconds": 29.408268283004873,
+      "seconds_per_image_effective": 7.352067070751218,
+      "throughput_vs_single": 1.0,
+      "all_bit_exact_vs_eager_single": true
+    },
+    "eager_2_concurrent": {
+      "processes": 2,
+      "images_total": 8,
+      "wall_seconds": 47.719605763,
+      "seconds_per_image_effective": 5.964950720375,
+      "throughput_vs_single": 1.2325444778006505,
+      "all_bit_exact_vs_eager_single": true
+    },
+    "eager_3_concurrent": {
+      "processes": 3,
+      "images_total": 12,
+      "wall_seconds": 67.965995355,
+      "seconds_per_image_effective": 5.66383294625,
+      "throughput_vs_single": 1.2980727257535005,
+      "all_bit_exact_vs_eager_single": true
+    }
+  },
+  "sequential_modes": [
+    {
+      "mode": "eager",
+      "ms_per_step_per_image": 39.61739053639078,
+      "bit_exact_vs_eager_single": true
+    },
+    {
+      "mode": "eager-patched",
+      "ms_per_step_per_image": 38.31457563947381,
+      "bit_exact_vs_eager_single": true
+    },
+    {
+      "mode": "graph",
+      "ms_per_step_per_image": 36.38902235800756,
+      "bit_exact_vs_eager_single": true
+    }
+  ],
+  "cuda_graph_note": "graph mode requires monkey-patching guided_diffusion.unet_v1.timestep_embedding so the CPU-computed freqs are cached on device (same CPU expression as the predecessor); past/ is not modified",
+  "concurrency_timing_note": "concurrent wall_seconds were measured by the shell and include process start-up and model loading; eager_single wall_seconds is measured inside the process after loading, so concurrency throughput ratios are conservative"
+}

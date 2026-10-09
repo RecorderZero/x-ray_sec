@@ -43,6 +43,7 @@
 | `scripts/e2_anonymization_runner.py` | 學長**加密流程**（`ddim_sample_loop_anonymization`）上的 P/S0/S1 實驗：`benchmark` 量 inversion（null=True）與生成（guidance −1／0）每步成本；`p-smoke` 以恆等金鑰 P 跑 4 張 dev 圖的輸出、重算、re-inversion 與 M1（float／學長 PNG 交接）端到端還原（AF-017、AF-019）；`cache` 為 E2.3 latent cache（batch 1，`latents.npy` 存於 run 目錄，seed 1911 抽樣以 batch 1 重算，MaxAbs ≤ 1e-5）。 | E2.3 起 P/S0/S1 共用；長任務經 `managed_run.py --validate-artifacts`。 |
 | `scripts/e2_roundtrip_runner.py` | E2.5：從 E2.3 cache 出發，對 P/S0/S1 分報 transform-only、T1（精確 latent）與 T2-WB／M1（學長 PNG 交接為主、float 交接為上限）；影像指標對 x0 與對 P 輸出兩種基準，latent 另報攻擊者視角（ẑ_ano vs z_ano）與解密後保真度（各方案專屬正控制量）；bootstrap 95% CI。 | E2.5 dev round-trip；之後 S2a/S2 沿用同一路徑定義。 |
 | `scripts/e2_metric_semantics.py` | E2.4（AF-022）：CPU、seed 1911，量測像素空間 cosine 基準（不同病人、加雜訊至指定 PSNR、去均值、cosine 對 PSNR 表）與「cosine=1 不等於相等」反例，並與稽核方數字比對。 | 指標語意報告的數字來源。 |
+| `scripts/perf_probe.py` | 診斷用 batch 1 吞吐探針：eager／CUDA Graphs（以快取同一 CPU 運算結果的 monkey-patch 讓 legacy `timestep_embedding` 可被 capture）與多行程並行，並比對 latent SHA-256。 | 決定正式 run 的加速方式前重新量測。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 
@@ -72,6 +73,7 @@
 | `results/E2.3_DONE.json` | E2.3 正式 latent cache（`security_v1` 200 張，batch 1）的 metadata：run ID、`latents.npy` 路徑與 SHA-256、shape／finite 檢查、seed 1911 抽 20 張以 batch 1 重算的 MaxAbs（全為 0）。cache 本體在 `artifacts/runs/E2.3/<run_id>/latents.npy`，不入 Git。 |
 | `results/E2.3_dev_v1.1_cache.json` | 同上，dev_v1.1 20 張（E2.5 的輸入），抽 5 張重算。 |
 | `results/E2.5_roundtrip_per_sample.csv` | E2.5 dev 20 張 × P/S0/S1 的逐筆結果（managed run `E2.5_20261009T191319376995Z_f990c7d7`）：transform-only、T1、M1 PNG／float 的影像（對 x0、對 P 輸出）與 latent（攻擊者視角、解密後保真度）指標。 |
+| `results/perf_probe_batch1.json` | 診斷用（非正式實驗）：batch 1 下多行程並行與 CUDA Graphs 的吞吐與逐位元檢查；量測時 GPU 與 ollama、稽核腳本共用，比例僅供參考。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `paper_assets/tables/table_baseline_correctness.csv` | E2.5 主表：P/S0/S1 × 23 項指標的平均、bootstrap 95% CI（B=10,000、seed 1911）、中位數與範圍。 |
 | `image/E2.5_roundtrip_grid.png` | 預先固定的 dev_v1.1_000（健康）與 _010（積水）在 P/S0/S1 下的原圖、匿名圖、T1 還原、M1 PNG 還原與固定色階差異圖。 |
