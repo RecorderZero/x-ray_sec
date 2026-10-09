@@ -71,7 +71,10 @@
 | `results/E2.4_metric_semantics.json` | E2.4 像素 cosine 基準與反例的數值（dev_v1.1 20 張、190 對），含與稽核方的 `cross_check`。 |
 | `results/E2.3_DONE.json` | E2.3 正式 latent cache（`security_v1` 200 張，batch 1）的 metadata：run ID、`latents.npy` 路徑與 SHA-256、shape／finite 檢查、seed 1911 抽 20 張以 batch 1 重算的 MaxAbs（全為 0）。cache 本體在 `artifacts/runs/E2.3/<run_id>/latents.npy`，不入 Git。 |
 | `results/E2.3_dev_v1.1_cache.json` | 同上，dev_v1.1 20 張（E2.5 的輸入），抽 5 張重算。 |
+| `results/E2.5_roundtrip_per_sample.csv` | E2.5 dev 20 張 × P/S0/S1 的逐筆結果（managed run `E2.5_20261009T191319376995Z_f990c7d7`）：transform-only、T1、M1 PNG／float 的影像（對 x0、對 P 輸出）與 latent（攻擊者視角、解密後保真度）指標。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
+| `paper_assets/tables/table_baseline_correctness.csv` | E2.5 主表：P/S0/S1 × 23 項指標的平均、bootstrap 95% CI（B=10,000、seed 1911）、中位數與範圍。 |
+| `image/E2.5_roundtrip_grid.png` | 預先固定的 dev_v1.1_000（健康）與 _010（積水）在 P/S0/S1 下的原圖、匿名圖、T1 還原、M1 PNG 還原與固定色階差異圖。 |
 | `image/E1.4_ddim_smoke_contact_sheet.png` | 四列視覺檢查圖；每列是 original、reconstruction、absolute difference。 |
 | `artifacts/preflight/canonical_direction_candidates_d4096_n100.json` | d=4,096、N=100 canonical preflight 原始輸出。 |
 | `artifacts/preflight/canonical_direction_candidates_d65536_n100.json` | d=65,536、N=100 canonical preflight 原始輸出。 |
