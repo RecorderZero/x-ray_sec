@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "task_id": "AF021_ANON_BENCH",
+  "run_id": "AF021_ANON_BENCH_20261009T152410677702Z_a5f3dcdc",
+  "pipeline": "legacy_anonymization:ddim_sample_loop_anonymization",
+  "benchmark_timestep": 250,
+  "benchmark_steps_per_repeat": 10,
+  "benchmark_repeats": 3,
+  "steps_per_half_cycle": 499,
+  "results": [
+    {
+      "sample_id": "batch_1",
+      "batch_size": 1,
+      "forward_seconds_per_step_per_image": 0.015498616569675506,
+      "generation_seconds_per_step_per_image": 0.015671000229970863,
+      "generation_guidance0_seconds_per_step_per_image": 0.03085415253105263,
+      "estimated_forward_half_cycle_seconds_per_image": 7.733809668268077,
+      "estimated_generation_half_cycle_seconds_per_image": 7.819829114755461,
+      "estimated_generation_guidance0_half_cycle_seconds_per_image": 15.396222112995263,
+      "peak_vram_bytes": 800531968
+    },
+    {
+      "sample_id": "batch_4",
+      "batch_size": 4,
+      "forward_seconds_per_step_per_image": 0.012643530924106016,
+      "generation_seconds_per_step_per_image": 0.012691461957486655,
+      "generation_guidance0_seconds_per_step_per_image": 0.025229139473716106,
+      "estimated_forward_half_cycle_seconds_per_image": 6.309121931128902,
+      "estimated_generation_half_cycle_seconds_per_image": 6.333039516785841,
+      "estimated_generation_guidance0_half_cycle_seconds_per_image": 12.589340597384338,
+      "peak_vram_bytes": 1707956224
+    },
+    {
+      "sample_id": "batch_8",
+      "batch_size": 8,
+      "forward_seconds_per_step_per_image": 0.011105343128535118,
+      "generation_seconds_per_step_per_image": 0.011070138970778014,
+      "generation_guidance0_seconds_per_step_per_image": 0.022066725458716976,
+      "estimated_forward_half_cycle_seconds_per_image": 5.541566221139024,
+      "estimated_generation_half_cycle_seconds_per_image": 5.523999346418229,
+      "estimated_generation_guidance0_half_cycle_seconds_per_image": 11.011296003899771,
+      "peak_vram_bytes": 2919994880
+    }
+  ],
+  "interpretation": "half-cycle estimate = per-step time x (noise_level-1); model loading, I/O and validation excluded"
+}

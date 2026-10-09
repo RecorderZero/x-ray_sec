@@ -50,7 +50,7 @@
 | `canonical_preflight.csv` | E0 唯一 canonical synthetic preflight 摘要；舊 31/32、98/100 不得混用。 |
 | `reports/evidence_reset.md` | 說明哪些舊 claim 被撤回或限制，以及現版 preflight 能支持什麼。 |
 | `reports/preprocessing_audit.md` | 學長實際 CheXpert 前處理的程式證據、與本 runner 的一致性及剩餘限制。 |
-| `reports/compute_budget.md` | E2–F9 各 scheme/attack 的 DDIM cycle 與 N=200/500/1,000 GPU 時數預算；記錄 N=200 裁決。 |
+| `reports/compute_budget.md` | E2–F9 各 scheme/attack 在加密流程上的 forward／generation 半週期矩陣（實測 batch 1/4/8 成本、guidance −1）與 N=200/500/1,000 GPU 時數；記錄 N=200 裁決。 |
 | `artifacts/environment_baseline.txt` | 當次環境、套件實際來源、GPU、checkpoint hash、freeze hash 與 strict-load 結果。 |
 | `artifacts/environment_freeze.txt` | 由 CFG_DDIM 的 `pip freeze --all` 產生，供 baseline hash 與重建。 |
 | `model_inventory.csv` | 一列式 checkpoint/model inventory，適合程式與試算表讀取。 |
@@ -60,6 +60,7 @@
 | `splits/security_v1_manifest.json` | formal split seed、抽樣規則、排除人數、hash 與 label counts。 |
 | `results/E1.2_benchmark.json` | batch 1/4/8 的 cycle 時間、估計 noise=500 時間與 peak VRAM；用來決定 batch/N。 |
 | `results/E1.4_ddim_smoke.csv` | **推論流程**（病灶定位用，`ddim_sample_loop_known_progressive`）四張 x0→z→xrec 的分段 runtime、VRAM、finite、image/latent metrics；不是 P/S0/S1 比較用的 P 基線（AF-017）。 |
+| `results/AF021_anonymization_benchmark.json` | 加密流程 batch 1/4/8 的 inversion／生成（guidance −1 與 0）每步每張成本與半週期估計；`compute_budget.md` 的依據。 |
 | `results/AF017_P_anonymization_smoke.csv` | 恆等金鑰 P 在加密流程上的 4 張 smoke：P 輸出、inversion 重算、re-inversion（float／PNG）latent 指標與低／高頻、\|z\| 診斷，以及 M1 端到端影像指標。 |
 | `image/AF017_P_anonymization_smoke.png` | 上述 4 張的 original、P 輸出、M1 float、M1 PNG 與固定色階 0–0.1 差異圖。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
