@@ -32,7 +32,7 @@
 | `scripts/build_e0_evidence_reset.py` | 彙整 d=4,096/d=65,536 與 seed sweep，產生 CSV、舊數字對照及去計時 stable hash。 | preflight 程式或設定改變後。 |
 | `scripts/run_cfg_ddim.sh` | 固定 `PYTHONNOUSERSITE=1` 後在 CFG_DDIM 執行命令，阻止 `~/.local` 套件混入。 | 所有文件化的 CFG_DDIM 指令。 |
 | `scripts/env_guard.py` | 共用 fail-closed 檢查；套件載自 active `sys.prefix` 外或 user-site 啟用時立即中止。 | E1/E2 runner 與 split builder 啟動時。 |
-| `scripts/managed_run.py` | 受控執行命令，保存真實 stdout/stderr/exit code、atomic status、PID、heartbeat 與 task/GPU locks。 | E2.3 起所有長任務的外層 runner。 |
+| `scripts/managed_run.py` | 受控執行命令，保存真實 stdout/stderr/exit code、atomic status、PID、heartbeat 與 task/GPU locks；自身設定寫入 `runner_config.json`，以 `EXPERIMENT_RUN_DIR` 把 run 目錄交給子程序；`--validate-artifacts` 時子程序成功後先以 `validate_run` 驗證 manifest/per-sample/summary，未通過即標為 failed（exit 3）。 | E2.3 起所有長任務的外層 runner。 |
 | `scripts/e1_environment_inventory.py` | strict load checkpoint，記錄 Python、PyTorch、CUDA、GPU、Pillow、pytest、OpenCV、模型參數及 hash。 | 環境、套件或 checkpoint 改變後。 |
 | `scripts/create_dev_split.py` | 從 CheXpert validation CSV 建立 20 位病人互斥 split；stable hash 不含 local path。 | split 版本升級時；不要為改善結果任意重抽。 |
 | `scripts/create_security_split.py` | 重現學長每類 16,000 張抽樣、排除其病人，再建立固定隨機 formal split。 | E2.1 重建或擴大 formal N 時。 |
@@ -71,7 +71,7 @@
 |---|---|
 | `tests/unit/test_artifact_schema.py` | valid synthetic artifact 應通過；duplicate ID、NaN/Inf、空 numeric fields、缺欄或 exit code 不一致應失敗。 |
 | `tests/unit/test_env_guard.py` | active-prefix 正控制，以及越界套件／啟用 user-site 的 fail-closed 負控制。 |
-| `tests/unit/test_managed_run.py` | 真 stdout 成功控制與 traceback/非零 exit/status=failed 負控制。 |
+| `tests/unit/test_managed_run.py` | 真 stdout 成功控制與 traceback/非零 exit/status=failed 負控制；`--validate-artifacts` 的有效 artifacts 正控制，以及 NaN、缺 manifest 兩個負控制。 |
 | `tests/unit/test_chexpert_preprocessing.py` | 直接載入學長原始前處理函式作 oracle，逐值守住 equalize/INTER_AREA/JPEG/min-max。 |
 | `tests/unit/test_split_hash.py` | 驗證更換 local path 前綴不改變 split hash。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |

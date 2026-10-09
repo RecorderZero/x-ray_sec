@@ -16,6 +16,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from scripts.artifact_schema import validate_run
+except ModuleNotFoundError:
+    from artifact_schema import validate_run
+
+MANAGED_RUN_ENV = "EXPERIMENT_RUN_DIR"
+VALIDATION_FAILURE_EXIT_CODE = 3
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -55,6 +63,12 @@ def main() -> None:
     parser.add_argument("--gpu-id", default="0")
     parser.add_argument("--heartbeat-seconds", type=float, default=60.0)
     parser.add_argument("--cwd", type=Path, default=Path.cwd())
+    parser.add_argument(
+        "--validate-artifacts",
+        action="store_true",
+        help="after a zero exit, require the child's manifest/per-sample/summary "
+        "in the run directory and validate them before marking success",
+    )
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     command = args.command[1:] if args.command[:1] == ["--"] else args.command
@@ -70,6 +84,7 @@ def main() -> None:
         "cwd": str(args.cwd.resolve()),
         "gpu_id": args.gpu_id,
         "heartbeat_seconds": args.heartbeat_seconds,
+        "validate_artifacts": args.validate_artifacts,
         "resumable": False,
     }
     config_bytes = (json.dumps(config, sort_keys=True, separators=(",", ":")) + "\n").encode()
@@ -84,9 +99,10 @@ def main() -> None:
 
     run_dir = args.artifacts_root / args.task_id / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
-    (run_dir / "config.json").write_bytes(config_bytes)
+    # config.json is reserved for the child's resolved experiment config.
+    (run_dir / "runner_config.json").write_bytes(config_bytes)
     (run_dir / "command.txt").write_text(" ".join(command) + "\n", encoding="utf-8")
-    os.environ["EXPERIMENT_RUN_DIR"] = str(run_dir.resolve())
+    os.environ[MANAGED_RUN_ENV] = str(run_dir.resolve())
     started_at = utc_now()
     status = {
         "schema_version": 1,
@@ -148,12 +164,22 @@ def main() -> None:
     ended_at = utc_now()
     (run_dir / "exit_code").write_text(f"{return_code}\n", encoding="utf-8")
     final_state = "interrupted" if interrupted else ("succeeded" if return_code == 0 else "failed")
+    last_error = tail_text(run_dir / "stderr.log") if return_code else ""
+    validation = None
+    if args.validate_artifacts and final_state == "succeeded":
+        # Loop spec 4.4: verify sample counts, IDs, finiteness and summary
+        # consistency before the run may be recorded as succeeded.
+        validation = validate_run(run_dir)
+        if not validation["valid"]:
+            final_state = "failed"
+            last_error = "artifact validation failed: " + "; ".join(validation["errors"])
     status.update(
         state=final_state,
         update_time=ended_at,
         end_time=ended_at,
         exit_code=return_code,
-        last_error=tail_text(run_dir / "stderr.log") if return_code else "",
+        last_error=last_error,
+        artifact_validation=validation,
     )
     atomic_json(run_dir / "status.json", status)
     runner_manifest = {
@@ -164,9 +190,12 @@ def main() -> None:
         "finished_at": ended_at,
         "exit_code": return_code,
         "state": final_state,
+        "artifact_validation": validation,
     }
     atomic_json(run_dir / "runner_manifest.json", runner_manifest)
     print(run_dir)
+    if return_code == 0 and final_state == "failed":
+        raise SystemExit(VALIDATION_FAILURE_EXIT_CODE)
     raise SystemExit(return_code)
 
 

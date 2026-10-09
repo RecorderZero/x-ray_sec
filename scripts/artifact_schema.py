@@ -26,10 +26,17 @@ REQUIRED_FILES = (
 REQUIRED_PACKAGES = {"numpy", "scipy", "scikit-image", "pillow", "opencv", "torch"}
 
 
-def write_synthetic_run(run_dir: Path, rows: Iterable[dict[str, Any]]) -> None:
-    """Write a tiny deterministic run fixture for validator tests."""
+def write_synthetic_run(
+    run_dir: Path, rows: Iterable[dict[str, Any]], managed: bool = False
+) -> None:
+    """Write a tiny deterministic run fixture for validator tests.
+
+    With ``managed=True`` the directory already exists and ``managed_run.py``
+    owns ``stdout.log``, ``stderr.log`` and ``exit_code``.
+    """
     materialized = list(rows)
-    run_dir.mkdir(parents=True, exist_ok=False)
+    if not managed:
+        run_dir.mkdir(parents=True, exist_ok=False)
     manifest = {
         "schema_version": 2,
         "task_id": "E1.5",
@@ -57,9 +64,10 @@ def write_synthetic_run(run_dir: Path, rows: Iterable[dict[str, Any]]) -> None:
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
     (run_dir / "config.json").write_text("{}\n", encoding="utf-8")
-    (run_dir / "stdout.log").write_text("synthetic run\n", encoding="utf-8")
-    (run_dir / "stderr.log").write_text("", encoding="utf-8")
-    (run_dir / "exit_code").write_text("0\n", encoding="utf-8")
+    if not managed:
+        (run_dir / "stdout.log").write_text("synthetic run\n", encoding="utf-8")
+        (run_dir / "stderr.log").write_text("", encoding="utf-8")
+        (run_dir / "exit_code").write_text("0\n", encoding="utf-8")
     with (run_dir / "per_sample.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=["sample_id", "metric"], lineterminator="\n")
         writer.writeheader()
