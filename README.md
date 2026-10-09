@@ -38,9 +38,9 @@
 | `scripts/create_dev_split.py` | 從 CheXpert validation CSV 建立 20 位病人互斥 split；stable hash 不含 local path。 | split 版本升級時；不要為改善結果任意重抽。 |
 | `scripts/create_security_split.py` | 重現學長每類 16,000 張抽樣、排除其病人，再建立固定隨機 formal split。 | E2.1 重建或擴大 formal N 時。 |
 | `scripts/e1_ddim_runner.py` | headless CFG-DDIM benchmark/smoke，走學長**推論流程**（`ddim_sample_loop_known_progressive`，manifest `pipeline` 註明）；smoke 的 re-inversion 分報共用雜訊（樂觀上限）與未知雜訊（seed+1,000,000）兩版（AF-019）；可在 `managed_run.py` 下寫入受控 run 目錄。 | E1 重驗；`preprocess`／`create_runtime` 供 E2 共用。P/S0/S1 比較改用 `e2_anonymization_runner.py`。 |
-| `scripts/e2_legacy_wrapper.py` | 直接呼叫學長 anonymization sampler 的 anonymize／deanonymize；`P` 為恆等金鑰（全 +1 Rademacher），與 S0/S1 只差在金鑰（AF-017）（生成固定 guidance=-1，與學長原始碼字面一致）；CLI 檢查 wrapper/direct、guidance 0 等價、deanonymize 與 transform round-trip 皆 bit-exact。 | E2.2 重現與後續 S0/S1 pipeline 共用。 |
+| `scripts/e2_legacy_wrapper.py` | 直接呼叫學長 anonymization sampler 的 anonymize／deanonymize；`P` 為恆等金鑰（全 +1 Rademacher），與 S0/S1 只差在金鑰（AF-017）；`legacy_invert`／`apply_legacy_key`／`legacy_generate` 讓 cached x_T 可重用，並以 test 證明與完整 legacy sampler bit-exact（生成固定 guidance=-1，與學長原始碼字面一致）；CLI 檢查 wrapper/direct、guidance 0 等價、deanonymize 與 transform round-trip 皆 bit-exact。 | E2.2 重現與後續 S0/S1 pipeline 共用。 |
 | `scripts/run_artifacts.py` | 共用 run 目錄寫入：standalone 時自建目錄、寫 log/exit code 並立即驗證；在 `managed_run.py` 下改寫入 `EXPERIMENT_RUN_DIR`，由 managed_run 擁有 log 並在結束後驗證。 | E1/E2 runner 寫出 manifest、per-sample、summary。 |
-| `scripts/e2_anonymization_runner.py` | 學長**加密流程**（`ddim_sample_loop_anonymization`）上的 P/S0/S1 實驗：`benchmark` 量 inversion（null=True）與生成（guidance −1／0）每步成本；`p-smoke` 以恆等金鑰 P 跑 4 張 dev 圖的輸出、重算、re-inversion 與 M1（float／學長 PNG 交接）端到端還原（AF-017、AF-019）。 | E2.3 起 P/S0/S1 共用；長任務經 `managed_run.py --validate-artifacts`。 |
+| `scripts/e2_anonymization_runner.py` | 學長**加密流程**（`ddim_sample_loop_anonymization`）上的 P/S0/S1 實驗：`benchmark` 量 inversion（null=True）與生成（guidance −1／0）每步成本；`p-smoke` 以恆等金鑰 P 跑 4 張 dev 圖的輸出、重算、re-inversion 與 M1（float／學長 PNG 交接）端到端還原（AF-017、AF-019）；`cache` 為 E2.3 latent cache（batch 1，`latents.npy` 存於 run 目錄，seed 1911 抽樣以 batch 1 重算，MaxAbs ≤ 1e-5）。 | E2.3 起 P/S0/S1 共用；長任務經 `managed_run.py --validate-artifacts`。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 
@@ -83,7 +83,7 @@
 | `tests/unit/test_split_hash.py` | 驗證更換 local path 前綴不改變 split hash。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
 | `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |
-| `tests/test_legacy_repro.py` | E2.2：P/S0/S1 transform 精確可逆；GPU 比對 P/S0/S1 anonymize／deanonymize wrapper 與 legacy sampler bit-exact、guidance −1 與 0 逐位元相同（AF-021），以及恆等金鑰 P 等同無金鑰的 legacy forward→backward（AF-017）。 |
+| `tests/test_legacy_repro.py` | E2.2：P/S0/S1 transform 精確可逆；GPU 比對 P/S0/S1 anonymize／deanonymize wrapper 與 legacy sampler bit-exact、guidance −1 與 0 逐位元相同（AF-021），以及恆等金鑰 P 等同無金鑰的 legacy forward→backward（AF-017）；cached x_T 路徑（invert → key → generate）與完整 legacy sampler bit-exact（E2.3）。 |
 
 執行：
 

@@ -28,9 +28,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import io
 import json
 import math
+import random
 import sys
 import time
 from contextlib import redirect_stderr, redirect_stdout
@@ -50,12 +52,15 @@ from scripts.e2_legacy_wrapper import (
     LEGACY_PIPELINE,
     legacy_anonymize,
     legacy_deanonymize,
+    legacy_invert,
     legacy_model_kwargs,
 )
 from scripts.run_artifacts import finalize_run, open_run, sha256_file
 
 
 SMOKE_ROWS = (0, 1, 10, 11)  # same dev images as E1.4
+CACHE_RECOMPUTE_TOLERANCE = 1e-5  # WORKFLOW E2.3: sampled recomputation MaxAbs
+CACHE_SHAPE = (1, 256, 256)
 LOWFREQ_POOL = 8  # 256x256 latent -> 32x32 block means (AUD-20261008-03 diagnostic)
 
 
@@ -323,9 +328,109 @@ def run_benchmark(args, rows, diffusion, model_fn, device, context) -> tuple[lis
     return results, numeric
 
 
+def _array_sha256(array: np.ndarray) -> str:
+    return hashlib.sha256(np.ascontiguousarray(array).tobytes()).hexdigest()
+
+
+@torch.inference_mode()
+def run_cache(args, rows, diffusion, model_fn, device, context) -> tuple[list[dict[str, Any]], list[str]]:
+    """E2.3: legacy x_T for every split image plus a seeded batch-1 recomputation."""
+    selected = rows[: args.limit] if args.limit else rows
+    count = len(selected)
+    images = [preprocess(Path(row["local_path"]))[0] for row in selected]
+    latents = np.empty((count, *CACHE_SHAPE), dtype=np.float32)
+    batch_runtime: dict[int, float] = {}
+    for start in range(0, count, args.batch_size):
+        batch = torch.stack(images[start:start + args.batch_size]).to(device)
+        _sync(device)
+        began = time.perf_counter()
+        x_T = legacy_invert(diffusion, model_fn, batch, args.noise_level)
+        _sync(device)
+        batch_runtime[start] = (time.perf_counter() - began) / batch.shape[0]
+        latents[start:start + batch.shape[0]] = x_T.detach().float().cpu().numpy()
+        print(f"cached {start + batch.shape[0]}/{count}")
+
+    recompute_ids = sorted(random.Random(args.seed).sample(range(count), min(args.recompute_count, count)))
+    recompute: dict[int, float] = {}
+    for index in recompute_ids:
+        again = legacy_invert(diffusion, model_fn, images[index].unsqueeze(0).to(device), args.noise_level)
+        recompute[index] = float(np.max(np.abs(again.detach().float().cpu().numpy()[0] - latents[index])))
+
+    latent_path = context.run_dir / "latents.npy"
+    np.save(latent_path, latents)
+    output_rows: list[dict[str, Any]] = []
+    for index, row in enumerate(selected):
+        z = latents[index]
+        output_rows.append({
+            "schema_version": 1,
+            "sample_id": row["sample_id"],
+            "patient_id": row["patient_id"],
+            "label": row["label"],
+            "cache_index": index,
+            "x0_sha256": _array_sha256(images[index].numpy()),
+            "latent_sha256": _array_sha256(z),
+            "latent_finite": int(bool(np.isfinite(z).all())),
+            "latent_l2": float(np.linalg.norm(z)),
+            "latent_mean": float(z.mean()),
+            "latent_std": float(z.std()),
+            "latent_abs_max": float(np.abs(z).max()),
+            "runtime_seconds_per_image": batch_runtime[index - index % args.batch_size],
+            "recomputed": int(index in recompute),
+            # Blank when not sampled; deliberately not a declared numeric field.
+            "recompute_max_abs": recompute.get(index, ""),
+        })
+
+    shape_ok = latents.shape == (count, *CACHE_SHAPE)
+    finite_ok = bool(np.isfinite(latents).all())
+    recompute_max = max(recompute.values()) if recompute else math.nan
+    recompute_ok = bool(recompute) and recompute_max <= CACHE_RECOMPUTE_TOLERANCE
+    done = {
+        "schema_version": 1,
+        "task_id": context.task_id,
+        "run_id": context.run_id,
+        "status": "passed" if shape_ok and finite_ok and recompute_ok else "failed",
+        "split": str(args.split),
+        "split_sha256": rows[0]["split_sha256"],
+        "sample_count": count,
+        "sample_ids": [row["sample_id"] for row in selected],
+        "pipeline": LEGACY_PIPELINE,
+        "pass": "legacy_invert (ddim_anonymization_forward, null=True, clip_denoised=True)",
+        "noise_level": args.noise_level,
+        "batch_size": args.batch_size,
+        "dtype": "float32",
+        "latent_shape": list(latents.shape),
+        "cache_file": str(latent_path),
+        "cache_file_sha256": sha256_file(latent_path),
+        "checks": {
+            "shape_ok": shape_ok,
+            "finite_ok": finite_ok,
+            "recompute_batch_size": 1,
+            "recompute_seed": args.seed,
+            "recompute_sample_ids": [selected[i]["sample_id"] for i in recompute_ids],
+            "recompute_max_abs": recompute_max,
+            "recompute_tolerance": CACHE_RECOMPUTE_TOLERANCE,
+            "recompute_ok": recompute_ok,
+            "recompute_bit_exact_count": sum(value == 0.0 for value in recompute.values()),
+        },
+        "checkpoint_sha256": sha256_file(args.checkpoint),
+        "raw_key_material_recorded": False,
+        "key_independent": "x_T does not depend on the key; P/S0/S1/S2 reuse this cache",
+    }
+    args.done_output.parent.mkdir(parents=True, exist_ok=True)
+    args.done_output.write_text(json.dumps(done, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(done["checks"], indent=2))
+    if done["status"] != "passed":
+        raise RuntimeError(f"E2.3 cache checks failed: {done['checks']}")
+    numeric = [
+        "cache_index", "latent_finite", "latent_l2", "latent_mean", "latent_std",
+        "latent_abs_max", "runtime_seconds_per_image", "recomputed",
+    ]
+    return output_rows, numeric
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("benchmark", "p-smoke"))
+    parser.add_argument("mode", choices=("benchmark", "p-smoke", "cache"))
     parser.add_argument("--split", type=Path, default=Path("splits/dev_v1.1.csv"))
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--source-root", type=Path, default=Path("past/SourceCode"))
@@ -337,12 +442,18 @@ def main() -> None:
     parser.add_argument("--benchmark-output", type=Path, default=Path("results/AF021_anonymization_benchmark.json"))
     parser.add_argument("--smoke-output", type=Path, default=Path("results/AF017_P_anonymization_smoke.csv"))
     parser.add_argument("--contact-sheet", type=Path, default=Path("image/AF017_P_anonymization_smoke.png"))
+    parser.add_argument("--batch-size", type=int, default=1, help="cache mode batch size")
+    parser.add_argument("--limit", type=int, default=0, help="cache mode: only the first N rows (smoke)")
+    parser.add_argument("--recompute-count", type=int, default=20, help="cache mode: seeded batch-1 recomputations")
+    parser.add_argument("--done-output", type=Path, default=Path("results/E2.3_DONE.json"))
     parser.add_argument("--artifacts-root", type=Path, default=Path("artifacts/runs"))
-    parser.add_argument("--task-id", default=None, help="defaults to AF021_ANON_BENCH / AF017_P_SMOKE")
+    parser.add_argument("--task-id", default=None, help="defaults to AF021_ANON_BENCH / AF017_P_SMOKE / E2.3")
     args = parser.parse_args()
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required")
-    task_id = args.task_id or {"benchmark": "AF021_ANON_BENCH", "p-smoke": "AF017_P_SMOKE"}[args.mode]
+    task_id = args.task_id or {
+        "benchmark": "AF021_ANON_BENCH", "p-smoke": "AF017_P_SMOKE", "cache": "E2.3",
+    }[args.mode]
     stdout_capture, stderr_capture = io.StringIO(), io.StringIO()
     with redirect_stdout(Tee(sys.stdout, stdout_capture)), redirect_stderr(Tee(sys.stderr, stderr_capture)):
         rows = load_split(args.split)
@@ -354,11 +465,12 @@ def main() -> None:
         context = open_run(task_id, config, args.artifacts_root)
         device = torch.device("cuda:0")
         _, diffusion, model_fn = create_runtime(args.source_root, args.checkpoint, device)
-        runner = run_benchmark if args.mode == "benchmark" else run_p_smoke
+        runner = {"benchmark": run_benchmark, "p-smoke": run_p_smoke, "cache": run_cache}[args.mode]
         per_sample, numeric = runner(args, rows, diffusion, model_fn, device, context)
         manifest = common_manifest(args, rows)
         manifest.update(
-            scheme="P" if args.mode == "p-smoke" else "P/S0/S1 shared passes",
+            scheme={"p-smoke": "P", "benchmark": "P/S0/S1 shared passes",
+                    "cache": "key-independent x_T shared by P/S0/S1/S2a/S2"}[args.mode],
             seed_list=[args.seed] * len(per_sample),
         )
         finalize_run(

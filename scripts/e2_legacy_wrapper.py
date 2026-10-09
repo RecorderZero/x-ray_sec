@@ -135,6 +135,62 @@ def legacy_anonymize(
     )
 
 
+@torch.inference_mode()
+def legacy_invert(diffusion, model_fn, image: torch.Tensor, noise_level: int = 500) -> torch.Tensor:
+    """Step 1 of the legacy anonymization sampler: x_0 -> x_T (null=True)."""
+    x_T, _ = diffusion.ddim_anonymization_forward(
+        model_fn,
+        image,
+        noise_level,
+        clip_denoised=True,
+        model_kwargs=legacy_model_kwargs(image.shape[0], image.device),
+    )
+    return x_T
+
+
+@torch.inference_mode()
+def apply_legacy_key(
+    x_T: torch.Tensor, source_root: Path, scheme: str, mode: str
+) -> torch.Tensor:
+    """Step 2 of ``ddim_sample_loop_anonymization`` applied to a cached x_T.
+
+    Mirrors the legacy key application (full pixel mask; SignedPermutationKey
+    uses ``apply``/``apply_inverse``, other keys ``M*(k*x) + (1-M)*x``) so that a
+    cached latent can be reused across schemes.  ``tests/test_legacy_repro.py``
+    checks invert -> apply_legacy_key -> generate against the full legacy
+    sampler bit-exactly.
+    """
+    if mode not in {"anonymize", "deanonymize"}:
+        raise ValueError(f"unknown mode: {mode}")
+    anonymizer, key = build_legacy_components(source_root, scheme, x_T.device)
+    from guided_diffusion.anonymization import AnonymizationMask, SignedPermutationKey
+
+    mask = AnonymizationMask(
+        shape=x_T.shape[1:], mask_type=anonymizer.mask_type, margin=anonymizer.margin
+    ).mask.to(x_T.device)
+    if mask.dim() < x_T.dim():
+        mask = mask.unsqueeze(0).expand_as(x_T)
+    if isinstance(key, SignedPermutationKey):
+        return key.apply(x_T, mask) if mode == "anonymize" else key.apply_inverse(x_T, mask)
+    key_tensor = key.key.to(x_T.device)
+    if key_tensor.dim() < x_T.dim():
+        key_tensor = key_tensor.unsqueeze(0).expand_as(x_T)
+    return mask * (key_tensor * x_T) + (1 - mask) * x_T
+
+
+@torch.inference_mode()
+def legacy_generate(diffusion, model_fn, x_T: torch.Tensor, noise_level: int = 500) -> torch.Tensor:
+    """Step 3 of the legacy anonymization sampler: x_T -> image (guidance -1)."""
+    return diffusion.ddim_anonymization_backward(
+        model_fn,
+        x_T,
+        noise_level,
+        clip_denoised=True,
+        model_kwargs=legacy_model_kwargs(x_T.shape[0], x_T.device),
+        guidance_scale=LEGACY_GUIDANCE_SCALE,
+    )
+
+
 def legacy_deanonymize(
     diffusion,
     model_fn,

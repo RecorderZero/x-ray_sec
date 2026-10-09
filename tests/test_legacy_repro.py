@@ -15,9 +15,12 @@ from scripts.e1_ddim_runner import create_runtime, preprocess
 from scripts.e2_legacy_wrapper import (
     KEY_SHAPE,
     LEGACY_GUIDANCE_SCALE,
+    apply_legacy_key,
     build_legacy_components,
     legacy_anonymize,
     legacy_deanonymize,
+    legacy_generate,
+    legacy_invert,
     legacy_model_kwargs,
 )
 
@@ -145,3 +148,32 @@ def test_p_identity_key_matches_keyless_legacy_passes(runtime) -> None:
         )
     assert torch.equal(latent, keyless_latent)
     assert torch.equal(output, keyless_output)
+
+
+@requires_gpu
+@pytest.mark.parametrize("scheme", ["P", "S0", "S1"])
+def test_cached_latent_path_matches_full_legacy_sampler(runtime, scheme: str) -> None:
+    """E2.3: invert -> apply_legacy_key -> generate equals the full legacy calls."""
+    diffusion, model_fn, x0 = runtime
+    anonymous, latent, _ = legacy_anonymize(diffusion, model_fn, x0, SOURCE, scheme, GPU_NOISE_LEVEL)
+    cached = legacy_invert(diffusion, model_fn, x0, GPU_NOISE_LEVEL)
+    assert torch.equal(cached, latent)
+    z_anonymous = apply_legacy_key(cached, SOURCE, scheme, "anonymize")
+    assert torch.equal(legacy_generate(diffusion, model_fn, z_anonymous, GPU_NOISE_LEVEL), anonymous)
+
+    recovered, reinverted, _ = legacy_deanonymize(
+        diffusion, model_fn, anonymous, SOURCE, scheme, GPU_NOISE_LEVEL
+    )
+    reinverted_cached = legacy_invert(diffusion, model_fn, anonymous, GPU_NOISE_LEVEL)
+    assert torch.equal(reinverted_cached, reinverted)
+    z_recovered = apply_legacy_key(reinverted_cached, SOURCE, scheme, "deanonymize")
+    assert torch.equal(legacy_generate(diffusion, model_fn, z_recovered, GPU_NOISE_LEVEL), recovered)
+
+
+@pytest.mark.parametrize("scheme", ["P", "S0", "S1"])
+def test_cached_key_application_round_trips_exactly(scheme: str) -> None:
+    z = torch.randn((2, *KEY_SHAPE), generator=torch.Generator().manual_seed(1911))
+    encrypted = apply_legacy_key(z, SOURCE, scheme, "anonymize")
+    assert torch.equal(apply_legacy_key(encrypted, SOURCE, scheme, "deanonymize"), z)
+    if scheme != "P":
+        assert not torch.equal(encrypted, z)
