@@ -37,6 +37,8 @@ class RunContext:
     config_hash: str
     managed: bool
     started_at: str
+    git_commit: str
+    git_dirty: bool
 
 
 def sha256_file(path: Path) -> str:
@@ -76,7 +78,12 @@ def open_run(
         run_dir = artifacts_root / task_id / run_id
         run_dir.mkdir(parents=True, exist_ok=False)
     (run_dir / "config.json").write_bytes(config_bytes)
-    return RunContext(task_id, run_id, run_dir, config_hash, bool(managed_dir), started_at)
+    # Git state is captured when the run starts, not when it finishes, so that
+    # commits made while a long run is in progress are not misattributed.
+    return RunContext(
+        task_id, run_id, run_dir, config_hash, bool(managed_dir), started_at,
+        git_value("rev-parse", "HEAD"), bool(git_value("status", "--porcelain=v1")),
+    )
 
 
 def package_versions() -> dict[str, str]:
@@ -128,8 +135,8 @@ def finalize_run(
         "task_id": context.task_id,
         "run_id": context.run_id,
         "config_hash": context.config_hash,
-        "git_commit": git_value("rev-parse", "HEAD"),
-        "git_dirty": bool(git_value("status", "--porcelain=v1")),
+        "git_commit": context.git_commit,
+        "git_dirty": context.git_dirty,
         "expected_samples": len(per_sample_rows),
         "sample_ids": [str(row["sample_id"]) for row in per_sample_rows],
         "command": " ".join(sys.argv),
