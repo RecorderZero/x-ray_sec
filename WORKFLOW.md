@@ -290,7 +290,7 @@ G0：E0.1 與 E1.1–E1.5 全過。
 
 大目標：建立可被後續所有攻擊共用的 S0/S1 與 latent cache。
 
-協定裁決：P／S0／S1／S2a／S2 的 security、correctness、reversibility 主表共用 `guidance_scale=0`；guidance=4 的病灶健康化結果若執行，須另列附表。
+協定裁決：P／S0／S1／S2a／S2 的 security、correctness、reversibility 主表共用同一生成設定：生成一律依學長程式寫死的 `guidance_scale=-1`（y=0 健康類條件生成、單次模型呼叫、無 CFG 混合；與 `guidance_scale=0` 逐位元等價，見 AF-021；使用者 2026-10-09 裁決），inversion 為 `null=True` 無條件；guidance=4 的病灶健康化結果若執行，須另列附表。
 
 | ID | 子任務 | 通過條件 | 交付 |
 |---|---|---|---|

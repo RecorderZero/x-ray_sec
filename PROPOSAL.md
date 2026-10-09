@@ -360,7 +360,7 @@ nonce 的安全需求是同一 master key 下唯一，不是保密或不可預�
 - pilot：50 張。
 - formal：依 GPU benchmark 決定，最低 200 張，目標 500–1,000 張。
 - formal split 採 AF-012(a)：以 `random_state=1911` 精確重現前作每類 16,000 張訓練抽樣，排除所有入選影像所屬病人的全部影像，再從未入選 train 病人以 seed 1911 固定隨機抽取；不得把 valid 與 train 混成同一 formal split。
-- P／S0／S1／S2a／S2 的 security、correctness 與 reversibility 主表一律共用 `guidance_scale=0`；病灶健康化的 guidance=4 若保留，只能作獨立附表，不得混入主表比較。
+- P／S0／S1／S2a／S2 的 security、correctness 與 reversibility 主表一律共用同一生成設定：生成一律依學長程式寫死的 `guidance_scale=-1`（y=0 健康類條件生成、單次模型呼叫、無 CFG 混合；與 `guidance_scale=0` 逐位元等價，見 AF-021；使用者 2026-10-09 裁決），inversion 為 `null=True` 無條件；病灶健康化的 guidance=4 若保留，只能作獨立附表，不得混入主表比較。
 - patient-disjoint split。
 - 固定 seed 1911。
 - 報 bootstrap 95% CI，不只報平均。
