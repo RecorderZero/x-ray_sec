@@ -450,3 +450,40 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 請稽核方複驗 E2.3–E2.5、AF-019（E2.5 部分）、AF-022，並判定 G0。
 * 進入 Week 2：A3.1 key-space audit、A3.2 小空間 brute force、A3.3 S0/S1 不變量、A3.4 T1 gallery（以 `security_v1` cache 做 P 正控制與 shuffle 負控制）。
 * A4 T2-WB 依 `reports/t2wb_protocol.md` §4 實作，需先為 security_v1 產生 S0/S1 匿名影像與 re-inversion（N=200，約 2.6 GPU-hours）。
+
+## 2026-10-10 · W1 · Track E · AF-023 用語與 provenance 修正
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：E2.3、E2.4、E2.5（文件與證據鏈收尾）。
+* 回應稽核：AUD-20261010-03 的 AF-023（7 點）。AUD-20261010-03 判定 G0 通過，並已關閉 AF-019、AF-022。
+* [決定] 使用者 2026-10-10 裁決 AF-023 第 6 點：影像指標維持不 clip 的定義，只在報告中註明，不修改、不重算。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-023-1] 已修正（待稽核複驗）｜commit `6db5347`｜`reports/metric_semantics.md` 摘要中「0.9989 等於 PSNR 約 30–32 dB，沒有 PSNR 以外資訊」改標 `[推定]`，並限定在加性、近正交誤差下；§3.4 與 §5 同類敘述一併改為 `[推定]`。
+* [AF-023-2] 已修正（待稽核複驗）｜commit `6db5347`｜「還原圖對 P 輸出」一律改稱「前作比較方式的類比」，註明前作實際比較的是兩條路徑的偽健康 `samples`；引用的稽核方 AUD-20261010-01 §4 表格，依稽核方自身更正同步改寫。
+* [AF-023-3] 已修正（待稽核複驗）｜commit `6db5347`｜T1 的「S0/S1 與 P 逐位元相同」改寫為依構造成立：transform 逐位元可逆，所以生成輸入與 P 相同，runner 直接沿用 P 的輸出（`t1_reused_p_output=1`，60/60）。
+* [AF-023-4] 已修正（待稽核複驗）｜commit `6db5347`｜`reports/t2wb_protocol.md` §1 改為各方案專屬正控制；`README.md` 的 t2wb_protocol 列改為已裁決。
+* [AF-023-5] 已修正（待稽核複驗）｜commit `26aed6f`｜`scripts/run_artifacts.py`：`git_dirty` 改用 `git status --porcelain=v1 --untracked-files=no`；manifest 新增 `imported_project_modules`，記錄 repo 內被 import 的 `.py` 及其 SHA-256，含 runtime 載入的 `past/SourceCode` 模組，並略過相對路徑的擴充模組；`tests/unit/test_run_artifacts.py` 新增對應檢查。
+* [AF-023-6] 依使用者裁決只註明｜commit `6db5347`｜`reports/metric_semantics.md` §3.3 與 §5 註明：PSNR、SSIM、L∞、MSE、MAE、cosine、bit-exact 都直接用未 clip 的生成輸出計算，只有 uint8 pixel equality 先 clip；與 clip 慣例的差異 ≤ 0.042 dB（稽核方 E2.5 逐張比對）。
+* [AF-023-7] 已修正（待稽核複驗）｜commit `26aed6f`｜`results/perf_probe_batch1.json` 補上 9 個行程中每張影像的 latent SHA-256 與參考值；全部與單行程 eager 相同。
+* 驗證指令：`scripts/run_cfg_ddim.sh python -m pytest -q tests/unit tests/integration tests/test_legacy_repro.py`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 測試 `44 passed in 132.10s`（unit 23、integration 1、legacy repro 20）。
+* [事實] 本輪只改文件、provenance 欄位與診斷 JSON，沒有修改任何正式 run、per-sample 結果或主表數值；E1 runner（`scripts/e1_ddim_runner.py`）未改動。
+* [更正] 前一條目（2026-10-10 E2.3–E2.5）§3 寫「T1 還原對 x0 為 42.23 dB，P/S0/S1 逐位元相同」。這是依構造成立，不是另外量測（見 AF-023-3）：S0/S1 的 T1 輸出直接沿用 P 的輸出，因為 transform 逐位元可逆（60/60）。舊條目保留不改。
+* [注意] `git_dirty` 改定義後，只有已追蹤檔案有未提交修改時才會是 true；本輪之前的 run，其 `git_dirty=true` 可能只是因為有 `AUDIT.md`、`audit/` 等未追蹤檔。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：AF-023 七點的實作方修正完成，測試通過；狀態 `FIXED?`，待稽核方複驗。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 未失敗。教訓是：報告摘要不得比正文的證據等級更強；依構造成立的等式要寫明機制，不要寫成量測結果。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 無。
+
+### 7. 下一步
+* 請使用者 push（`git push origin main`）；自動模式擋下了實作方的 push。
+* Week 2：A3.1 key-space audit、A3.2 小空間 brute force、A3.3 S0/S1 不變量、A3.4 T1 gallery（security_v1 cache）。
