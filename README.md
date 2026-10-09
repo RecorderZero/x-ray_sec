@@ -54,7 +54,7 @@
 | `reports/preprocessing_audit.md` | 學長實際 CheXpert 前處理的程式證據、與本 runner 的一致性及剩餘限制。 |
 | `reports/metric_semantics.md` | E2.4（AF-022）：前作「Cosine Sim 0.9989」在論文（latent）與程式（輸出影像、base 對解密輸出）的差異與行號；像素 cosine 基準；本專案 latent／影像指標定義與「對 x0／對 P 輸出」並列；論文用語規範。 |
 | `reports/t2wb_protocol.md` | AF-019：可逆性以影像端端到端為主指標、latent 只作診斷；加密流程 P smoke 事實；T2-WB 攻擊的 P 正控制／負控制定義，以及 `Inconclusive` 判定門檻提案（待使用者裁決）。 |
-| `reports/compute_budget.md` | E2–F9 各 scheme/attack 在加密流程上的 forward／generation 半週期矩陣（實測 batch 1/4/8 成本、guidance −1）與 N=200/500/1,000 GPU 時數；記錄 N=200 裁決。 |
+| `reports/compute_budget.md` | E2–F9 各 scheme/attack 在加密流程上的 forward／generation 半週期矩陣（實測 batch 1/4/8 成本、guidance −1）與 N=200/500/1,000 GPU 時數；記錄 N=200 裁決，以及 batch 組成會改變結果（batch 4 vs 1 MaxAbs 6.9e-4）而正式 pass 固定 batch 1 的決定。 |
 | `artifacts/environment_baseline.txt` | 當次環境、套件實際來源、GPU、checkpoint hash、freeze hash 與 strict-load 結果。 |
 | `artifacts/environment_freeze.txt` | 由 CFG_DDIM 的 `pip freeze --all` 產生，供 baseline hash 與重建。 |
 | `model_inventory.csv` | 一列式 checkpoint/model inventory，適合程式與試算表讀取。 |
@@ -68,6 +68,8 @@
 | `results/AF017_P_anonymization_smoke.csv` | 恆等金鑰 P 在加密流程上的 4 張 smoke：P 輸出、inversion 重算、re-inversion（float／PNG）latent 指標與低／高頻、\|z\| 診斷，以及 M1 端到端影像指標。 |
 | `image/AF017_P_anonymization_smoke.png` | 上述 4 張的 original、P 輸出、M1 float、M1 PNG 與固定色階 0–0.1 差異圖。 |
 | `results/E2.4_metric_semantics.json` | E2.4 像素 cosine 基準與反例的數值（dev_v1.1 20 張、190 對），含與稽核方的 `cross_check`。 |
+| `results/E2.3_DONE.json` | E2.3 正式 latent cache（`security_v1` 200 張，batch 1）的 metadata：run ID、`latents.npy` 路徑與 SHA-256、shape／finite 檢查、seed 1911 抽 20 張以 batch 1 重算的 MaxAbs（全為 0）。cache 本體在 `artifacts/runs/E2.3/<run_id>/latents.npy`，不入 Git。 |
+| `results/E2.3_dev_v1.1_cache.json` | 同上，dev_v1.1 20 張（E2.5 的輸入），抽 5 張重算。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `image/E1.4_ddim_smoke_contact_sheet.png` | 四列視覺檢查圖；每列是 original、reconstruction、absolute difference。 |
 | `artifacts/preflight/canonical_direction_candidates_d4096_n100.json` | d=4,096、N=100 canonical preflight 原始輸出。 |

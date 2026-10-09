@@ -29,11 +29,19 @@ repeats, per image, scaled by 499 steps (noise level 500):
   image (AUD-20261009-02); the batch-8 guidance-0 cycle (16.55 s) matches the
   E1.2 basis used previously (16.6 s). The P smoke measured 15.67 s for one
   complete batch-1 anonymization (`results/AF017_P_anonymization_smoke.csv`).
-- Planning below uses batch 8: F = 5.54 s, G = 5.52 s per image. Model loading,
-  I/O, validation and contention are covered by a 25% reserve.
-- Caveat: batch composition may change GPU floating-point results. Any
-  comparison that must be bit-exact (E2.3 recomputation, T1 reuse of P outputs)
-  must use the same batch composition; this is checked in the E2.3 smoke.
+- Planning below is given for batch 8 (F = 5.54 s, G = 5.52 s per image) and
+  batch 1 (F = 7.73 s, G = 7.82 s). Model loading, I/O, validation and
+  contention are covered by a 25% reserve.
+- `[事實]` Batch composition changes the GPU result: an E2.3 smoke that cached
+  four `security_v1` latents at batch 4 and recomputed them at batch 1 gave
+  MaxAbs 6.93e-4 (> the E2.3 tolerance 1e-5, 0/4 bit-exact), while caching and
+  recomputing at batch 1 gave MaxAbs 0 (4/4 bit-exact).
+- `[決定]` (implementer, 2026-10-10) Formal passes run at **batch 1**: the E2.3
+  tolerance, the T1 reuse of P outputs and every bit-exact regression test are
+  defined at batch 1. Switching downstream generation to batch 8 would save
+  about 29% but requires recording the batch composition and redoing the
+  recomputation checks at that composition; it is not adopted unless the user
+  asks for it.
 - T1/KPA/CPA/norm/linkage and tamper checks reuse cached tensors and are not
   charged a diffusion pass; their small costs are measured in the runtime table.
 
@@ -42,7 +50,7 @@ repeats, per image, scaled by 499 steps (noise level 500):
 The forward pass is key-independent in the legacy pipeline, so one cached
 `x_T` per image serves all schemes.
 
-| Stage | P | S0 | S1 | S2a | S2 | F | G | N=200 GPU-hours |
+| Stage | P | S0 | S1 | S2a | S2 | F | G | N=200 GPU-hours (batch 8) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | E2.3 forward cache (shared by all schemes) | F | — | — | — | — | 1 | 0 | 0.31 |
 | Anonymous image generation from keyed latent | G | G | G | G | G | 0 | 5 | 1.53 |
@@ -58,15 +66,18 @@ The forward pass is key-independent in the legacy pipeline, so one cached
 
 ## Scale comparison and decision
 
-| Formal N | Core | Core +25% | Core +25% +2 full-cycle contingency |
-|---:|---:|---:|---:|
-| 200 | 11.67 | 14.59 | 15.82 |
-| 500 | 29.18 | 36.48 | 39.55 |
-| 1,000 | 58.37 | 72.96 | 79.11 |
+| Formal N | Batch | Core | Core +25% | Core +25% +2 full-cycle contingency |
+|---:|---:|---:|---:|---:|
+| 200 | 8 | 11.67 | 14.59 | 15.82 |
+| 200 | **1 (adopted)** | **16.45** | **20.56** | **22.29** |
+| 500 | 8 | 29.18 | 36.48 | 39.55 |
+| 500 | 1 | 41.13 | 51.41 | 55.73 |
+| 1,000 | 8 | 58.37 | 72.96 | 79.11 |
+| 1,000 | 1 | 82.26 | 102.82 | 111.46 |
 
-N=200 is retained (user decision 2026-10-08). The revision lowers the N=200
-cap from 18.45 to 15.82 GPU-hours even though P's anonymous generation and the
-T2-WB positive control on P are now charged, because generation uses one model
-call per step and the forward cache is shared. Automatic retries remain limited
+N=200 is retained (user decision 2026-10-08). At batch 8 the revision would
+lower the N=200 cap from 18.45 to 15.82 GPU-hours (one model call per
+generation step, shared forward cache); at the adopted batch 1 the cap is
+22.29 GPU-hours, still within the eight-week schedule. Automatic retries remain limited
 by the loop specification and cannot change seed, split, metric or method
 parameters; the existing `security_v1` membership and hash remain frozen.
