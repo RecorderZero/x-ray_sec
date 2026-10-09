@@ -362,3 +362,42 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 請稽核方複驗 AF-006、AF-013～AF-016 並決定是否 CLOSED。
 * 複驗通過後建立 E2.3 latent cache runner 與 1–4 張 smoke，不直接啟動 N=200。
+
+## 2026-10-09 · W1 · Track E · AF-017／AF-019／AF-020／AF-021 修復與加密流程 P 基線
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：E1.4、E2.2，以及 E2.3／E2.5 開始前的前置條件。
+* 回應稽核：AUD-20261008-03 的 AF-017、AF-019；AUD-20261009-01 的 AF-020 與 §8-Q2；AUD-20261009-02 的 AF-021。
+* [決定] 使用者 2026-10-09 指派 Claude 擔任實作與測試方，並同意依 loop spec §6 逐子任務 commit；稽核方另行驗證。`AUDIT.md` 保持唯讀。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-021] 已修正（待稽核複驗）｜commits `15e5a62`、`05ae398`｜`scripts/e2_legacy_wrapper.py`：生成固定 `LEGACY_GUIDANCE_SCALE=-1`，移除 `--guidance-scale`，新增 `legacy_deanonymize`、`legacy_model_kwargs`；manifest 記 `guidance_scale=-1`、`generation_conditioning`、`inversion_conditioning`、`pipeline`；`tests/test_legacy_repro.py` 新增 −1 對 0 的 bit-exact test；`reports/compute_budget.md` 改用加密流程實測成本；README／WORKFLOW E2 協定裁決／PROPOSAL §7.3 用語改為「y=0 健康類條件生成、單次模型呼叫、無 CFG 混合」｜驗證：`scripts/run_cfg_ddim.sh python -m pytest -q tests/test_legacy_repro.py`；`scripts/run_cfg_ddim.sh python -m scripts.e2_legacy_wrapper --checkpoint <ckpt> --noise-level 500 --output results/E2.2.json`。
+* [AF-017] 已修正（待稽核複驗）｜commits `faf2fa9`、`7689239`｜`build_legacy_components` 新增 `P`＝恆等 Rademacher 金鑰（全 +1），P／S0／S1 共用 `ddim_sample_loop_anonymization`，只差在金鑰；新增 `scripts/e2_anonymization_runner.py`（manifest `pipeline=legacy_anonymization:ddim_sample_loop_anonymization`）與 P smoke；新增 test：恆等金鑰 P 與直接呼叫學長函式 bit-exact，且等同無金鑰的 legacy forward→backward；E1 runner manifest 標 `pipeline=legacy_inference:ddim_sample_loop_known_progressive`，README 將 E1.4 標為推論流程｜驗證：同上 pytest；`scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id AF017_P_SMOKE --validate-artifacts -- python -m scripts.e2_anonymization_runner p-smoke --checkpoint <ckpt>`。E2.3 latent cache 將以 `ddim_anonymization_forward` 產生（尚未開始）。
+* [AF-020] 已修正（待稽核複驗）｜commits `cf1879f`、`7689239`、`4fcb7ca`｜`scripts/managed_run.py` 新增 `--validate-artifacts`：子程序成功後以 `validate_run` 驗證，未過即 `state=failed`、exit 3；自身設定改存 `runner_config.json`。新增 `scripts/run_artifacts.py`，E1 runner 在 managed 模式下直接寫入受控 run 目錄。以 committed runner 經 managed_run 重跑 E1.2／E1.4；四個舊 run 目錄未刪除，已加 `SUPERSEDED` 標記｜驗證：`scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id E1.4 --validate-artifacts -- python scripts/e1_ddim_runner.py smoke --checkpoint <ckpt>`（E1.2 同理，`benchmark`）。
+* [AF-019] 部分修正｜commits `7689239`、`4fcb7ca`、`faf2fa9`、本條 docs commit｜E1.4 的 re-inversion 改名為 `latent_reinversion_shared_noise_*`（0.906 標為共用雜訊、樂觀上限），並新增 `latent_reinversion_unknown_noise_*`（seed+1,000,000）；加密流程 P smoke 報告無雜訊 re-inversion 的 latent 指標與低／高頻、\|z\| 診斷，並以 M1 端到端影像指標為主；新增 `reports/t2wb_protocol.md` 定義 T2-WB 正控制（P）、負控制與 `Inconclusive` 判定提案。驗收條件中的 E2.5 表格與 A4 T2-WB 結果尚未產生，**本 finding 不能在本輪關閉**。
+* [AUD-20261009-01 §8-Q2] 已回覆｜commit `05ae398`｜預算改以 forward（F）／generation（G）半週期矩陣計算，P 的匿名生成與 T2-WB 正控制皆已計入。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `scripts/run_cfg_ddim.sh python -m pytest -q tests/unit tests/integration tests/test_legacy_repro.py` → `33 passed in 60.61s`。`git diff --stat b94a4a9..HEAD -- past/SourceCode` 為空。
+* [事實] E2.2 CLI（dev_v1.1_000、T=500，`results/E2.2.json`）：P／S0／S1 的 wrapper 對 direct、wrapper 對 guidance 0、deanonymize wrapper 對 direct、transform round-trip，以及 P 對無金鑰 forward→backward，MaxAbs 全為 0。S0／S1 output 與 latent SHA-256 與舊 guidance 0 版本相同。
+* [事實] 加密流程 benchmark（managed run `AF021_ANON_BENCH_20261009T152410677702Z_a5f3dcdc`，valid）：每張半週期 batch 1 為 F=7.73 s、G(−1)=7.82 s、G(0)=15.40 s；batch 8 為 F=5.54 s、G=5.52 s。batch 1 full cycle −1／0 = 15.55／23.13 s，與稽核方的 15.9／23.0 s 一致。N=200 core 11.67、+25% 14.59、+2 cycles 15.82 GPU-hours（舊版 18.45）。
+* [事實] P smoke（managed run `AF017_P_SMOKE_20261009T152434977798Z_df76812e`，valid；4 張平均）：P 輸出 vs 原圖 PSNR 42.35 dB、SSIM 0.9838；同一輸入重算 inversion MaxAbs=0（4/4 bit-exact）；re-inversion（PNG 交接）latent cos 0.275（範圍 0.012–0.739）、低頻 32×32 cos 0.974、\|z\| Pearson 0.430；M1 PNG 端到端 PSNR 38.10 dB、SSIM 0.9760、L∞ 0.136；PNG 儲存本身 vs P 輸出 PSNR 54.58 dB。科學數值只報告，不作成功門檻。
+* [事實] E1.2／E1.4 重跑（`E1.2_20261009T153114394206Z_8339c2f5`、`E1.4_20261009T153121667310Z_aa04e79c`）state=succeeded、artifact_validation valid；manifest `script_sha256=a9711eea…` 等於 commit `7689239` 的 runner。E1.4 所有既有欄位與舊 CSV 逐值相同（max diff 0），contact sheet 位元組相同；新的未知雜訊 re-inversion cos 平均 0.3713，與稽核方 0.371 一致。
+* [觀察] 加密流程即使沒有 t=0 雜訊，re-inversion 的 latent 仍只保留低頻（高頻 cos 0.24）。逐元素 \|z\| 攻擊在 T2-WB 下的結果必須先看 P 正控制才能解讀，這支持 AF-019 的疑慮。
+* [觀察] dev_v1.1_010／011 的 M1 還原圖中可見原圖沒有的細小字樣狀紋理（`image/AF017_P_anonymization_smoke.png`），屬生成模型的局部幻覺；n=4，僅記錄，留待 E2.5／Q8 以較大樣本確認。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：AF-017、AF-020、AF-021 的實作方驗收條件與兩個硬閘門均完成，狀態為 `FIXED?`，待稽核方複驗後在 `AUDIT.md` 關閉。
+* [ ] **未達標 (Failed)**：無。AF-019 屬「部分修正」而非失敗，其驗收條件依賴尚未開始的 E2.5 與 A4。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 本輪未失敗。E2.3 必須等稽核方關閉 AF-017／AF-020／AF-021 後才開始；開始時先做 1–4 張 managed smoke，並檢查 batch 8 與 batch 1 的 inversion 是否 bit-exact，再排程 N=200。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- WORKFLOW §3.4 第 4 點要求 positive control 不足時標 `Inconclusive`，但沒有預先登記「不足」的門檻。`reports/t2wb_protocol.md` §4 提出方案 (a) 統計可分離（建議）與方案 (b) 固定 10 倍隨機基準，**需使用者裁決**；裁決前不得用來判定 A4／D7 結果。
+- 依 AUD-20261009-02 使用者裁決（生成 guidance −1），已更新 WORKFLOW E2「協定裁決」與 PROPOSAL §7.3 的用語；通過條件未放寬。WORKFLOW E1.4 列的「主線 `guidance_scale=0`」描述的是推論流程 smoke 的實際設定，未改。
+
+### 7. 下一步
+* 請稽核方複驗 AF-017、AF-020、AF-021，並確認 AF-019 的部分修正方向；請使用者裁決 T2-WB `Inconclusive` 門檻。
+* 稽核通過後執行 E2.3：以 `ddim_anonymization_forward` 對 `security_v1` 建立 latent cache（先 1–4 張 smoke，含 batch 組成的 bit-exact 檢查）。
+* 接著完成 E2.4 metric semantics 報告與 E2.5 dev 20 張 P／S0／S1 的 T1 與 T2-WB（M1 PNG 交接）round-trip，用以關閉 AF-019。

@@ -4,7 +4,8 @@
 
 ## 目前狀態
 
-- E0.1、E1.1–E1.5 已由 AUD-20261008-02 複驗通過；E2.2 已完成 S0/S1 legacy regression。
+- E0.1、E1.1–E1.5 已由 AUD-20261008-02 複驗通過；E2.2 已完成 S0/S1 legacy regression，並補上恆等金鑰 P（AF-017）。
+- 2026-10-09 起 P/S0/S1 一律走學長**加密流程**（`ddim_sample_loop_anonymization`）；E1 的推論流程結果只作病灶定位流程的歷史基線。AF-017、AF-020、AF-021 已修正待稽核複驗；AF-019 需待 E2.5／A4 完成。
 - 目標 checkpoint 可 strict load，missing/unexpected keys 均為 0。
 - E2.1 formal split 已建立且通過獨立驗證；formal N 依使用者裁決先維持 200，僅在小實驗跑通後另建新版 split 擴大。輸入必須使用已凍結的 legacy CheXpert preprocessing：grayscale → histogram equalization → OpenCV `INTER_AREA` 256×256 → JPEG quality 100 round-trip → per-image min-max `[0,1]`。
 - 固定 dev split：`dev_v1.1`，20 張、20 位不同病人，健康／積水各 10 張；hash 排除本機路徑。
@@ -50,6 +51,7 @@
 | `canonical_preflight.csv` | E0 唯一 canonical synthetic preflight 摘要；舊 31/32、98/100 不得混用。 |
 | `reports/evidence_reset.md` | 說明哪些舊 claim 被撤回或限制，以及現版 preflight 能支持什麼。 |
 | `reports/preprocessing_audit.md` | 學長實際 CheXpert 前處理的程式證據、與本 runner 的一致性及剩餘限制。 |
+| `reports/t2wb_protocol.md` | AF-019：可逆性以影像端端到端為主指標、latent 只作診斷；加密流程 P smoke 事實；T2-WB 攻擊的 P 正控制／負控制定義，以及 `Inconclusive` 判定門檻提案（待使用者裁決）。 |
 | `reports/compute_budget.md` | E2–F9 各 scheme/attack 在加密流程上的 forward／generation 半週期矩陣（實測 batch 1/4/8 成本、guidance −1）與 N=200/500/1,000 GPU 時數；記錄 N=200 裁決。 |
 | `artifacts/environment_baseline.txt` | 當次環境、套件實際來源、GPU、checkpoint hash、freeze hash 與 strict-load 結果。 |
 | `artifacts/environment_freeze.txt` | 由 CFG_DDIM 的 `pip freeze --all` 產生，供 baseline hash 與重建。 |
