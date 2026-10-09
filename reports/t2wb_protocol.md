@@ -1,6 +1,6 @@
 # T2-WB 可逆性指標與正控制協定（AF-019）
 
-> 狀態：§1–§3 為已實作的量測規則；§4 的 `Inconclusive` 判定門檻是**提案，待使用者裁決**，裁決前不得用來判定 A4／D7 的 T2-WB 結果。
+> 狀態：§1–§3 為量測規則；§4 為使用者 2026-10-10 裁決的 `Inconclusive` 規則（取代原提案），A4／D7 依此實作。
 > 依據：WORKFLOW §3.4 第 4 點、PROPOSAL §5.4、AUD-20261008-03（AF-017、AF-019）。
 
 ## 1. 為什麼不能用 latent cosine 0.906
@@ -30,20 +30,30 @@
 3. 三條路徑分開報告（PROPOSAL §7.2）：transform-only、T1（精確 latent）、T2-WB／M1（匿名影像 → 目標模型 inversion → 解密 → 生成）。
 4. M1 的主路徑採**學長實際的儲存方式**：匿名影像經 per-image min-max 後以 uint8 PNG 保存（truncation），重新讀入後 inversion（`legacy_png_handoff`）。float 交接只作上限對照。
 
-## 3. T2-WB 攻擊的正控制與負控制（已定義，A4／D7 實作）
+## 3. T2-WB 攻擊的正控制與負控制（A4／D7 實作）
 
 - Gallery：E2.3 cache 的原圖 latent `z_i = ddim_anonymization_forward(x0_i)`，`security_v1`，N=200。
 - Query（方案 s）：攻擊者對保存的匿名 PNG 自行 inversion 得 `ẑ_j^s`；T1 則直接取精確 `z_ano,j^s`。
 - 特徵與 scorer 在 T1、T2-WB、所有方案間完全相同：S0 用 `|z|`，S1 用 `sort(|z|)`，另報 norm-only `‖z‖`；可加報低頻 `|z|` 區塊平均作為 re-inversion 穩健特徵（`[假設]` 身分資訊主要在低頻，見 AUD-20261008-03 §3.3）。
-- **正控制**：方案 P（恆等金鑰，與 S0/S1 同一條加密流程）以相同的 re-inversion 與特徵做 linkage。它只衡量 inversion 誤差本身對攻擊的影響。
+- **正控制**（依 §4 裁決）：每個方案各自的正控制，即以正確金鑰把 re-inversion 得到的 `ẑ_ano` 解密成 `ẑ` 後，以 latent 相關對 gallery 做 linkage。P（恆等金鑰）的 re-inversion linkage 只作參考，不用來判定其他方案。
 - **負控制**：gallery ID 以 seed 1911 隨機重排後的 Top-1（預期約 1/N）。
 - 統計：Top-1、Top-5、mAP／CMC；以 query 為單位 bootstrap（B=10,000、seed 1911）95% CI。
 
-## 4. `Inconclusive` 判定（提案，待使用者裁決）
+## 4. `Inconclusive` 判定（使用者裁決 2026-10-10，AUD-20261010-02 §1）
 
-對每個（特徵 f，威脅情境 T2-WB）組合：
+原提案（以 P 的 re-inversion 當所有方案的正控制）已被取代：稽核方實測 P 的 re-inversion 保真度（\|z\| Pearson 約 0.43）遠低於 S0/S1 自身（約 0.976，AUD-20261010-01 §4），以 P 判定會低估對 S0/S1 的攻擊可行性。
 
-- **方案 (a)（建議）統計可分離**：若 P 正控制 Top-1 的 95% CI 下界 ≤ 負控制 Top-1 的 95% CI 上界，則 S0/S1/S2a/S2 在 f 上的 T2-WB 結果全部標為 `Inconclusive`。不得寫成「攻擊失敗」或「方案安全」。
-- **方案 (b) 固定倍數**：P 正控制 Top-1 未達隨機基準（1/N）的 10 倍即判 `Inconclusive`。好處是直觀；缺點是倍數沒有出現在 WORKFLOW 的預先登記門檻中。
-- 正控制通過、但方案 s 的攻擊未達顯著時，只能寫「在 T2-WB 下此特徵的 linkage 未達顯著（正控制通過）」。依 PROPOSAL §5，這仍不是安全性宣稱。
-- T1 的正控制（P 精確 latent，Top-1 應為 1）一律報告，作為 scorer 正確性的檢查。
+對每個（方案 s、特徵 f、T2-WB）格子：
+
+1. **攻擊成功**：Top-1 的 95% CI 下界 > 負控制 Top-1 的 95% CI 上界 → 照實報告為攻擊成功，不受正控制影響。
+2. **攻擊未成功**時，才看**該方案專屬的正控制**：實驗者以正確金鑰把 re-inversion 得到的 `ẑ_ano` 解密成 `ẑ`，再以 latent 相關（cosine／Pearson）對 gallery `z_i` 做 linkage，取 Top-1 與 95% CI。
+   - 正控制的 CI 下界 ≤ 負控制的 CI 上界 → 該格標 `Inconclusive`（受 inversion 誤差限制），不得寫成攻擊失敗或方案安全。
+   - 正控制通過 → 只能寫「T2-WB 下此特徵的 linkage 未達顯著（正控制通過）」；依 PROPOSAL §5，這仍不是安全性宣稱。
+3. 每個方案都報告解密後 latent 的保真度（cosine、RMSE、低頻 cosine、\|z\| Pearson）。P 的 re-inversion 保真度只作參考，**不再**用來判定其他方案。
+4. T1 的正控制（P 精確 latent，Top-1 應為 1）一律報告，作為 scorer 正確性的檢查。
+5. 匿名影像維持學長的 per-image min-max uint8 PNG 儲存；改為無損儲存不在本次裁決範圍內（AUD-20261010-01 §5-Q2）。
+
+## 5. 診斷：latent 距離不能預測影像可逆性
+
+- `[事實]`（稽核方 `audit/e2_latent_direction_sensitivity.py`）P 的 re-inversion 誤差（RMSE 約 1.13）與大幅白雜訊同等級，但前者生成的影像對 P 輸出仍有 43.9 dB，後者只有 6.4 dB；S0 的解密 latent 誤差（RMSE 0.132）與同大小白雜訊的影像影響相當（31.8 對 31.3 dB）。
+- `[結論]` 任何各方向等權的 latent 距離（cosine、RMSE、L2）都無法預測影像可逆性；可逆性一律以影像端指標判斷，latent 指標只用於診斷與攻擊特徵分析。
