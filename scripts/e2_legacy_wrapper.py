@@ -52,18 +52,26 @@ def _load_crypto(source_root: Path):
 
 
 def build_legacy_components(source_root: Path, scheme: str, device: torch.device):
-    """Construct the exact full-mask key objects used by the predecessor."""
+    """Construct the exact full-mask key objects used by the predecessor.
+
+    ``P`` (AF-017) is the unencrypted control on the same pipeline: an identity
+    Rademacher key (all +1), for which the legacy full-mask expression
+    ``M*(k*x) + (1-M)*x`` returns ``x`` exactly.
+    """
     DiffusionAnonymizer, RademacherKey, SignedPermutationKey = _load_crypto(source_root)
-    if scheme not in {"S0", "S1"}:
+    if scheme not in {"P", "S0", "S1"}:
         raise ValueError(f"unknown legacy scheme: {scheme}")
-    key_class = RademacherKey if scheme == "S0" else SignedPermutationKey
-    # Both arguments were present in the predecessor shell command.  In the
-    # legacy constructors password takes precedence over seed for key material.
-    key = key_class(
-        shape=KEY_SHAPE,
-        seed=LEGACY_KEY_SEED,
-        password=LEGACY_PASSWORD,
-    ).to(device)
+    if scheme == "P":
+        key = RademacherKey(shape=KEY_SHAPE, key=torch.ones(KEY_SHAPE)).to(device)
+    else:
+        key_class = RademacherKey if scheme == "S0" else SignedPermutationKey
+        # Both arguments were present in the predecessor shell command.  In the
+        # legacy constructors password takes precedence over seed for key material.
+        key = key_class(
+            shape=KEY_SHAPE,
+            seed=LEGACY_KEY_SEED,
+            password=LEGACY_PASSWORD,
+        ).to(device)
     anonymizer = DiffusionAnonymizer(
         latent_shape=KEY_SHAPE,
         mask_type="full",
@@ -219,7 +227,7 @@ def verify_scheme(
     anonymizer, key = build_legacy_components(source_root, scheme, x0.device)
     z_anon = anonymizer.anonymize_latent(observed_latent, key)
     z_roundtrip = anonymizer.deanonymize_latent(z_anon, key)
-    result = {
+    result: dict[str, Any] = {
         "scheme": scheme,
         "wrapper_vs_direct_output_max_abs": _max_abs(observed_output, expected_output),
         "wrapper_vs_direct_latent_max_abs": _max_abs(observed_latent, expected_latent),
@@ -238,6 +246,19 @@ def verify_scheme(
         "latent_sha256": _tensor_sha256(observed_latent),
         "recovered_sha256": _tensor_sha256(recovered),
     }
+    if scheme == "P":
+        # The identity key must change nothing: generation straight from the
+        # unmodified x_T with the legacy backward pass is the oracle.
+        keyless = diffusion.ddim_anonymization_backward(
+            model_fn,
+            observed_latent,
+            noise_level,
+            clip_denoised=True,
+            model_kwargs=legacy_model_kwargs(x0.shape[0], x0.device),
+            guidance_scale=LEGACY_GUIDANCE_SCALE,
+        )
+        result["p_identity_vs_keyless_output_max_abs"] = _max_abs(observed_output, keyless)
+        result["p_identity_latent_transform_max_abs"] = _max_abs(observed_latent, z_anon)
     numeric = [value for value in result.values() if isinstance(value, float)]
     if not all(math.isfinite(value) for value in numeric):
         raise RuntimeError(f"non-finite E2.2 metric for {scheme}")
@@ -279,7 +300,7 @@ def main() -> None:
             scheme,
             args.noise_level,
         )
-        for scheme in ("S0", "S1")
+        for scheme in ("P", "S0", "S1")
     ]
     payload = {
         "schema_version": 2,

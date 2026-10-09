@@ -1,4 +1,7 @@
-"""E2.2 regression tests against the predecessor's S0/S1 implementation."""
+"""E2.2 regression tests against the predecessor's S0/S1 implementation.
+
+P (AF-017) is the identity-key control on the same anonymization pipeline.
+"""
 
 from __future__ import annotations
 
@@ -10,10 +13,12 @@ import torch
 
 from scripts.e1_ddim_runner import create_runtime, preprocess
 from scripts.e2_legacy_wrapper import (
+    KEY_SHAPE,
     LEGACY_GUIDANCE_SCALE,
     build_legacy_components,
     legacy_anonymize,
     legacy_deanonymize,
+    legacy_model_kwargs,
 )
 
 
@@ -68,7 +73,7 @@ def test_wrapper_uses_predecessor_hardcoded_guidance() -> None:
     assert LEGACY_GUIDANCE_SCALE == -1
 
 
-@pytest.mark.parametrize("scheme", ["S0", "S1"])
+@pytest.mark.parametrize("scheme", ["P", "S0", "S1"])
 def test_legacy_transform_is_exactly_invertible(scheme: str) -> None:
     anonymizer, key = build_legacy_components(SOURCE, scheme, torch.device("cpu"))
     z = torch.linspace(-2.0, 2.0, 256 * 256, dtype=torch.float32).reshape(1, 1, 256, 256)
@@ -78,7 +83,7 @@ def test_legacy_transform_is_exactly_invertible(scheme: str) -> None:
 
 
 @requires_gpu
-@pytest.mark.parametrize("scheme", ["S0", "S1"])
+@pytest.mark.parametrize("scheme", ["P", "S0", "S1"])
 def test_wrapper_is_bit_exact_with_legacy_anonymization_sampler(runtime, scheme: str) -> None:
     diffusion, model_fn, x0 = runtime
     observed = legacy_anonymize(diffusion, model_fn, x0, SOURCE, scheme, GPU_NOISE_LEVEL)
@@ -97,7 +102,7 @@ def test_guidance_minus_one_equals_guidance_zero(runtime, scheme: str) -> None:
 
 
 @requires_gpu
-@pytest.mark.parametrize("scheme", ["S0", "S1"])
+@pytest.mark.parametrize("scheme", ["P", "S0", "S1"])
 def test_deanonymize_wrapper_is_bit_exact_with_legacy_sampler(runtime, scheme: str) -> None:
     diffusion, model_fn, x0 = runtime
     anonymous, _, _ = legacy_anonymize(diffusion, model_fn, x0, SOURCE, scheme, GPU_NOISE_LEVEL)
@@ -106,3 +111,37 @@ def test_deanonymize_wrapper_is_bit_exact_with_legacy_sampler(runtime, scheme: s
     )
     expected = direct_legacy_call(diffusion, model_fn, anonymous, scheme, "deanonymize", -1)
     assert_all_equal(observed, expected)
+
+
+def test_identity_key_leaves_latent_unchanged_in_legacy_expression() -> None:
+    """AF-017: the sampler's inline full-mask Rademacher step is the identity for P."""
+    import sys
+
+    sys.path.insert(0, str(SOURCE))
+    from guided_diffusion.anonymization import AnonymizationMask
+
+    anonymizer, key = build_legacy_components(SOURCE, "P", torch.device("cpu"))
+    assert torch.equal(key.key, torch.ones(KEY_SHAPE))
+    z = torch.randn((1, *KEY_SHAPE), generator=torch.Generator().manual_seed(1911))
+    mask = AnonymizationMask(shape=KEY_SHAPE, mask_type=anonymizer.mask_type, margin=anonymizer.margin).mask
+    processed = mask * (key.key * z) + (1 - mask) * z
+    assert torch.equal(processed, z)
+    assert torch.equal(anonymizer.anonymize_latent(z, key), z)
+
+
+@requires_gpu
+def test_p_identity_key_matches_keyless_legacy_passes(runtime) -> None:
+    """AF-017: P output equals legacy forward then backward with no key at all."""
+    diffusion, model_fn, x0 = runtime
+    output, latent, _ = legacy_anonymize(diffusion, model_fn, x0, SOURCE, "P", GPU_NOISE_LEVEL)
+    kwargs = legacy_model_kwargs(1, x0.device)
+    with torch.inference_mode():
+        keyless_latent, _ = diffusion.ddim_anonymization_forward(
+            model_fn, x0, GPU_NOISE_LEVEL, clip_denoised=True, model_kwargs=kwargs
+        )
+        keyless_output = diffusion.ddim_anonymization_backward(
+            model_fn, keyless_latent, GPU_NOISE_LEVEL, clip_denoised=True,
+            model_kwargs=kwargs, guidance_scale=LEGACY_GUIDANCE_SCALE,
+        )
+    assert torch.equal(latent, keyless_latent)
+    assert torch.equal(output, keyless_output)

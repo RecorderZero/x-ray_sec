@@ -37,7 +37,9 @@
 | `scripts/create_dev_split.py` | 從 CheXpert validation CSV 建立 20 位病人互斥 split；stable hash 不含 local path。 | split 版本升級時；不要為改善結果任意重抽。 |
 | `scripts/create_security_split.py` | 重現學長每類 16,000 張抽樣、排除其病人，再建立固定隨機 formal split。 | E2.1 重建或擴大 formal N 時。 |
 | `scripts/e1_ddim_runner.py` | headless CFG-DDIM benchmark/smoke；直接呼叫 legacy progressive sampler，產出完整 run artifacts 與兩空間指標。 | E1 重驗與 E2 runner 的基礎。 |
-| `scripts/e2_legacy_wrapper.py` | 直接呼叫學長 anonymization sampler 的 anonymize／deanonymize（生成固定 guidance=-1，與學長原始碼字面一致）；CLI 檢查 wrapper/direct、guidance 0 等價、deanonymize 與 transform round-trip 皆 bit-exact。 | E2.2 重現與後續 S0/S1 pipeline 共用。 |
+| `scripts/e2_legacy_wrapper.py` | 直接呼叫學長 anonymization sampler 的 anonymize／deanonymize；`P` 為恆等金鑰（全 +1 Rademacher），與 S0/S1 只差在金鑰（AF-017）（生成固定 guidance=-1，與學長原始碼字面一致）；CLI 檢查 wrapper/direct、guidance 0 等價、deanonymize 與 transform round-trip 皆 bit-exact。 | E2.2 重現與後續 S0/S1 pipeline 共用。 |
+| `scripts/run_artifacts.py` | 共用 run 目錄寫入：standalone 時自建目錄、寫 log/exit code 並立即驗證；在 `managed_run.py` 下改寫入 `EXPERIMENT_RUN_DIR`，由 managed_run 擁有 log 並在結束後驗證。 | E1/E2 runner 寫出 manifest、per-sample、summary。 |
+| `scripts/e2_anonymization_runner.py` | 學長**加密流程**（`ddim_sample_loop_anonymization`）上的 P/S0/S1 實驗：`benchmark` 量 inversion（null=True）與生成（guidance −1／0）每步成本；`p-smoke` 以恆等金鑰 P 跑 4 張 dev 圖的輸出、重算、re-inversion 與 M1（float／學長 PNG 交接）端到端還原（AF-017、AF-019）。 | E2.3 起 P/S0/S1 共用；長任務經 `managed_run.py --validate-artifacts`。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 
@@ -57,8 +59,10 @@
 | `splits/security_v1.csv` | E2 formal 200 人 split，健康／積水各 100；病人與重建的前作訓練抽樣互斥。 |
 | `splits/security_v1_manifest.json` | formal split seed、抽樣規則、排除人數、hash 與 label counts。 |
 | `results/E1.2_benchmark.json` | batch 1/4/8 的 cycle 時間、估計 noise=500 時間與 peak VRAM；用來決定 batch/N。 |
-| `results/E1.4_ddim_smoke.csv` | 四張 x0→z→xrec 的 primary/repeat/re-inversion 分段 runtime、VRAM、finite、image/latent metrics。 |
-| `results/E2.2.json` | 單張 noise=500、guidance=-1 的 S0/S1 wrapper 對 legacy direct-call regression：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
+| `results/E1.4_ddim_smoke.csv` | **推論流程**（病灶定位用，`ddim_sample_loop_known_progressive`）四張 x0→z→xrec 的分段 runtime、VRAM、finite、image/latent metrics；不是 P/S0/S1 比較用的 P 基線（AF-017）。 |
+| `results/AF017_P_anonymization_smoke.csv` | 恆等金鑰 P 在加密流程上的 4 張 smoke：P 輸出、inversion 重算、re-inversion（float／PNG）latent 指標與低／高頻、\|z\| 診斷，以及 M1 端到端影像指標。 |
+| `image/AF017_P_anonymization_smoke.png` | 上述 4 張的 original、P 輸出、M1 float、M1 PNG 與固定色階 0–0.1 差異圖。 |
+| `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `image/E1.4_ddim_smoke_contact_sheet.png` | 四列視覺檢查圖；每列是 original、reconstruction、absolute difference。 |
 | `artifacts/preflight/canonical_direction_candidates_d4096_n100.json` | d=4,096、N=100 canonical preflight 原始輸出。 |
 | `artifacts/preflight/canonical_direction_candidates_d65536_n100.json` | d=65,536、N=100 canonical preflight 原始輸出。 |
@@ -76,7 +80,7 @@
 | `tests/unit/test_split_hash.py` | 驗證更換 local path 前綴不改變 split hash。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
 | `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |
-| `tests/test_legacy_repro.py` | E2.2：S0/S1 transform 精確可逆；GPU 比對 anonymize／deanonymize wrapper 與 legacy sampler bit-exact，以及 guidance −1 與 0 逐位元相同（AF-021）。 |
+| `tests/test_legacy_repro.py` | E2.2：P/S0/S1 transform 精確可逆；GPU 比對 P/S0/S1 anonymize／deanonymize wrapper 與 legacy sampler bit-exact、guidance −1 與 0 逐位元相同（AF-021），以及恆等金鑰 P 等同無金鑰的 legacy forward→backward（AF-017）。 |
 
 執行：
 
