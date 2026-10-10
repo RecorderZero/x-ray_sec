@@ -95,12 +95,17 @@ def encrypt_all(latents: np.ndarray, scheme: str) -> np.ndarray:
 
 
 def feature(matrix: np.ndarray, scorer: str) -> np.ndarray:
+    # AF-028: compute in float64. The abs / sorted-abs magnitudes are already
+    # exact in float32 (sign flip and permutation are exact), but float32 norm
+    # accumulation produced spurious ties that the pessimistic tie-break scored
+    # as misses, understating the T1 norm attack.
+    matrix64 = matrix.astype(np.float64)
     if scorer == "abs":
-        return np.abs(matrix)
+        return np.abs(matrix64)
     if scorer == "sorted_abs":
-        return np.sort(np.abs(matrix), axis=1)
+        return np.sort(np.abs(matrix64), axis=1)
     if scorer == "norm":
-        return np.linalg.norm(matrix, axis=1, keepdims=True)
+        return np.linalg.norm(matrix64, axis=1, keepdims=True)
     raise ValueError(scorer)
 
 
@@ -122,25 +127,40 @@ def ranks_of_truth(query_feat: np.ndarray, gallery_feat: np.ndarray) -> np.ndarr
     return results
 
 
+def wilson_ci(successes: int, n: int, z: float = 1.959963984540054) -> list[float]:
+    """95% Wilson score interval for a binomial proportion.
+
+    AF-028: a bootstrap CI collapses to [1.00, 1.00] at 200/200 and overstates
+    certainty; Wilson gives [0.981, 1.00] for a perfect sample.
+    """
+    if n == 0:
+        return [0.0, 0.0]
+    phat = successes / n
+    denom = 1 + z * z / n
+    center = (phat + z * z / (2 * n)) / denom
+    half = z * ((phat * (1 - phat) / n + z * z / (4 * n * n)) ** 0.5) / denom
+    return [max(0.0, center - half), min(1.0, center + half)]
+
+
 def summarize(ranks: np.ndarray, gallery_size: int, rng: np.random.Generator) -> dict:
-    top1 = ranks <= 1
-    top5 = ranks <= 5
+    n = len(ranks)
+    top1 = int(np.sum(ranks <= 1))
+    top5 = int(np.sum(ranks <= 5))
     average_precision = 1.0 / ranks  # one true match per query
-    draws = rng.integers(0, len(ranks), size=(BOOTSTRAP, len(ranks)))
-
-    def ci(values: np.ndarray) -> list[float]:
-        means = values[draws].mean(axis=1)
-        return [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]
-
+    draws = rng.integers(0, n, size=(BOOTSTRAP, n))
+    ap_means = average_precision[draws].mean(axis=1)
     cmc = [float(np.mean(ranks <= k)) for k in range(1, gallery_size + 1)]
     return {
-        "queries": int(len(ranks)),
+        "queries": n,
         "gallery_size": gallery_size,
         "random_top1": 1.0 / gallery_size,
-        "top1": float(top1.mean()), "top1_ci95": ci(top1.astype(float)),
-        "top5": float(top5.mean()), "top5_ci95": ci(top5.astype(float)),
-        "mAP": float(average_precision.mean()), "mAP_ci95": ci(average_precision),
+        "top1": top1 / n, "top1_ci95_wilson": wilson_ci(top1, n),
+        "top5": top5 / n, "top5_ci95_wilson": wilson_ci(top5, n),
+        "mAP": float(average_precision.mean()),
+        "mAP_ci95_bootstrap": [float(np.percentile(ap_means, 2.5)), float(np.percentile(ap_means, 97.5))],
         "median_rank": float(np.median(ranks)), "max_rank": int(ranks.max()),
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=%d)" % BOOTSTRAP,
+        "norm_dtype": "float64",
         "cmc": cmc,
     }
 
@@ -178,10 +198,10 @@ def main() -> None:
                 "scheme": scheme, "scorer": scorer,
                 "queries": positive["queries"], "gallery_size": gallery_size,
                 "random_top1": positive["random_top1"],
-                "top1": positive["top1"], "top1_ci95_low": positive["top1_ci95"][0], "top1_ci95_high": positive["top1_ci95"][1],
+                "top1": positive["top1"], "top1_ci95_low": positive["top1_ci95_wilson"][0], "top1_ci95_high": positive["top1_ci95_wilson"][1],
                 "top5": positive["top5"], "mAP": positive["mAP"],
                 "median_rank": positive["median_rank"], "max_rank": positive["max_rank"],
-                "negctrl_top1": negative["top1"], "negctrl_top1_ci95_high": negative["top1_ci95"][1],
+                "negctrl_top1": negative["top1"], "negctrl_top1_ci95_high": negative["top1_ci95_wilson"][1],
             })
             gallery_cache[(scheme, scorer)] = np.array(positive["cmc"])
             print(f"{scheme}/{scorer}: top1={positive['top1']:.3f} top5={positive['top5']:.3f} "

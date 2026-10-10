@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "task_id": "A3.4",
-  "created_at": "2026-10-10T03:48:48.201453+00:00",
-  "command": "/data2/paper/scripts/a3_t1_gallery.py --latent-cache artifacts/runs/E2.3/E2.3_20261009T183736363217Z_84cf642a",
-  "script_sha256": "9c8293d51c09472b16db3f3968e53122ce3299d47d6e35fcec36bf64b0383eaa",
-  "git_commit": "caa82ddef20643ff592960098d7e8ecc8287ae3a",
+  "created_at": "2026-10-10T17:48:32.234596+00:00",
+  "command": "/data2/paper/scripts/a3_t1_gallery.py --latent-cache artifacts/runs/E2.3/E2.3_20261009T183736363217Z_84cf642a --force",
+  "script_sha256": "79a373210aca6224542187c1a34ab0b976e9f1d472a0ce1dd5953029c3fb30d7",
+  "git_commit": "002427e10c0f97b90f694ad27900c43523f6b3aa",
   "threat_model": "T1 (exact ciphertext latent, no inversion error)",
   "seed": 1911,
   "bootstrap_resamples": 10000,
@@ -20,22 +20,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 1.0,
-        "top1_ci95": [
-          1.0,
+        "top1_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "top5": 1.0,
-        "top5_ci95": [
-          1.0,
+        "top5_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "mAP": 1.0,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           1.0,
           1.0
         ],
         "median_rank": 1.0,
         "max_rank": 1,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           1.0,
           1.0,
@@ -244,22 +246,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.005,
-        "top1_ci95": [
-          0.0,
-          0.015
+        "top1_ci95_wilson": [
+          0.0008831687156009814,
+          0.02777370439789293
         ],
         "top5": 0.02,
-        "top5_ci95": [
-          0.005,
-          0.04
+        "top5_ci95_wilson": [
+          0.0078044264163494685,
+          0.050287086905826436
         ],
         "mAP": 0.02549760251591292,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           0.017207833120502888,
           0.03800847153979906
         ],
         "median_rank": 104.0,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.005,
           0.005,
@@ -470,22 +474,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 1.0,
-        "top1_ci95": [
-          1.0,
+        "top1_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "top5": 1.0,
-        "top5_ci95": [
-          1.0,
+        "top5_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "mAP": 1.0,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           1.0,
           1.0
         ],
         "median_rank": 1.0,
         "max_rank": 1,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           1.0,
           1.0,
@@ -694,22 +700,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.005,
-        "top1_ci95": [
-          0.0,
-          0.015
+        "top1_ci95_wilson": [
+          0.0008831687156009814,
+          0.02777370439789293
         ],
         "top5": 0.05,
-        "top5_ci95": [
-          0.02,
-          0.085
+        "top5_ci95_wilson": [
+          0.02738264560076393,
+          0.08957814813877599
         ],
         "mAP": 0.03782795309370492,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           0.025442937961778832,
           0.053227541100103234
         ],
         "median_rank": 89.5,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.005,
           0.02,
@@ -919,25 +927,27 @@
         "queries": 200,
         "gallery_size": 200,
         "random_top1": 0.005,
-        "top1": 0.99,
-        "top1_ci95": [
-          0.975,
+        "top1": 1.0,
+        "top1_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "top5": 1.0,
-        "top5_ci95": [
+        "top5_ci95_wilson": [
+          0.9811546736227335,
+          1.0
+        ],
+        "mAP": 1.0,
+        "mAP_ci95_bootstrap": [
           1.0,
           1.0
         ],
-        "mAP": 0.995,
-        "mAP_ci95": [
-          0.9875,
-          1.0
-        ],
         "median_rank": 1.0,
-        "max_rank": 2,
+        "max_rank": 1,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
-          0.99,
+          1.0,
           1.0,
           1.0,
           1.0,
@@ -1144,26 +1154,28 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.005,
-        "top1_ci95": [
-          0.0,
-          0.015
+        "top1_ci95_wilson": [
+          0.0008831687156009814,
+          0.02777370439789293
         ],
         "top5": 0.02,
-        "top5_ci95": [
-          0.005,
-          0.04
+        "top5_ci95_wilson": [
+          0.0078044264163494685,
+          0.050287086905826436
         ],
-        "mAP": 0.02651416634638573,
-        "mAP_ci95": [
-          0.017963567053540585,
-          0.039105295627634235
+        "mAP": 0.026092641888047375,
+        "mAP_ci95_bootstrap": [
+          0.017800056219634378,
+          0.038487815704128944
         ],
         "median_rank": 89.0,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.005,
           0.005,
-          0.01,
+          0.005,
           0.01,
           0.02,
           0.025,
@@ -1195,7 +1207,7 @@
           0.13,
           0.135,
           0.14,
-          0.145,
+          0.14,
           0.15,
           0.16,
           0.17,
@@ -1228,7 +1240,7 @@
           0.365,
           0.365,
           0.375,
-          0.38,
+          0.375,
           0.395,
           0.4,
           0.4,
@@ -1328,7 +1340,7 @@
           0.82,
           0.825,
           0.83,
-          0.84,
+          0.845,
           0.845,
           0.86,
           0.865,
@@ -1370,22 +1382,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 1.0,
-        "top1_ci95": [
-          1.0,
+        "top1_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "top5": 1.0,
-        "top5_ci95": [
-          1.0,
+        "top5_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "mAP": 1.0,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           1.0,
           1.0
         ],
         "median_rank": 1.0,
         "max_rank": 1,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           1.0,
           1.0,
@@ -1594,22 +1608,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.005,
-        "top1_ci95": [
-          0.0,
-          0.015
+        "top1_ci95_wilson": [
+          0.0008831687156009814,
+          0.02777370439789293
         ],
         "top5": 0.02,
-        "top5_ci95": [
-          0.005,
-          0.04
+        "top5_ci95_wilson": [
+          0.0078044264163494685,
+          0.050287086905826436
         ],
         "mAP": 0.02549760251591292,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           0.017207833120502888,
           0.03800847153979906
         ],
         "median_rank": 104.0,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.005,
           0.005,
@@ -1820,22 +1836,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 1.0,
-        "top1_ci95": [
-          1.0,
+        "top1_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "top5": 1.0,
-        "top5_ci95": [
-          1.0,
+        "top5_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "mAP": 1.0,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           1.0,
           1.0
         ],
         "median_rank": 1.0,
         "max_rank": 1,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           1.0,
           1.0,
@@ -2044,22 +2062,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.005,
-        "top1_ci95": [
-          0.0,
-          0.015
+        "top1_ci95_wilson": [
+          0.0008831687156009814,
+          0.02777370439789293
         ],
         "top5": 0.05,
-        "top5_ci95": [
-          0.02,
-          0.085
+        "top5_ci95_wilson": [
+          0.02738264560076393,
+          0.08957814813877599
         ],
         "mAP": 0.03782795309370492,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           0.025442937961778832,
           0.053227541100103234
         ],
         "median_rank": 89.5,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.005,
           0.02,
@@ -2269,25 +2289,27 @@
         "queries": 200,
         "gallery_size": 200,
         "random_top1": 0.005,
-        "top1": 0.99,
-        "top1_ci95": [
-          0.975,
+        "top1": 1.0,
+        "top1_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "top5": 1.0,
-        "top5_ci95": [
+        "top5_ci95_wilson": [
+          0.9811546736227335,
+          1.0
+        ],
+        "mAP": 1.0,
+        "mAP_ci95_bootstrap": [
           1.0,
           1.0
         ],
-        "mAP": 0.995,
-        "mAP_ci95": [
-          0.9875,
-          1.0
-        ],
         "median_rank": 1.0,
-        "max_rank": 2,
+        "max_rank": 1,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
-          0.99,
+          1.0,
           1.0,
           1.0,
           1.0,
@@ -2494,26 +2516,28 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.005,
-        "top1_ci95": [
-          0.0,
-          0.015
+        "top1_ci95_wilson": [
+          0.0008831687156009814,
+          0.02777370439789293
         ],
         "top5": 0.02,
-        "top5_ci95": [
-          0.005,
-          0.04
+        "top5_ci95_wilson": [
+          0.0078044264163494685,
+          0.050287086905826436
         ],
-        "mAP": 0.02651416634638573,
-        "mAP_ci95": [
-          0.017963567053540585,
-          0.039105295627634235
+        "mAP": 0.026092641888047375,
+        "mAP_ci95_bootstrap": [
+          0.017800056219634378,
+          0.038487815704128944
         ],
         "median_rank": 89.0,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.005,
           0.005,
-          0.01,
+          0.005,
           0.01,
           0.02,
           0.025,
@@ -2545,7 +2569,7 @@
           0.13,
           0.135,
           0.14,
-          0.145,
+          0.14,
           0.15,
           0.16,
           0.17,
@@ -2578,7 +2602,7 @@
           0.365,
           0.365,
           0.375,
-          0.38,
+          0.375,
           0.395,
           0.4,
           0.4,
@@ -2678,7 +2702,7 @@
           0.82,
           0.825,
           0.83,
-          0.84,
+          0.845,
           0.845,
           0.86,
           0.865,
@@ -2720,22 +2744,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.005,
-        "top1_ci95": [
-          0.0,
-          0.015
+        "top1_ci95_wilson": [
+          0.0008831687156009814,
+          0.02777370439789293
         ],
         "top5": 0.025,
-        "top5_ci95": [
-          0.005,
-          0.05
+        "top5_ci95_wilson": [
+          0.010724719651761264,
+          0.05717834040664198
         ],
         "mAP": 0.030632885579314803,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           0.020910079852529004,
           0.04361099445917091
         ],
         "median_rank": 99.0,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.005,
           0.005,
@@ -2944,22 +2970,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.01,
-        "top1_ci95": [
-          0.0,
-          0.025
+        "top1_ci95_wilson": [
+          0.0027466581335444384,
+          0.0357217617161768
         ],
         "top5": 0.02,
-        "top5_ci95": [
-          0.005,
-          0.04
+        "top5_ci95_wilson": [
+          0.0078044264163494685,
+          0.050287086905826436
         ],
         "mAP": 0.0329594162823986,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           0.02075972333314242,
           0.04947251521645175
         ],
         "median_rank": 100.0,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.01,
           0.01,
@@ -3170,22 +3198,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 1.0,
-        "top1_ci95": [
-          1.0,
+        "top1_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "top5": 1.0,
-        "top5_ci95": [
-          1.0,
+        "top5_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "mAP": 1.0,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           1.0,
           1.0
         ],
         "median_rank": 1.0,
         "max_rank": 1,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           1.0,
           1.0,
@@ -3394,22 +3424,24 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.005,
-        "top1_ci95": [
-          0.0,
-          0.015
+        "top1_ci95_wilson": [
+          0.0008831687156009814,
+          0.02777370439789293
         ],
         "top5": 0.05,
-        "top5_ci95": [
-          0.02,
-          0.085
+        "top5_ci95_wilson": [
+          0.02738264560076393,
+          0.08957814813877599
         ],
         "mAP": 0.03782795309370492,
-        "mAP_ci95": [
+        "mAP_ci95_bootstrap": [
           0.025442937961778832,
           0.053227541100103234
         ],
         "median_rank": 89.5,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.005,
           0.02,
@@ -3619,25 +3651,27 @@
         "queries": 200,
         "gallery_size": 200,
         "random_top1": 0.005,
-        "top1": 0.985,
-        "top1_ci95": [
-          0.965,
+        "top1": 1.0,
+        "top1_ci95_wilson": [
+          0.9811546736227335,
           1.0
         ],
         "top5": 1.0,
-        "top5_ci95": [
+        "top5_ci95_wilson": [
+          0.9811546736227335,
+          1.0
+        ],
+        "mAP": 1.0,
+        "mAP_ci95_bootstrap": [
           1.0,
           1.0
         ],
-        "mAP": 0.9925,
-        "mAP_ci95": [
-          0.9825,
-          1.0
-        ],
         "median_rank": 1.0,
-        "max_rank": 2,
+        "max_rank": 1,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
-          0.985,
+          1.0,
           1.0,
           1.0,
           1.0,
@@ -3844,26 +3878,28 @@
         "gallery_size": 200,
         "random_top1": 0.005,
         "top1": 0.005,
-        "top1_ci95": [
-          0.0,
-          0.015
+        "top1_ci95_wilson": [
+          0.0008831687156009814,
+          0.02777370439789293
         ],
         "top5": 0.02,
-        "top5_ci95": [
-          0.005,
-          0.04
+        "top5_ci95_wilson": [
+          0.0078044264163494685,
+          0.050287086905826436
         ],
-        "mAP": 0.02651416634638573,
-        "mAP_ci95": [
-          0.017963567053540585,
-          0.039105295627634235
+        "mAP": 0.026092641888047375,
+        "mAP_ci95_bootstrap": [
+          0.017800056219634378,
+          0.038487815704128944
         ],
         "median_rank": 89.0,
         "max_rank": 200,
+        "ci_method": "top-k: Wilson score; mAP: bootstrap (B=10000)",
+        "norm_dtype": "float64",
         "cmc": [
           0.005,
           0.005,
-          0.01,
+          0.005,
           0.01,
           0.02,
           0.025,
@@ -3895,7 +3931,7 @@
           0.13,
           0.135,
           0.14,
-          0.145,
+          0.14,
           0.15,
           0.16,
           0.17,
@@ -3928,7 +3964,7 @@
           0.365,
           0.365,
           0.375,
-          0.38,
+          0.375,
           0.395,
           0.4,
           0.4,
@@ -4028,7 +4064,7 @@
           0.82,
           0.825,
           0.83,
-          0.84,
+          0.845,
           0.845,
           0.86,
           0.865,
