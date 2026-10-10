@@ -48,6 +48,7 @@
 | `scripts/perf_probe.py` | 診斷用 batch 1 吞吐探針：eager／CUDA Graphs（以快取同一 CPU 運算結果的 monkey-patch 讓 legacy `timestep_embedding` 可被 capture）與多行程並行，並比對 latent SHA-256。 | 決定正式 run 的加速方式前重新量測。 |
 | `scripts/m1_storage.py` | AF-024：M1 存檔協定 `range_preserving_png/v1`，以真實 8-bit 灰階 PNG 儲存，float32 lo/hi 以 IEEE-754 位元保存在 PNG text chunk 與紀錄中，`np.rint` 量化，讀回 `q/255·(hi−lo)+lo`；缺值域時拒絕解碼。前作 `legacy_png_handoff` 不變。 | 本專案 M1 存檔；S2 的 HMAC 須涵蓋 lo/hi（D5）。 |
 | `scripts/m1_storage_compare_runner.py` | AF-024：從 E2.3 dev cache 對 P/S0/S1 以 range-preserving PNG 重跑 M1，逐張驗證匿名影像與 E2.5 相同，再唯讀併入 E2.5 的 legacy PNG／float 結果，輸出三欄並列表。 | P/S0/S1 存檔協定對照；S2a/S2 沿用同一協定。 |
+| `scripts/a3_t1_gallery.py` | A3.4：T1（精確 latent）magnitude／sorted-magnitude／norm gallery linkage；P 正控制、shuffle 負控制；Top-1/5、mAP、CMC 與 bootstrap 95% CI。CPU，讀 E2.3 cache。 | A3.4 攻擊上限；A4 為其 T2-WB 版本。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 
@@ -79,10 +80,13 @@
 | `results/E2.5_roundtrip_per_sample.csv` | E2.5 dev 20 張 × P/S0/S1 的逐筆結果（managed run `E2.5_20261009T191319376995Z_f990c7d7`）：transform-only、T1、M1 PNG／float 的影像（對 x0、對 P 輸出）與 latent（攻擊者視角、解密後保真度）指標。 |
 | `results/perf_probe_batch1.json` | 診斷用（非正式實驗）：batch 1 下多行程並行與 CUDA Graphs 的吞吐與逐位元檢查，含各行程每張影像的 latent SHA-256；量測時 GPU 與 ollama、稽核腳本共用，比例僅供參考。 |
 | `results/AF024_m1_storage_per_sample.csv` | AF-024 dev 20 張 × P/S0/S1：range-preserving PNG 的 lo/hi、PNG SHA-256、攻擊者／解密 latent 與還原影像指標，並唯讀併入 E2.5 的 legacy PNG／float 欄（managed run `AF024_M1_STORAGE_20261010T023636939496Z_278c5ed8`）。 |
+| `results/A3.4_T1_gallery.json` | A3.4 逐 scheme×scorer 的 Top-1/5、mAP、CI、CMC 與正負控制（security_v1 200 張，T1）。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `paper_assets/tables/table_baseline_correctness.csv` | E2.5 主表：P/S0/S1 × 23 項指標的平均、bootstrap 95% CI（B=10,000、seed 1911）、中位數與範圍。 |
 | `image/E2.5_roundtrip_grid.png` | 預先固定的 dev_v1.1_000（健康）與 _010（積水）在 P/S0/S1 下的原圖、匿名圖、T1 還原、M1 PNG 還原與固定色階差異圖。 |
 | `paper_assets/tables/table_m1_storage_comparison.csv` | AF-024 三欄並列表：P/S0/S1 × legacy PNG／range-preserving PNG／float × 10 項指標的平均、bootstrap 95% CI、中位數與範圍。 |
+| `paper_assets/tables/table_T1_magnitude.csv` | A3.4 主表：P/S0/S1 × abs/sorted_abs/norm 的 Top-1/5、mAP、median rank 與負控制。 |
+| `image/A3.4_T1_cmc.png` | A3.4 CMC 曲線（三 scorer 分欄，P/S0/S1）。 |
 | `image/E1.4_ddim_smoke_contact_sheet.png` | 四列視覺檢查圖；每列是 original、reconstruction、absolute difference。 |
 | `artifacts/preflight/canonical_direction_candidates_d4096_n100.json` | d=4,096、N=100 canonical preflight 原始輸出。 |
 | `artifacts/preflight/canonical_direction_candidates_d65536_n100.json` | d=65,536、N=100 canonical preflight 原始輸出。 |
