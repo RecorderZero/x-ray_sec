@@ -487,3 +487,65 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 請使用者 push（`git push origin main`）；自動模式擋下了實作方的 push。
 * Week 2：A3.1 key-space audit、A3.2 小空間 brute force、A3.3 S0/S1 不變量、A3.4 T1 gallery（security_v1 cache）。
+
+## 2026-10-10 · W1→W2 · Track E/A · AF-024 保存值域的 M1 存檔協定
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：A4（T2-WB 匿名影像產生前置條件）、D5（HMAC 部分，延後）、§1.3 M1 定義。
+* 回應稽核：AUD-20261010-05 的 AF-024（第 1、2、4、5 點；第 3 點 HMAC 依稽核排程於 D5 完成）。
+* [決定] 使用者 2026-10-10 裁決（AUD-20261010-05）：
+  * 前作 M1 約 30–32 dB 的損失，歸因於存檔時 per-image min-max 後未保存值域，屬於工程失真，不是翻號／置換加密本身的限制。
+  * 之後所有以影像形式保存、且需要再 inversion 或還原的輸出，都必須記錄實際值域並在讀回時還原。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-024-1] 已修正（待稽核複驗）｜commit `f5c967e`｜新增 `scripts/m1_storage.py` 的 `range_preserving_png/v1`：
+  * 寫入真實 8-bit 灰階 PNG，以 `np.rint` 量化。
+  * float32 lo/hi 以 IEEE-754 位元保存在 PNG text chunk 與 storage record。
+  * 讀回公式為 `q/255·(hi−lo)+lo`；缺值域或含非有限值時 fail closed。
+  * manifest 記錄 `storage_protocol`、`quantization`。
+* [AF-024-2] 已修正（待稽核複驗）｜commits `f5c967e`、`a4b0db9`｜`legacy_png_handoff` 與 E2.2／E2.5 結果不變。新增 `scripts/m1_storage_compare_runner.py`，從 E2.3 dev cache 以新協定重跑 P/S0/S1：逐張驗證匿名影像與 E2.5 相同，再唯讀併入 E2.5 的 legacy PNG／float 欄，輸出三欄並列表。
+* [AF-024-3] 規格已落地、實作延後至 D5｜commit `fd4f799`｜PROPOSAL §4.4 與 WORKFLOW D5.5／D5.6、§2.3 已要求：
+  * HMAC 涵蓋 `storage_protocol`、`quantization`、lo/hi。
+  * PNG text chunk 與 record 的 lo/hi 須逐位元一致。
+  * T4 須含「只改 lo/hi」且必須被拒絕。
+  * 驗證前不得以 lo/hi 讀回。
+* [AF-024-4] 已修正（待稽核複驗）｜commits `f5c967e`、`a4b0db9`｜`tests/unit/test_m1_storage.py` 共 9 項：任意值域誤差 ≤ (hi−lo)/510、lo/hi 精確、常數影像、缺 metadata／NaN 拒絕、優於 legacy min-max；GPU 回歸用 dev 全部 20 張（≥ 4 張的要求）。
+* [AF-024-5] 已修正（待稽核複驗）｜commit `fd4f799`｜更新 PROPOSAL §2.1／§4.4／§4.5、WORKFLOW §1.3／§2.3／A4.1／A4.2／D5.5／D5.6、`reports/t2wb_protocol.md` §2–§4、`reports/metric_semantics.md` §3.2／§3.3／§4／§5，並新增 §7（含 §7.5 dev 實測）。文件初稿由 subagent 撰寫，實作方審閱，並補上它列出的 7 處未改衝突，例如 t2wb_protocol §4 第 5 點的舊裁決已標示被取代。
+* [證據基礎設施] commit `b1a2fea`｜`scripts/run_artifacts.py` 在 run 開始時記錄已 import 專案模組的 SHA-256；finalize 時若任一檔案改變，run 即失敗。這是實作方審查 AF-023-5 修正時發現的缺口：hash 原本在 run 結束時才讀檔。
+* 指令：`scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id AF024_M1_STORAGE --validate-artifacts -- python -m scripts.m1_storage_compare_runner --checkpoint <ckpt> --latent-cache artifacts/runs/E2.3/E2.3_20261009T190608331743Z_6edaf199 --e2-5-run artifacts/runs/E2.5/E2.5_20261009T191319376995Z_f990c7d7`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `scripts/run_cfg_ddim.sh python -m pytest -q tests/unit tests/integration tests/test_legacy_repro.py` → `54 passed in 66.52s`。
+* [事實] managed run `AF024_M1_STORAGE_20261010T023636939496Z_278c5ed8`：state=succeeded、artifact_validation valid（60 rows）。
+  * script／`m1_storage.py` 的 SHA-256 等於 `f5c967e`。
+  * `imported_project_modules` 含 12 個 `past/SourceCode` 模組。
+  * 60/60 匿名影像的 `anon_vs_x0_psnr_db` 與 E2.5 逐值相同。
+* [事實] 還原對 x0 的 PSNR（20 張平均，三欄依序為 legacy PNG／range-preserving PNG／float）：
+
+  | 方案 | legacy PNG | range-preserving PNG | float |
+  |---|---|---|---|
+  | P | 37.71 | 37.81 | 37.62 |
+  | S0 | 31.47 | 38.44 [37.98, 38.85] | 38.70 |
+  | S1 | 31.30 | 39.17 [38.98, 39.34] | 39.40 |
+
+  * S0/S1 新協定與 float 的平均差為 0.26／0.23 dB；逐張差 S0 −1.04～+2.14 dB、S1 −0.39～+1.37 dB。
+  * SSIM：S0 0.927 → 0.972，S1 0.898 → 0.973。
+* [事實] dev 加密匿名影像的 lo 最低 −0.53，hi 最高 1.0。
+* [事實] 保存值域也提升了攻擊者能取得的資訊：S0/S1 的 T2-WB 攻擊者視角 \|z\| Pearson 從 0.976 升到 0.999，解密 latent cosine 從 0.990 升到 0.9997。`[推定]` A4 在 range-preserving 欄下的 magnitude 類攻擊至少不弱於 legacy 欄，待實測。
+* [結論] dev 20 張的結果支持使用者的歸因裁決。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：AF-024 第 1、2、4、5 點的實作方驗收條件完成（協定與單元測試、manifest 欄位、兩種交接並列的 dev 結果、文件更新），狀態 `FIXED?`。第 3 點（HMAC 涵蓋 lo/hi）依稽核排程留待 D5，finding 需到 D5 後才能完全關閉。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 未失敗。A4 起，T2-WB 的匿名影像與 re-inversion 必須同時產生 legacy PNG 與 range-preserving PNG 兩欄。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 依 AF-024 與使用者裁決，已更新 WORKFLOW §1.3（M1 定義）、§2.3、A4.1／A4.2、D5.5／D5.6 的文字；通過條件只增不減。
+- AF-024 未規定 S2a/S2 是否也要跑 legacy PNG 欄；目前文件不禁止也不強制。建議 D7 至少在 dev 上對 S2 跑一次 legacy 欄作對照，需使用者決定。
+
+### 7. 下一步
+* 請稽核方複驗 AF-023 與 AF-024（第 1、2、4、5 點）。
+* 請使用者 push（實作方的 push 被自動模式擋下；本地領先遠端的 commit 數持續增加）。
+* Week 2：A3.1–A3.4；A4 依兩種存檔協定分欄產生 security_v1 的 T2-WB 資料。
