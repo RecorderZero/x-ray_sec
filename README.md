@@ -49,6 +49,7 @@
 | `scripts/m1_storage.py` | AF-024：M1 存檔協定 `range_preserving_png/v1`，以真實 8-bit 灰階 PNG 儲存，float32 lo/hi 以 IEEE-754 位元保存在 PNG text chunk 與紀錄中，`np.rint` 量化，讀回 `q/255·(hi−lo)+lo`；缺值域時拒絕解碼。前作 `legacy_png_handoff` 不變。 | 本專案 M1 存檔；S2 的 HMAC 須涵蓋 lo/hi（D5）。 |
 | `scripts/m1_storage_compare_runner.py` | AF-024：從 E2.3 dev cache 對 P/S0/S1 以 range-preserving PNG 重跑 M1，逐張驗證匿名影像與 E2.5 相同，再唯讀併入 E2.5 的 legacy PNG／float 結果，輸出三欄並列表。 | P/S0/S1 存檔協定對照；S2a/S2 沿用同一協定。 |
 | `scripts/p3_attack_overview.py` | P3.1：固定病例（dev_v1.1_000／_010）的原圖、latent、sorted-|·| profile（z／S0／S1 重合）與 S0／S1 匿名圖；GPU 生成 4 張匿名圖。 | P3.1 攻擊示意圖。 |
+| `scripts/a3_keyspace_audit.py` | A3.1：從程式路徑證明 legacy 金鑰有效位元上界（S0 password 32、S1 password 64、整數 seed 模式 32），含 sha256[:4] 碰撞與整數 seed 低 32 位截斷的數值驗證。 | A3.1 金鑰空間稽核。 |
 | `scripts/a3_t1_gallery.py` | A3.4：T1（精確 latent）magnitude／sorted-magnitude／norm gallery linkage；P 正控制、shuffle 負控制；Top-1/5、mAP、CMC 與 bootstrap 95% CI。CPU，讀 E2.3 cache。 | A3.4 攻擊上限；A4 為其 T2-WB 版本。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
@@ -61,6 +62,7 @@
 | `reports/evidence_reset.md` | 說明哪些舊 claim 被撤回或限制，以及現版 preflight 能支持什麼。 |
 | `reports/preprocessing_audit.md` | 學長實際 CheXpert 前處理的程式證據、與本 runner 的一致性及剩餘限制。 |
 | `reports/metric_semantics.md` | E2.4（AF-022）：前作「Cosine Sim 0.9989」在論文（latent）與程式（輸出影像、base 對解密輸出）的差異與行號；像素 cosine 基準；本專案 latent／影像指標定義與「對 x0／對 P 輸出」並列；論文用語規範。 |
+| `reports/keyspace_method_note.md` | A3.1 方法說明：claim vs actual 位元數、21 個 file:line 錨點、V1–V6 數值檢查，以及「32 bits」在 password／整數 seed 模式的限定。 |
 | `reports/t2wb_protocol.md` | AF-019：可逆性以影像端端到端為主指標、latent 只作診斷；加密流程 P smoke 事實；T2-WB 攻擊的正控制／負控制定義，以及使用者 2026-10-10 裁決的 `Inconclusive` 規則（攻擊成功照實報告；未成功時看各方案專屬正控制）。 |
 | `reports/compute_budget.md` | E2–F9 各 scheme/attack 在加密流程上的 forward／generation 半週期矩陣（實測 batch 1/4/8 成本、guidance −1）與 N=200/500/1,000 GPU 時數；記錄 N=200 裁決，以及 batch 組成會改變結果（batch 4 vs 1 MaxAbs 6.9e-4）而正式 pass 固定 batch 1 的決定。 |
 | `artifacts/environment_baseline.txt` | 當次環境、套件實際來源、GPU、checkpoint hash、freeze hash 與 strict-load 結果。 |
@@ -81,6 +83,7 @@
 | `results/E2.5_roundtrip_per_sample.csv` | E2.5 dev 20 張 × P/S0/S1 的逐筆結果（managed run `E2.5_20261009T191319376995Z_f990c7d7`）：transform-only、T1、M1 PNG／float 的影像（對 x0、對 P 輸出）與 latent（攻擊者視角、解密後保真度）指標。 |
 | `results/perf_probe_batch1.json` | 診斷用（非正式實驗）：batch 1 下多行程並行與 CUDA Graphs 的吞吐與逐位元檢查，含各行程每張影像的 latent SHA-256；量測時 GPU 與 ollama、稽核腳本共用，比例僅供參考。 |
 | `results/AF024_m1_storage_per_sample.csv` | AF-024 dev 20 張 × P/S0/S1：range-preserving PNG 的 lo/hi、PNG SHA-256、攻擊者／解密 latent 與還原影像指標，並唯讀併入 E2.5 的 legacy PNG／float 欄（managed run `AF024_M1_STORAGE_20261010T023636939496Z_278c5ed8`）。 |
+| `paper_assets/tables/table_keyspace.csv` | A3.1 主表：各 scheme／模式的 claim_bits、actual_bits、gap、known-plaintext search bits 與 file:line 依據。 |
 | `results/A3.4_T1_gallery.json` | A3.4 逐 scheme×scorer 的 Top-1/5、mAP、CI、CMC 與正負控制（security_v1 200 張，T1）。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `paper_assets/tables/table_baseline_correctness.csv` | E2.5 主表：P/S0/S1 × 23 項指標的平均、bootstrap 95% CI（B=10,000、seed 1911）、中位數與範圍。 |
