@@ -272,7 +272,7 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 | 項目 | legacy PNG（前作原樣交接） | range-preserving PNG（本專案 M1 協定） |
 |---|---|---|
 | 實作 | `legacy_png_handoff`（`scripts/e2_anonymization_runner.py:123`） | `range_preserving_png/v1`（`scripts/m1_storage.py`：`encode_range_preserving_png`、`decode_range_preserving_png`、`range_preserving_png_handoff`） |
-| 角色 | P/S0/S1「前作重現」的唯一主路徑；E2.2／E2.5 的既有結果不改寫 | 本專案的 M1 協定；P/S0/S1/S2a/S2 都以此協定跑，使方案間的比較只差在加密方法，不差在存檔方式 |
+| 角色 | P/S0/S1「前作重現」的主路徑（E2.2／E2.5 的既有結果不改寫）；S2a/S2 也跑此欄，作為與前作相同基準的對照與歸因（附表；使用者 2026-10-10） | 本專案的 M1 協定與對外主結果；P/S0/S1/S2a/S2 都以此協定跑，使方案間的比較只差在加密方法，不差在存檔方式；設定選擇只依此欄 |
 | 正規化 | per-image min-max：`stored = ((x − low)/(high − low)·255).to(uint8)` | `lo = min(x)`、`hi = max(x)`（float32，每張影像各一組） |
 | 量化 | 截斷（`.to(uint8)`），不是四捨五入 | `q = clip(np.rint((x − lo)/(hi − lo)·255), 0, 255)`（round-half-to-even）；`hi = lo` 時 `q` 全為 0；8-bit 灰階 PNG |
 | 值域 | **丟棄**；讀回時對 `stored/255` 再做一次 min-max，輸出值域恆為 [0,1] | `lo`、`hi` 以 IEEE-754 float32 的位元樣式原值保存（PNG text chunk `x-range-lo-float32-bits`／`x-range-hi-float32-bits`，storage record 的 `lo_float32_bits`／`hi_float32_bits`），不經十進位字串 |

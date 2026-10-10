@@ -30,7 +30,8 @@
 3. 三條路徑分開報告（PROPOSAL §7.2）：transform-only、T1（精確 latent）、T2-WB／M1（匿名影像 → 目標模型 inversion → 解密 → 生成）。
 4. M1 的存檔協定**分兩欄報告**（AF-024、使用者裁決 2026-10-10，AUD-20261010-05）：
    - 「legacy PNG」：學長實際的儲存方式，匿名影像經 per-image min-max 後以 uint8 PNG 保存（truncation、丟棄值域），重新讀入後 inversion（`legacy_png_handoff`）。這是**前作重現的唯一主路徑**（P/S0/S1；E2.2／E2.5 的既有結果不改寫）。
-   - 「range-preserving PNG」：**本專案的 M1 協定**（`range_preserving_png/v1`，`scripts/m1_storage.py`）。每張匿名影像保存實際值域 `lo`、`hi`（float32 原值），四捨五入量化為 8-bit 灰階 PNG，讀回 `x = q/255·(hi−lo)+lo`。P/S0/S1/S2a/S2 都以此協定跑，讓方案間的比較只差在加密方法，不差在存檔方式。
+   - 「range-preserving PNG」：**本專案的 M1 協定**（`range_preserving_png/v1`，`scripts/m1_storage.py`）。每張匿名影像保存實際值域 `lo`、`hi`（float32 原值），四捨五入量化為 8-bit 灰階 PNG，讀回 `x = q/255·(hi−lo)+lo`。P/S0/S1/S2a/S2 都以此協定跑，讓方案間的比較只差在加密方法，不差在存檔方式；這是對外宣稱的主結果。
+   - `[決定]`（使用者 2026-10-10）S2a/S2 也要跑 legacy PNG 欄（**兩欄都跑**）：range-preserving PNG 是對外宣稱的主結果；legacy PNG 欄作為與前作相同基準的對照與歸因（{S0/S1, S2} × {legacy, range-preserving} 2×2，分離加密與存檔的效果），放附表；R／permutation 等設定的選擇只依 range-preserving 欄，legacy 欄受每把金鑰生成的值域影響大，不作選擇依據。S2 與 S2a 的匿名影像相同（MAC 不改像素），legacy 欄只需算一次。
    - float 交接維持**診斷用的上限對照**，不是主路徑。
    - `lo`／`hi` 是公開的儲存 metadata。`[決定]` T2-WB 攻擊者取得保存的匿名影像時，同時取得 `lo`、`hi`，因此 range-preserving PNG 欄的 T2-WB 攻擊（inversion、linkage、正控制）一律以**含值域還原的讀回**評估；legacy PNG 欄則沿用丟棄值域的讀回。
    - `[事實]`（稽核方，AUD-20261010-04；`audit/out/e2_png_handoff_decomposition.json`）加密後匿名影像的值域約為 [−0.4, 0.7–1.0]；legacy PNG 交接造成的損失幾乎全部來自 per-image min-max（讀回時等於對整張圖做一次未保存的仿射改變），只做 8-bit 量化、保留 lo/hi 時與 float 交接相差 ≤ 0.6 dB（逐方案的 4 張平均，逐張最大 0.78 dB，見 `metric_semantics.md` §7.3）。

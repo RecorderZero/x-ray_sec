@@ -221,7 +221,7 @@ z_{r+1}
 - 優點：維持既有流程。
 - 缺點：受 PNG／DICOM 量化及 DDIM inversion error 影響。
 - 本專案的影像存檔協定為 `range_preserving_png/v1`（AF-024，實作 `scripts/m1_storage.py`）：每張影像以自身實際值域 [lo, hi] 量化為 8-bit 灰階 PNG，`q = clip(rint((x−lo)/(hi−lo)·255), 0, 255)`（四捨五入）；`lo`、`hi` 以 float32 原值逐位元保存（manifest 與 PNG text chunk），讀回時 `x = q/255·(hi−lo)+lo`。缺少值域的 PNG 一律拒絕讀回，不猜測值域。任何需要再 inversion 或還原的影像都依此保存（使用者裁決 2026-10-10，AUD-20261010-05）。
-- 前作的 per-image min-max uint8 PNG（截斷、丟棄值域，`legacy_png_handoff`）只保留作「前作重現」的主路徑，不是本專案的 M1 協定。P／S0／S1 兩種存檔協定都跑；S2a／S2 使用 range-preserving PNG；表格以「legacy PNG」與「range-preserving PNG」分欄報告，使方案間的比較只差在加密方法，不差在存檔方式。
+- 前作的 per-image min-max uint8 PNG（截斷、丟棄值域，`legacy_png_handoff`）只保留作「前作重現」的主路徑，不是本專案的 M1 協定。表格以「legacy PNG」與「range-preserving PNG」分欄報告，使方案間的比較只差在加密方法，不差在存檔方式。`[決定]`（使用者 2026-10-10）P/S0/S1/S2a/S2 **兩欄都跑**：range-preserving PNG 是對外宣稱的主結果；legacy PNG 欄作為與前作相同基準的對照與歸因（{S0/S1, S2} × {legacy, range-preserving} 2×2，分離加密與存檔的效果），放附表；R／permutation 等設定的選擇只依 range-preserving 欄，legacy 欄受每把金鑰生成的值域影響大，不作選擇依據。S2 與 S2a 的匿名影像相同（MAC 不改像素），legacy 欄只需算一次。
 - `[決定]` 歸因（使用者裁決 2026-10-10，AUD-20261010-05）：前作 M1 還原品質約 30–32 dB 的主要損失，來自存檔流程的 per-image min-max 後未保存原值域，屬工程失真，**不是**翻號／置換加密本身的限制。依據是稽核方診斷 `[事實]`（AUD-20261010-04，`audit/out/e2_png_handoff_decomposition.json`）：稽核方在 4 張 dev 影像上量到，只做 8-bit 量化、保留 lo/hi 時與 float 交接相差 ≤ 0.6 dB（逐方案的 4 張平均）。論文須如此歸因，不得把這部分損失寫成加密造成的。
 - 認證欄位見 §4.4：`storage_protocol`、`quantization`、`lo`、`hi` 皆須被 HMAC 涵蓋，驗證通過前不得讀回影像。
 

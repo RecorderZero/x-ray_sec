@@ -549,3 +549,33 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 請稽核方複驗 AF-023 與 AF-024（第 1、2、4、5 點）。
 * 請使用者 push（實作方的 push 被自動模式擋下；本地領先遠端的 commit 數持續增加）。
 * Week 2：A3.1–A3.4；A4 依兩種存檔協定分欄產生 security_v1 的 T2-WB 資料。
+
+## 2026-10-10 · W2 · Track D · 使用者裁決：S2a/S2 也跑 legacy PNG 欄
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：D6.5、D7.1–D7.3、F9（存檔協定欄位）。
+* 回應：前一條目 §6 提出的待裁決事項（AF-024 未規定 S2a/S2 是否也跑 legacy PNG 欄）。
+
+### 2. 執行動作 (Actions Taken)
+* [決定] 使用者 2026-10-10 裁決：P/S0/S1/S2a/S2 **兩欄都跑**。
+  * range-preserving PNG 為對外宣稱的主結果。
+  * legacy PNG 欄是與前作相同基準的對照與歸因，放附表：{S0/S1, S2} × {legacy, range-preserving} 的 2×2 用來分離加密與存檔的效果。
+  * R／permutation 等設定的選擇只依 range-preserving 欄。
+* 同步更新 WORKFLOW §1.3、PROPOSAL §4.5、`reports/t2wb_protocol.md` §2 第 4 點、`reports/metric_semantics.md` §7.1。D6／D7 的 runner 預設兩欄都產生。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] legacy 欄的額外成本只有「讀回 → inversion → 解密 → 生成」一段，batch 1 每張約 15.6 s（F 7.73 s＋G 7.82 s，`results/AF021_anonymization_benchmark.json`）；S2 與 S2a 的匿名影像相同，只需算一次。
+* [推定] 額外時間約為：dev 20 張每組設定約 5 分鐘；R=1–4 × permutation on/off 共 8 組約 42 分鐘；正式 N=200 只跑最終 S2 設定約 52 分鐘（約佔 22.29 GPU-hours 上限的 4%）。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：裁決已記錄並落地到規格文件。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 無。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 無；WORKFLOW 已依裁決更新，通過條件未放寬。
+
+### 7. 下一步
+* Week 2：A3.1–A3.4；A4 依兩種存檔協定產生 security_v1 的 T2-WB 資料。
