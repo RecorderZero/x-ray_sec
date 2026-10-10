@@ -99,7 +99,7 @@
 | `tests/unit/test_chexpert_preprocessing.py` | 直接載入學長原始前處理函式作 oracle，逐值守住 equalize/INTER_AREA/JPEG/min-max。 |
 | `tests/unit/test_split_hash.py` | 驗證更換 local path 前綴不改變 split hash。 |
 | `tests/unit/test_roundtrip_runner.py` | E2.5 runner 的 cache 載入檢查：有效 cache 正控制；split hash、樣本順序、latent hash 被竄改時拒絕；bootstrap 摘要可重現。 |
-| `tests/unit/test_run_artifacts.py` | 共用 run 目錄寫入：standalone run 通過 validator 且 git commit 取自 run 開始時；`git_dirty` 不計未追蹤檔；manifest 記錄 import 的專案模組 SHA-256；managed 模式沿用 `EXPERIMENT_RUN_DIR`。 |
+| `tests/unit/test_run_artifacts.py` | 共用 run 目錄寫入：standalone run 通過 validator 且 git commit 取自 run 開始時；`git_dirty` 不計未追蹤檔；manifest 記錄 import 的專案模組 SHA-256；run 期間原始碼被修改時 finalize 失敗；managed 模式沿用 `EXPERIMENT_RUN_DIR`。 |
 | `tests/unit/test_m1_storage.py` | AF-024：任意值域（含負值、>1）`decode(encode(x))` 誤差 ≤ (hi−lo)/510；lo/hi 精確保存；常數影像；缺值域 metadata 與非有限值 fail closed；對超出 [0,1] 的影像優於前作 min-max。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
 | `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |

@@ -42,6 +42,8 @@ class RunContext:
     started_at: str
     git_commit: str
     git_dirty: bool
+    # SHA-256 of the project modules already imported when the run started.
+    source_snapshot: dict[str, str]
 
 
 def sha256_file(path: Path) -> str:
@@ -109,7 +111,7 @@ def open_run(
     # commits made while a long run is in progress are not misattributed.
     return RunContext(
         task_id, run_id, run_dir, config_hash, bool(managed_dir), started_at,
-        git_value("rev-parse", "HEAD"), git_dirty(),
+        git_value("rev-parse", "HEAD"), git_dirty(), imported_project_modules(),
     )
 
 
@@ -142,6 +144,15 @@ def finalize_run(
     import torch
 
     run_dir = context.run_dir
+    # A source file edited while the run was in progress would otherwise be
+    # recorded with the hash of the edited file, not of the code that ran.
+    current_modules = imported_project_modules()
+    modified = sorted(
+        path for path, digest in context.source_snapshot.items()
+        if current_modules.get(path) != digest
+    )
+    if modified:
+        raise RuntimeError(f"project source files changed during the run: {modified}")
     with (run_dir / "per_sample.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(per_sample_rows[0]), lineterminator="\n")
         writer.writeheader()
@@ -171,7 +182,8 @@ def finalize_run(
         "finished_at": datetime.now(timezone.utc).isoformat(),
         "exit_code": 0,
         "script_sha256": sha256_file(script_path),
-        "imported_project_modules": imported_project_modules(),
+        "imported_project_modules": current_modules,
+        "source_snapshot_at_start": sorted(context.source_snapshot),
         "python": sys.version.replace("\n", " "),
         "pytorch": torch.__version__,
         "cuda": torch.version.cuda or "none",

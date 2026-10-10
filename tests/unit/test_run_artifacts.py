@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts import run_artifacts
 from scripts.artifact_schema import validate_run
 
@@ -49,3 +51,14 @@ def test_managed_run_dir_is_adopted(tmp_path: Path, monkeypatch) -> None:
     context = run_artifacts.open_run("UNIT", {"a": 1}, tmp_path)
     assert context.managed and context.run_dir == run_dir
     assert (run_dir / "config.json").is_file()
+
+
+def test_source_edited_during_run_fails_finalize(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("EXPERIMENT_RUN_DIR", raising=False)
+    monkeypatch.setattr(run_artifacts, "git_value", lambda *args: "")
+    snapshots = iter([{"scripts/example.py": "a" * 64}, {"scripts/example.py": "b" * 64}])
+    monkeypatch.setattr(run_artifacts, "imported_project_modules", lambda: next(snapshots))
+    context = run_artifacts.open_run("UNIT", {"a": 1}, tmp_path)
+    rows = [{"sample_id": "x", "metric": 1.0}]
+    with pytest.raises(RuntimeError, match="changed during the run"):
+        run_artifacts.finalize_run(context, Path(__file__), rows, ["metric"], {}, "", "")
