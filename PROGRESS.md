@@ -630,3 +630,44 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 請稽核方複驗 A3.1–A3.4、P3.1。
 * 進入 A4：T2-WB anonymous-image inversion、magnitude gallery、KPA、CPA、tamper baseline；依 AF-025 兩種存檔協定分欄，magnitude 類加 norm-only（含偏差校正）與 lo/hi 旁道。
+
+## 2026-10-11 · W2 · Track A · AF-026～AF-029 修復；A3 唯密文攻擊補完
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：A3.1、A3.2、A3.4、P3.1；流程面 AF-029。
+* 回應稽核：AUD-20261011-01 的 AF-026、AF-027、AF-028、AF-029；AUD-20261011-02 的唯密文協定與使用者裁決（PROPOSAL §2.1 修訂、兩份週摘要並存）。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-029] 已修正（待複驗）｜commit `002427e`｜新增 `scripts/output_guard.py`、`tests/unit/test_output_guard.py`；為 4 支無 argparse 的腳本補上 argparse，為 13 支會寫追蹤檔的腳本加 `--force`，輸出已存在時預設拒絕覆寫。
+* [AF-028-1,2] 已修正（待複驗）｜commit `401c4e9`｜`scripts/a3_t1_gallery.py` 的 feature 改用 float64；top-k 改用 Wilson score CI、mAP 仍 bootstrap。
+* [AF-027、AF-028-3] 已修正（待複驗）｜commit `deb1c3b`｜`scripts/a3_bruteforce.py` 新增 E5（S0 唯密文）、E6（S1 唯密文兩階段）與負控制；extrapolation 標明 CPU 單執行緒並加高斯尾部假設；E2 補解析假陽性率、E4 改報 2·2^18 對 2^36。
+* [AF-026] 已修正（待複驗）｜commit `39b290c`｜`scripts/a3_keyspace_audit.py` 的 CSV 欄位與 method note 改寫（金鑰上界 vs 攻擊工作量分開；補唯密文與密碼寫死位置、第二組設定）；PROPOSAL §2.1 依使用者核准文字修訂。由 subagent 執行、實作方審閱。
+* [AF-028-4] 已修正（待複驗）｜commit `257160e`｜`scripts/p3_attack_overview.py` 的 profile 面板改畫兩位病人 sorted |z| 的逐 rank 差。
+* 分工：AF-026 與（上一輪）A3.1–A3.3 由 subagent 執行；AF-027 唯密文攻擊、AF-028 數值與圖、AF-029 由實作方執行。AF-027 的四項關鍵數字由實作方以自寫實作獨立重現。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `scripts/run_cfg_ddim.sh python -m pytest -q tests/unit tests/integration tests/test_legacy_repro.py` → `57 passed`；13 支腳本 `--help` 皆只印 usage、不寫任何追蹤檔；無 `--force` 重跑 `a3_invariants` 被拒絕且 `results/A3.3.json` 不變。
+* [事實] **唯密文攻擊（AF-027，實作方獨立重現）**：單一 T1 密文 latent 即可在 2^14 縮小 seed 空間中辨識正確金鑰——
+  * S0：正確金鑰 37.1σ，2^14 個錯誤候選最高 3.7σ，排第 1。
+  * S1：置換 seed 12.0σ、符號 seed 37.0σ，皆排第 1；負控制（置換 seed 在範圍外）最高 3.8σ。
+  * 分數本身即以 σ 為單位（錯誤金鑰 ~ N(0,1)）；2^32 個錯誤候選的期望最大值約 6.66σ，仍遠低於正確金鑰。10 個正負控制全過。
+  * 與稽核方一致：S0 37σ、S1 符號 36.9σ；S1 置換 12.0 對稽核 14.6σ，因單張 latent 的空間相關不同（兩者皆 ≫ 控制）。
+* [事實] **金鑰空間表述（AF-026）**：金鑰上界 S0=32／S1=64 bits；攻擊工作量另分三欄：已知一對明密文=0（直接讀出）、唯密文 S0≈2^32、S1≈2^33。密碼 `Ki@13579` 寫死於 `run_*_Crypto.sh` 等腳本（另有 `paper_experiment_key_2024`）。
+* [事實] **norm 攻擊更正（AF-028-1）**：A3.4 的 norm scorer 改用 float64 後，T1 Top-1 由 0.99/0.99/0.985 更正為 **1.00/1.00/1.00**（P/S0/S1）。先前 PROGRESS 稱「兩張影像 norm 幾乎相同」不正確，實為 float32 捨入碰撞；security_v1_0031 與 0105 的 float64 norm 差 5.3e-6、latent cosine 僅 0.027，是不同影像。200/200 的 CI 由 bootstrap [1.00,1.00] 改為 Wilson [0.981,1.00]。
+* [更正] AF-028-5：上一輪（2026-10-10 W2）PROGRESS 與 method note 引用的 sha256 碰撞例不同，兩者都是正確的碰撞。canonical 以 `reports/keyspace_method_note.md`（由 `a3_keyspace_audit.py` 產生）為準；舊 PROGRESS 條目保留不改。`A3.2.json` 的 `git_commit` 原記為 `91bf0ff`（腳本當時未追蹤），重跑後記錄當前 commit，另有 `script_sha256` 可補足。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：AF-026、AF-027、AF-028、AF-029 的實作方驗收條件完成，狀態 `FIXED?`，待稽核複驗後關閉；關閉後 A3.1 可判 Achieved、A3.2 的 COA 補完（G1 前要求）。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 未失敗。A3 的教訓：金鑰「上界」與攻擊「工作量」是兩回事；norm 類不變量要用 float64 避免捨入碰撞被誤判為攻擊失敗。
+* [注意] `a3_keyspace_audit.py` 以 file:line 錨點斷言 `scripts/e2_legacy_wrapper.py` 的某一行；該檔日後被編輯時錨點會失效（本輪 AF-029 的 import 已造成一次 73→74 位移，由 subagent 修正）。建議改以函式名或內容比對取代硬編行號，留待後續。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。PROPOSAL §2.1 的修訂經使用者 2026-10-11 裁決（AUD-20261011-02 §1）。
+
+### 7. 下一步
+* 請稽核方複驗 AF-026～AF-029。
+* 尚未處理（屬後續週次，非本輪範圍）：AF-024 剩 HMAC 涵蓋 lo/hi（D5）、AF-025 兩欄存檔與 norm/lo-hi 旁道（A4／D7）、AF-030 S2 金鑰材料不得經短 seed／非密碼學 PRNG（D5／D6）。
+* 進入 A4：T2-WB inversion、magnitude gallery（兩種存檔分欄、加 norm-only 與 lo/hi 旁道）、KPA、CPA、tamper baseline。
