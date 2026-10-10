@@ -90,7 +90,7 @@
 | `results/E2.5_roundtrip_per_sample.csv` | E2.5 dev 20 張 × P/S0/S1 的逐筆結果（managed run `E2.5_20261009T191319376995Z_f990c7d7`）：transform-only、T1、M1 PNG／float 的影像（對 x0、對 P 輸出）與 latent（攻擊者視角、解密後保真度）指標。 |
 | `results/perf_probe_batch1.json` | 診斷用（非正式實驗）：batch 1 下多行程並行與 CUDA Graphs 的吞吐與逐位元檢查，含各行程每張影像的 latent SHA-256；量測時 GPU 與 ollama、稽核腳本共用，比例僅供參考。 |
 | `results/AF024_m1_storage_per_sample.csv` | AF-024 dev 20 張 × P/S0/S1：range-preserving PNG 的 lo/hi、PNG SHA-256、攻擊者／解密 latent 與還原影像指標，並唯讀併入 E2.5 的 legacy PNG／float 欄（managed run `AF024_M1_STORAGE_20261010T023636939496Z_278c5ed8`）。 |
-| `paper_assets/tables/table_keyspace.csv` | A3.1 主表：各 scheme／模式的 claim_bits、actual_bits、gap、known-plaintext search bits 與 file:line 依據。 |
+| `paper_assets/tables/table_keyspace.csv` | A3.1 主表：各 scheme／模式的 claim_bits、key_upper_bound_bits、seed_search_bits_separable、kpa_full_pair_search_bits（=0）、ciphertext_only_seed_search_bits 與 file:line 依據（AF-026）。 |
 | `results/A3.3.json` | A3.3 不變量數值：S0/S1 的幅值與 norm 最大差、S1 被置換座標比例、float32/64 norm 殘差與 negative control。 |
 | `results/A3.2.json` | A3.2 暴力搜尋結果：還原的 seed、候選數、負控制、拆開搜尋與吞吐外推（吞吐/牆鐘在 timing_nondeterministic）。 |
 | `results/A3.4_T1_gallery.json` | A3.4 逐 scheme×scorer 的 Top-1/5、mAP、CI、CMC 與正負控制（security_v1 200 張，T1）。 |

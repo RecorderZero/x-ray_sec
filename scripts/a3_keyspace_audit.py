@@ -10,13 +10,26 @@ The script (1) anchors every file:line citation to the predecessor source
 of numerical checks on the *predecessor's own key classes*, and (3) writes
 the claimed-vs-actual table and a method note.
 
+The table separates four different quantities (AF-026).  A key *upper bound*
+(how many independent bits determine the key) is not an attack cost:
+    key_upper_bound_bits               bits that determine the key (S0 32, S1 64)
+    seed_search_bits_separable         cost of enumerating the seed(s) when only
+                                       partial plaintext or ciphertext is
+                                       available (NOT the known-plaintext cost)
+    kpa_full_pair_search_bits          one full known plaintext/ciphertext pair:
+                                       the key is read out directly, 0 search
+    ciphertext_only_seed_search_bits   seed enumeration with a ciphertext-only
+                                       oracle; auditor results (AF-027), not
+                                       measured by this script
+
 It is an independent re-implementation of the arithmetic in the exploratory
 attack/attack_keyspace.py (which it does not import).  CPU only; no
 checkpoint is loaded; the GPU is hidden from torch before import.
 
-    scripts/run_cfg_ddim.sh python -m scripts.a3_keyspace_audit
+    scripts/run_cfg_ddim.sh python -m scripts.a3_keyspace_audit --force
 
-Outputs (deterministic for a fixed source tree, torch and numpy version):
+Outputs (deterministic for a fixed source tree, torch and numpy version; the
+script refuses to overwrite existing outputs unless --force is given, AF-029):
     paper_assets/tables/table_keyspace.csv
     reports/keyspace_method_note.md
 """
@@ -77,6 +90,11 @@ PERM_OFFSET = 1_000_000  # SignedPermutationKey seed mode: perm_seed = seed + 10
 
 # (id, file, line, substring) -- every citation used below is verified at run time.
 CRYPTO_SH = "past/SourceCode/run_cfg_inference_Crypto.sh"
+UNCOND_SH = "past/SourceCode/run_uncond_inference_Crypto.sh"
+CLF_SH = "past/SourceCode/run_clf_inference_Crypto.sh"
+COMPARISON_SH = "past/SourceCode/run_comparison_experiments.sh"
+PAPER_SH = "past/SourceCode/run_paper_comparison.sh"
+VSCODE_LAUNCH = "past/SourceCode/.vscode/launch.json"
 SAMPLER = "past/SourceCode/scripts/cfg_image_sample_anonymization.py"
 ANCHORS = [
     ("claim_module_docstring", ANON, 20, "Key space expands from 2^d to 2^d × d!"),
@@ -99,9 +117,38 @@ ANCHORS = [
     ("sp_perm_ctor", ANON, 359, "self.permutation_key = PermutationKey("),
     ("sampler_log_claim", SAMPLER, 505, "key space = 2^d × d! (astronomical)"),
     ("sampler_sp_ctor", SAMPLER, 506, "key = SignedPermutationKey("),
-    ("e22_wrapper_ctor", "scripts/e2_legacy_wrapper.py", 73, "password=LEGACY_PASSWORD,"),
+    ("e22_wrapper_ctor", "scripts/e2_legacy_wrapper.py", 74, "password=LEGACY_PASSWORD,"),
     ("shell_flags", CRYPTO_SH, 7, "--anonymization_key_seed 42 --anonymization_key_password Ki@13579 --use_signed_permutation True"),
+    # Known-pair read-out path (AF-026 point 2): c = k * z (S0) and c = P(k * z) (S1).
+    ("s0_apply_flip", ANON, 681, "z_flipped = key * z_t"),
+    ("s0_apply_mask", ANON, 682, "z_ano = mask * z_flipped + (1 - mask) * z_t"),
+    ("s1_apply_sign", ANON, 394, "x_signed = key * x"),
+    ("s1_apply_perm", ANON, 397, "x_permuted = self.permutation_key.apply(x_signed)"),
+    ("perm_apply_gather", ANON, 225, "x_permuted = x_flat[:, perm]"),
+    # Hard-coded passwords (AF-026 points 3 and 4).
+    ("pw_cfg_crypto", CRYPTO_SH, 7, "--anonymization_key_password Ki@13579"),
+    ("pw_cfg_decrypto", CRYPTO_SH, 8, "--anonymization_key_password Ki@13579"),
+    ("pw_uncond_crypto", UNCOND_SH, 7, "--anonymization_key_password Ki@13579"),
+    ("pw_uncond_decrypto", UNCOND_SH, 8, "--anonymization_key_password Ki@13579"),
+    ("pw_clf_crypto", CLF_SH, 8, "--anonymization_key_password Ki@13579"),
+    ("pw_clf_decrypto", CLF_SH, 9, "--anonymization_key_password Ki@13579"),
+    ("pw_comparison_def", COMPARISON_SH, 29, 'KEY_PASSWORD="Ki@13579"'),
+    ("pw_comparison_use_anon", COMPARISON_SH, 70, '--anonymization_key_password "${KEY_PASSWORD}"'),
+    ("pw_comparison_use_deanon", COMPARISON_SH, 83, '--anonymization_key_password "${KEY_PASSWORD}"'),
+    ("pw_comparison_echo", COMPARISON_SH, 46, 'echo "Key password: ${KEY_PASSWORD}"'),
+    ("pw_vscode_anon", VSCODE_LAUNCH, 200, '"Ki@13579"'),
+    ("pw_vscode_deanon", VSCODE_LAUNCH, 273, '"Ki@13579"'),
+    ("pw2_paper_def", PAPER_SH, 27, 'PASSWORD="paper_experiment_key_2024"'),
+    ("pw2_paper_s0", PAPER_SH, 62, '--anonymization_key_password "${PASSWORD}_rademacher"'),
+    ("pw2_paper_s1", PAPER_SH, 75, '--anonymization_key_password "${PASSWORD}_signed_perm"'),
 ]
+# Anchor ids rendered in the hard-coded password table of the method note, in order.
+PASSWORD_ANCHOR_IDS = [
+    "pw_cfg_crypto", "pw_cfg_decrypto", "pw_uncond_crypto", "pw_uncond_decrypto",
+    "pw_clf_crypto", "pw_clf_decrypto", "pw_comparison_def", "pw_comparison_use_anon",
+    "pw_comparison_use_deanon", "pw_vscode_anon", "pw_vscode_deanon",
+]
+SECOND_SETTING_ANCHOR_IDS = ["pw2_paper_def", "pw2_paper_s0", "pw2_paper_s1"]
 PAPER_PDF = "past/Privacy-Preserving and Reversible Diffusion Models for Lesion Localization in Chest X-Rays.pdf"
 
 
@@ -313,35 +360,64 @@ def log2_factorial(n: int) -> float:
 
 
 def build_rows() -> list[dict]:
+    """One row per (scheme, mode); the four bit columns are different quantities (AF-026).
+
+    key_upper_bound_bits             independent bits that determine the key (code path)
+    seed_search_bits_separable       seed enumeration with an oracle for partial plaintext
+                                     or ciphertext-only; NOT the known-plaintext cost
+    kpa_full_pair_search_bits        one full known pair: direct read-out, no search
+    ciphertext_only_seed_search_bits auditor results (AF-027, AUD-20261011-02); not measured here
+    """
     claim_s0 = float(D)
     claim_s1 = D + log2_factorial(D)
+    kpa_s0 = (f"[KPA full pair = 0] [事實] {ANON}:681-682 z_flipped = key*z, z_ano = mask*z_flipped + (1-mask)*z, so on mask = 1 coordinates "
+              "k = sign(c*z) is read out directly; "
+              "seed enumeration is needed only for partial plaintext (auditor: about 64 known coordinates [推定]) or ciphertext-only")
+    kpa_s1 = (f"[KPA full pair = 0] [事實] {ANON}:394,397 c = P(k*z); sorting |c| against |z| gives pi in O(d log d), signs then give k; "
+              "A3.2 E4 recovers (k, pi) exactly this way at d=4096 with distinct magnitudes; [推定] float32 magnitude ties at d=65536 (A3.3) "
+              "leave a small residual ambiguity, resolved by a second pair or seed enumeration (A4.3)")
+    coa_s0 = ("[ciphertext-only ~32] [事實, auditor AF-027] one ciphertext latent scores the true key at 37.1/36.8/37.0 sigma vs wrong-seed max "
+              "3.3-3.8 sigma over 2000 wrong seeds (audit/out/a3_s0_coa_oracle_check.json); [推定] Gaussian-tail extrapolation to 2^32 wrong seeds "
+              "(expected max about 6.7 sigma); not measured by this script")
+    coa_s1_int = ("[ciphertext-only ~32] [推定] the key is one coupled 32-bit seed, so the AUD-20261011-02 permutation-stage oracle over perm_seed = seed+1000000 "
+                  "(mod 2^32) also fixes the sign seed; the auditor did not test this mode")
+    coa_s1_pw = ("[ciphertext-only ~33] [事實, auditor AUD-20261011-02] in a 2^14 reduced space ONE S1 ciphertext ranks the planted permutation seed first "
+                 "(14.6 sigma) and, with the permutation known, the sign seed first (36.9 sigma), vs wrong-candidate max <= 4.2 sigma "
+                 "(audit/out/a3_s1_coa_experiment.json); [推定] extrapolation to 2^32 gives about 2*2^32 = 2^33 checks; the subagent estimate recorded "
+                 "in AUD-20261011-01 assumed key reuse and 10-50 ciphertexts; not measured by this script")
     rows = [
         {
             "scheme": "S0 Rademacher", "mode": "password (legacy configuration)",
-            "claim_expression": "2^d", "claim_bits": claim_s0, "actual_bits": 32, "gap_bits": claim_s0 - 32,
-            "known_plaintext_search_bits": 32,
+            "claim_expression": "2^d", "claim_bits": claim_s0, "key_upper_bound_bits": 32, "gap_bits": claim_s0 - 32,
+            "seed_search_bits_separable": 32, "kpa_full_pair_search_bits": 0, "ciphertext_only_seed_search_bits": 32,
             "basis": (f"{ANON}:99-100 seed=int.from_bytes(sha256(pw)[:4]); :85-87 manual_seed(seed)+bernoulli -> k=f(32-bit seed); "
-                      "checks V1,V2,V5,V6"),
+                      "checks V1,V2,V5,V6 || seed_search_bits_separable = 32: one 32-bit seed, nothing to split; applies to partial plaintext "
+                      f"or ciphertext-only, NOT the known-plaintext cost || {kpa_s0} || {coa_s0}"),
         },
         {
             "scheme": "S0 Rademacher", "mode": "integer seed",
-            "claim_expression": "2^d", "claim_bits": claim_s0, "actual_bits": 32, "gap_bits": claim_s0 - 32,
-            "known_plaintext_search_bits": 32,
-            "basis": f"{ANON}:73-75,85-87 key=bernoulli(generator.manual_seed(seed)); torch CPU generator keeps low 32 bits of seed; check V5",
+            "claim_expression": "2^d", "claim_bits": claim_s0, "key_upper_bound_bits": 32, "gap_bits": claim_s0 - 32,
+            "seed_search_bits_separable": 32, "kpa_full_pair_search_bits": 0, "ciphertext_only_seed_search_bits": 32,
+            "basis": (f"{ANON}:73-75,85-87 key=bernoulli(generator.manual_seed(seed)); torch CPU generator keeps low 32 bits of seed; check V5 "
+                      "|| seed_search_bits_separable = 32: one 32-bit seed, nothing to split; applies to partial plaintext or ciphertext-only, "
+                      f"NOT the known-plaintext cost || {kpa_s0} || {coa_s0}"),
         },
         {
             "scheme": "S1 Signed Permutation", "mode": "integer seed (sign and permutation coupled)",
-            "claim_expression": "2^d * d!", "claim_bits": claim_s1, "actual_bits": 32, "gap_bits": claim_s1 - 32,
-            "known_plaintext_search_bits": 32,
-            "basis": f"{ANON}:358 perm_seed = seed + 1000000, :344-348 sign from the same seed -> (k,pi)=f(32-bit seed); checks V4,V5",
+            "claim_expression": "2^d * d!", "claim_bits": claim_s1, "key_upper_bound_bits": 32, "gap_bits": claim_s1 - 32,
+            "seed_search_bits_separable": 32, "kpa_full_pair_search_bits": 0, "ciphertext_only_seed_search_bits": 32,
+            "basis": (f"{ANON}:358 perm_seed = seed + 1000000, :344-348 sign from the same seed -> (k,pi)=f(32-bit seed); checks V4,V5 "
+                      "|| seed_search_bits_separable = 32: sign and permutation share one 32-bit seed, nothing to split; applies to partial "
+                      f"plaintext or ciphertext-only, NOT the known-plaintext cost || {kpa_s1} || {coa_s1_int}"),
         },
         {
             "scheme": "S1 Signed Permutation", "mode": "password (legacy configuration; seed argument ignored)",
-            "claim_expression": "2^d * d!", "claim_bits": claim_s1, "actual_bits": 64, "gap_bits": claim_s1 - 64,
-            "known_plaintext_search_bits": 33,
+            "claim_expression": "2^d * d!", "claim_bits": claim_s1, "key_upper_bound_bits": 64, "gap_bits": claim_s1 - 64,
+            "seed_search_bits_separable": 33, "kpa_full_pair_search_bits": 0, "ciphertext_only_seed_search_bits": 33,
             "basis": (f"{ANON}:99-100 sign seed from sha256(pw)[:4] and {ANON}:189-191 permutation seed from sha256(pw+'_permutation')[:4] "
-                      "-> two independent 32-bit seeds (upper bound 64 bits; 33 bits if the two halves are searched separately, "
-                      "see method note section 5); checks V1,V2,V3,V6"),
+                      "-> two independent 32-bit seeds; key upper bound 64 bits, but the halves can be enumerated separately: "
+                      "seed_search_bits_separable = 33 (2*2^32 = 2^33; A3.2 E4 reduced demo 2*2^18 vs joint 2^36), applies to partial plaintext "
+                      f"or ciphertext-only, NOT the known-plaintext cost; checks V1,V2,V3,V6 || {kpa_s1} || {coa_s1_pw}"),
         },
     ]
     return rows
@@ -349,8 +425,8 @@ def build_rows() -> list[dict]:
 
 def write_csv(rows: list[dict]) -> None:
     CSV_OUT.parent.mkdir(parents=True, exist_ok=True)
-    fields = ["scheme", "mode", "claim_expression", "claim_bits", "actual_bits", "gap_bits",
-              "known_plaintext_search_bits", "basis"]
+    fields = ["scheme", "mode", "claim_expression", "claim_bits", "key_upper_bound_bits", "gap_bits",
+              "seed_search_bits_separable", "kpa_full_pair_search_bits", "ciphertext_only_seed_search_bits", "basis"]
     with CSV_OUT.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
@@ -373,11 +449,19 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
     ln = {a["id"]: f"{Path(a['file']).name}:{a['line']}" for a in anchors}
     s1_bits = rows[2]["claim_bits"]
     log2_fact = log2_factorial(D)
-    table = ["| 方案 | 模式 | 宣稱 | claim_bits | actual_bits（上界） | 已知明文下搜尋 bits | gap_bits |",
-             "|---|---|---|---:|---:|---:|---:|"]
+    table = ["| 方案 | 模式 | 宣稱 | claim_bits | key_upper_bound_bits（金鑰上界） | seed_search_bits_separable（種子搜尋，可分拆） | "
+             "kpa_full_pair_search_bits（已知一對完整明密文） | ciphertext_only_seed_search_bits（唯密文） | gap_bits |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|"]
     for r in rows:
         table.append(f"| {r['scheme']} | {r['mode']} | {r['claim_expression']} | {r['claim_bits']:,.1f} | "
-                     f"{r['actual_bits']} | {r['known_plaintext_search_bits']} | {r['gap_bits']:,.1f} |")
+                     f"{r['key_upper_bound_bits']} | {r['seed_search_bits_separable']} | {r['kpa_full_pair_search_bits']} | "
+                     f"≈ {r['ciphertext_only_seed_search_bits']} | {r['gap_bits']:,.1f} |")
+    by_anchor = {a["id"]: a for a in anchors}
+
+    def anchor_row(aid: str) -> str:
+        a = by_anchor[aid]
+        text = a["text"].replace("|", "\\|")
+        return f"| `{a['file']}:{a['line']}` | `{text}` |"
 
     lines = [
         "# 前作金鑰空間審計：方法說明（A3.1）",
@@ -388,16 +472,23 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
         f"- 產生腳本 sha256：`{script_sha}`。",
         "- 標記說明：[事實] = 逐行讀碼或本腳本實測（附來源）；[推定] = 由 [事實] 推導，未獨立量測；[假設] = 尚未驗證的前提。",
         "",
-        "## 1. 結論",
+        "## 1. 結論：金鑰上界 S0 = 32／S1 = 64 bits；實際攻擊工作量：已知一對明密文 = 0（直接讀出）；唯密文 S0 ≈ 2^32（AF-027）",
         "",
+        "- [事實] 金鑰上界（`key_upper_bound_bits`）：S0 = 32 bits，S1 = 64 bits（password 模式；整數 seed 模式為 32）。"
+        "這是「金鑰由多少個獨立 bits 決定」的上界，**不是攻擊者的工作量**（AF-026）。",
+        "- [事實] 實際攻擊工作量：已知一對完整明密文 = 0（金鑰直接讀出，不需搜尋；見第 5 節第 3 點）；唯密文 S0 ≈ 2^32（稽核方 AF-027：單一密文 latent 即可辨識正確 seed）。"
+        "S1 唯密文 ≈ 2^33（稽核方 AUD-20261011-02：縮小空間下單張密文即可，外推到 2^32 為 [推定]）。後兩者為稽核方結果，本腳本不量測，實作方重現屬 A3.2 補測（AF-027）。",
+        "- [事實] 密碼 `Ki@13579` 寫死在多支啟動腳本內（第 5 節第 8 點），取得程式碼即取得密碼，給定程式碼時秘密為 0 bits。"
+        "另有第二組設定 `paper_experiment_key_2024`（`run_paper_comparison.sh:27`），目前無法確定論文數字出自哪一組（第 5 節第 9 點）。",
         "- [事實] 前作的 Rademacher 金鑰 k（d = 65536 維、值域 ±1）完全由一個 32-bit 整數 seed 經 `torch.Generator.manual_seed` 與 "
         f"`torch.bernoulli` 決定（{ln['rad_seed_slice']}、{ln['rad_manual_seed']}、{ln['rad_bernoulli']}）。"
-        f"`actual_bits` 上界為 32，宣稱為 {D:,}，差 {D - 32:,} bits。",
+        f"`key_upper_bound_bits` 為 32，宣稱為 {D:,}，差 {D - 32:,} bits（`gap_bits` 是宣稱與金鑰上界的差，不是攻擊工作量）。",
         f"- [事實] Signed Permutation 在整數 seed 模式下，置換的 seed 為 `seed + 1000000`（{ln['sp_perm_offset']}），符號與置換由同一個 32-bit 值決定，"
-        f"`actual_bits` 上界為 32，宣稱 2^d·d!（約 {s1_bits:,.1f} bits）。",
+        f"`key_upper_bound_bits` 為 32，宣稱 2^d·d!（約 {s1_bits:,.1f} bits）。",
         "- [事實] 前作實際執行的 S1 設定（`run_cfg_inference_Crypto.sh:7`：`--anonymization_key_password Ki@13579 --use_signed_permutation True`）走 password 模式："
-        "符號 seed 與置換 seed 是兩個獨立的 32-bit 值，因此 `actual_bits` 上界是 64，不是 32。這是對「32 bits」說法的重要修正，見第 5 節。",
-        "- [推定] 上述上界均為 bits 數的上限；「搜尋成本」尚須 oracle，見 A3.2（實測吞吐與外推）。本檔不宣稱任何實際攻擊成功率。",
+        "符號 seed 與置換 seed 是兩個獨立的 32-bit 值，因此 `key_upper_bound_bits` 是 64，不是 32。這是對「32 bits」說法的重要修正，見第 5 節。",
+        "- [事實] 本檔量測的是金鑰上界；攻擊工作量取決於攻擊者持有的資訊與 oracle（第 3、5 節），"
+        "實測吞吐與外推見 A3.2。本檔不宣稱任何實際攻擊成功率。",
         "",
         "## 2. 程式碼路徑（[事實]，每個 file:line 都在執行時逐行驗證）",
         "",
@@ -418,6 +509,10 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
         ("S1 置換：SHA-256", "perm_sha256"),
         ("S1 置換：只取前 4 bytes", "perm_seed_slice"),
         ("S1 置換：randperm", "perm_randperm"),
+        ("S0 加密：z_ano = k ⊙ z", "s0_apply_flip"),
+        ("S1 加密：先逐元素乘符號 k", "s1_apply_sign"),
+        ("S1 加密：再做置換 P", "s1_apply_perm"),
+        ("S1 置換：以索引取值（只搬移位置，幅值不變）", "perm_apply_gather"),
         ("S1 整數 seed：置換 seed 為固定偏移", "sp_perm_offset"),
         ("S1：符號金鑰以 seed/password 建構", "sp_rademacher_ctor"),
         ("S1：置換金鑰以 seed+偏移/password 建構", "sp_perm_ctor"),
@@ -440,8 +535,14 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
         *table,
         "",
         f"- [事實] d = {D:,}；claim_bits 的 S0 = d，S1 = d + log2(d!) = {D:,} + {log2_fact:,.1f}（以 `math.lgamma` 計算）。",
-        "- [事實] `actual_bits` 欄是「金鑰可由多少個獨立 bits 決定」的上界（由程式路徑得出），不是攻擊成本；"
-        "`known_plaintext_search_bits` 是在攻擊者持有一對明文/密文 latent 時、對 seed 做窮舉所需的 bits（第 5 節）。",
+        "- [事實] 表中四個 bits 欄是四種不同的量，不可互換：",
+        "  - `key_upper_bound_bits`：金鑰可由多少個獨立 bits 決定的上界（由程式路徑得出）；**不是攻擊者的工作量**。",
+        "  - `seed_search_bits_separable`：攻擊者只有部分明文或只有密文、必須對 seed 窮舉時的搜尋 bits。S1 password 模式的兩半可分開窮舉（2·2^32 = 2^33，"
+        "縮小示範為 2·2^18 對聯合 2^36，見 `results/A3.2.json` 的 E4）；**這不是已知明文的成本**。",
+        "  - `kpa_full_pair_search_bits` = 0：持有一對完整的已知明文/密文 latent 時不需要搜尋，金鑰直接讀出（第 5 節第 3 點）。",
+        "  - `ciphertext_only_seed_search_bits`：唯密文情境下的 seed 搜尋 bits。S0 ≈ 32（稽核方 AF-027）、S1 password ≈ 33（稽核方 AUD-20261011-02）、"
+        "S1 整數 seed ≈ 32 為 [推定]（金鑰本身只有 32 bits）；皆非本腳本量測（第 5 節第 4 點）。",
+        "- [事實] `gap_bits` = claim_bits − key_upper_bound_bits，只比較宣稱與金鑰上界，不是攻擊工作量。",
         "",
         "## 4. 數值驗證（皆以前作自己的 `RademacherKey`、`PermutationKey`、`SignedPermutationKey` 實測）",
         "",
@@ -470,24 +571,57 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
         f"置換同理：`{v6['perm']['password_a']}` 與 `{v6['perm']['password_b']}`（後綴 `_permutation`，seed = {v6['perm']['seed']}，{v6['perm']['hashes_computed']:,} 次雜湊）的 `PermutationKey` 在 "
         f"{v6['perm']['positions_equal']:,}/{D:,} 個位置相同（{yes(v6['perm']['keys_equal'])}）。",
         "",
-        "## 5. 對「32 bits」說法的限定與細節",
+        "## 5. 對「32 bits」說法的限定與細節：金鑰上界 S0 = 32／S1 = 64 bits ≠ 攻擊工作量（已知一對明密文 = 0；唯密文 S0 ≈ 2^32，AF-027）",
         "",
-        "1. [事實] 預設 legacy 設定（password 模式）下，S0 的 `actual_bits` 上界是 32；S1 的上界是 64，因為符號與置換各由一個獨立的 32-bit 前綴決定"
+        "- [事實] 摘要：金鑰上界 S0 = 32／S1 = 64 bits；實際攻擊工作量：已知一對明密文 = 0（直接讀出）；唯密文 S0 ≈ 2^32（AF-027）。"
+        "「64 bits」是金鑰的上界，不是攻擊者的工作量（AF-026）。",
+        "",
+        "1. [事實] 預設 legacy 設定（password 模式）下，S0 的 `key_upper_bound_bits` 是 32；S1 是 64，因為符號與置換各由一個獨立的 32-bit 前綴決定"
         f"（{ln['rad_seed_slice']} 與 {ln['perm_seed_slice']}，且置換的 password 分支先於 seed 分支，{ln['perm_password_branch']}，所以 `seed + 1000000` 的耦合在 password 模式不會發生）。",
-        "2. [事實] 只有整數 seed 模式才有 `seed + 1000000` 耦合（V4），此時 S1 的上界是 32。本專案 legacy 重現（E2.2，`e2_legacy_wrapper.py:70-74`）與前作一樣同時給 seed 與 password，此時 seed 被忽略（V3），走 password 模式。",
-        "3. [推定] 在攻擊者持有一對明文/密文 latent 時，S1 的置換可由 |z| 排序配對、符號可由逐元素比較直接讀出（連續分布下幅值理論上互異），"
-        "因此符號 seed 與置換 seed 可各自獨立窮舉：候選數約 2·2^32 = 2^33，而非 2^64。此推論的 S0 部分與縮小空間 S1 positive control 見 A3.2，完整 S1 KPA 屬 A4.3，不在本任務內。",
-        "   [事實] 但 float32 latent 並非幅值互異：A3.3 的 10 個 d=65536 latent 的相異幅值數皆小於 65536（`results/A3.3.json` 的 `inputs.*.stats.n_distinct_magnitudes`，即有座標共用相同幅值），"
-        "僅憑幅值排序時這些座標的配對有歧義；其處理屬 A4.3，不影響本檔的 bits 上界。",
-        "4. [推定] 在僅有密文、且 oracle 無法分開評估符號與置換的情況下，搜尋空間上界仍是 2^64（S1 password 模式）。是否存在這樣的 oracle 不在本任務檢驗範圍。",
-        "5. [假設] 若密碼本身是人類可記憶字串（例如本案的 `Ki@13579`），實際熵可能遠低於 32 bits（字典或規則式猜測）；本檔只量測由 SHA-256 前綴施加的 32-bit 上界，不量測密碼熵。",
+        "2. [事實] 只有整數 seed 模式才有 `seed + 1000000` 耦合（V4），此時 S1 的上界是 32。本專案 legacy 重現（E2.2，`e2_legacy_wrapper.py:69-74`）與前作一樣同時給 seed 與 password，此時 seed 被忽略（V3），走 password 模式。",
+        f"3. [事實] 已知一對完整的明文/密文 latent 時不需要任何搜尋。S0 的密文為 `z_ano = mask ⊙ (k ⊙ z) + (1 − mask) ⊙ z`（{ln['s0_apply_flip']}、{ln['s0_apply_mask']}），"
+        "故對 mask = 1 的座標 `k = sign(c ⊙ z)` 直接讀出；"
+        f"S1 的密文為 `c = P(k ⊙ z)`（{ln['s1_apply_sign']}、{ln['s1_apply_perm']}；置換只是索引取值 {ln['perm_apply_gather']}，不改變幅值），"
+        "把 |c| 與 |z| 各自排序即可配對出 π，再由符號比對得 k，成本 O(d log d)。`results/A3.2.json` 的 E4 在 d = 4096、幅值互異的 latent 上以此法精確找回 (k, π)"
+        "（`kpa_recovers_sign_and_permutation_exactly` = true）。所以 `kpa_full_pair_search_bits` = 0。",
+        "   [事實] seed 窮舉只在三種情況才有意義：部分明文（稽核方 AF-026：S0 約需 64 個已知座標，[推定]）、magnitude tie，以及唯密文（第 4 點）。"
+        "float32 latent 並非幅值互異：A3.3 的 10 個 d=65536 latent 的相異幅值數皆小於 65536（`results/A3.3.json` 的 `inputs.*.stats.n_distinct_magnitudes`，即有座標共用相同幅值），"
+        "僅憑幅值排序時這些座標的配對有歧義，需第二對明密文或對 seed 窮舉（上限為 `seed_search_bits_separable`）才能消除；其處理屬 A4.3，不影響本檔的 bits 上界。",
+        "   [推定] 需要 seed 窮舉時，S1 的符號 seed 與置換 seed 可各自獨立窮舉（置換只比對 magnitude 排序，可容忍 tie；符號只比對符號），"
+        "候選數約 2·2^32 = 2^33，而非 2^64；這是 `seed_search_bits_separable` 欄的意義，不是已知明文的成本。S0 部分與縮小空間 S1 positive control 見 A3.2，完整 S1 KPA 屬 A4.3，不在本任務內。",
+        "4. [事實，稽核方結果；本腳本不量測] 唯密文也能對 seed 窮舉，而且 oracle 可分開評估符號與置換，所以 2^64 不是攻擊工作量。"
+        "S0（AF-027，`audit/a3_s0_coa_oracle_check.py`）：單一密文 latent 對正確金鑰的分數約 37σ（三張真實 latent 為 37.1／36.8／37.0σ），2,000 個錯誤 seed 最高只有 3.3–3.8σ；"
+        "[推定] 外推到 2^32 個錯誤候選，期望最大值約 6.7σ（高斯尾部假設），仍遠低於 37σ，故 S0 唯密文約 2^32。"
+        "S1（AUD-20261011-02，`audit/a3_s1_coa_experiment.py`）：在 2^14 縮小空間中，**單一 S1 密文**即讓植入的置換 seed（14.6σ）與符號 seed（置換已知時 36.9σ）都排第 1，"
+        "錯誤候選與負控制最高 ≤ 4.2σ；[推定] 外推到完整空間總工作量約 2·2^32 = 2^33。AUD-20261011-01 記錄的 subagent 估計是金鑰重用下需 10–50 張密文，AUD-20261011-02 實測更正為單張即可；"
+        "前作部署本來就讓所有影像共用同一把金鑰（第 7 點）。實作方以自己的實作重現唯密文實驗屬 A3.2 補測（AF-027，尚未完成），在此之前 `ciphertext_only_seed_search_bits` 欄只引用稽核方結果。",
+        "5. [事實] 密碼 `Ki@13579` 寫死在啟動腳本內（第 8 點列出位置）；[推定] 取得程式碼的攻擊者不需要猜測，秘密為 0 bits，與 SHA-256 前綴的 32-bit 上界無關。"
+        "[假設] 若攻擊者沒有程式碼，且密碼是人類可記憶字串，實際熵可能遠低於 32 bits（字典或規則式猜測）；本檔只量測由 SHA-256 前綴施加的 32-bit 上界，不量測密碼熵。",
         "6. [推定] 32 是上界而非精確值：seed → 金鑰的映射在 2^32 個 seed 上是否全為單射本腳本未窮舉驗證（V6 只顯示不同密碼可共用同一 seed）。",
         "7. [事實] 金鑰由 password 確定性導出（V2），且啟動命令寫死單一 password（`run_cfg_inference_Crypto.sh:7`）；[推定] 因此同一 password 下的所有影像共用同一把金鑰，恢復一把即可還原全部——這屬於金鑰重用問題，與位元數是兩個獨立議題。",
+        "8. [事實] 密碼 `Ki@13579` 寫死的位置（本腳本逐行驗證）。稽核方列出 `run_{cfg,uncond,clf}_inference_Crypto.sh` 與 `run_comparison_experiments.sh:29`；"
+        "`.vscode/launch.json` 的兩處不在稽核方清單內，為本腳本額外找到。給定程式碼時秘密為 0 bits（第 5 點）。",
+        "",
+        "   | 位置 | 內容 |",
+        "   |---|---|",
+        *[f"   {anchor_row(aid)}" for aid in PASSWORD_ANCHOR_IDS],
+        "",
+        f"   此外 `{by_anchor['pw_comparison_echo']['file']}:{by_anchor['pw_comparison_echo']['line']}` 會把該密碼 echo 到執行輸出（`{by_anchor['pw_comparison_echo']['text']}`）。",
+        "9. [事實] 第二組設定：`run_paper_comparison.sh` 另有一個密碼設定，實際傳入的字串帶後綴（S0 用 `${PASSWORD}_rademacher`，S1 用 `${PASSWORD}_signed_perm`）：",
+        "",
+        "   | 位置 | 內容 |",
+        "   |---|---|",
+        *[f"   {anchor_row(aid)}" for aid in SECOND_SETTING_ANCHOR_IDS],
+        "",
+        "   [推定] 它走同一條 SHA-256 前 4 bytes 路徑（第 1 點），所以 `key_upper_bound_bits` 的結論相同（S0 = 32／S1 = 64）；只有具體的 seed 值不同，本腳本未計算。"
+        "[假設] 論文數字出自 `Ki@13579`（`run_*_Crypto.sh`、`run_comparison_experiments.sh`）還是 `paper_experiment_key_2024`（`run_paper_comparison.sh`）目前無法確定，尚未查證；"
+        f"本專案 E2.2 legacy 重現使用 `Ki@13579`（`{ln['e22_wrapper_ctor']}`，`LEGACY_PASSWORD`）。",
         "",
         "## 6. 與後續任務的接口",
         "",
         "- [事實] A3.2（`results/A3.2.json`）用同一批前作金鑰類別在縮小空間（2^20）上做窮舉 positive control，並量測吞吐後外推到 2^32；本檔不含任何計時。",
         "- [事實] A3.3 驗證 S0 逐元素 |z_enc| = |z| 與 S1 排序幅值不變，這是不需要金鑰就能比對 gallery 的依據；本檔只處理金鑰空間。",
+        "- [事實] 唯密文 oracle（AF-027）：稽核方結果與證據檔見第 5 節第 4 點；實作方的 A3.2 補測完成前，本檔不含唯密文量測。",
         "- [推定] 修補方向（D5.1）應使用 256-bit 隨機主金鑰，並由 CSPRNG／KDF 展開到 d 維，使每一位元都來自完整熵；該設計的檢驗不在本任務內。",
         "",
         "## 7. 重現",
@@ -496,6 +630,7 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
         COMMAND,
         "```",
         "",
+        f"- 輸出檔已存在時腳本拒絕覆寫，需加 `--force`（AF-029）：`{COMMAND} --force`。",
         f"- 驗證項共 {len(anchors)} 個 file:line 錨點與 V1–V6 六組數值檢查；任何一項失敗腳本即以非零狀態結束，不寫出檔案。",
     ]
     NOTE_OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -518,7 +653,9 @@ def main() -> None:
     print(f"wrote {CSV_OUT.relative_to(ROOT)}")
     print(f"wrote {NOTE_OUT.relative_to(ROOT)}")
     for row in rows:
-        print(f"{row['scheme']:<24} {row['mode']:<56} claim={row['claim_bits']:>12,.1f} actual={row['actual_bits']:>3} kpa_search={row['known_plaintext_search_bits']}")
+        print(f"{row['scheme']:<24} {row['mode']:<56} claim={row['claim_bits']:>12,.1f} key_upper={row['key_upper_bound_bits']:>3} "
+              f"seed_search={row['seed_search_bits_separable']} kpa_full_pair={row['kpa_full_pair_search_bits']} "
+              f"ct_only={row['ciphertext_only_seed_search_bits']}")
 
 
 if __name__ == "__main__":
