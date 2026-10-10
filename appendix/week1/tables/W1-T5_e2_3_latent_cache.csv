@@ -1,0 +1,3 @@
+split,run_id,images,latent_shape,batch_size,recomputed,recompute_max_abs,recompute_bit_exact,tolerance,finite,status,cache_sha256
+security_v1,E2.3_20261009T183736363217Z_84cf642a,200,200x1x256x256,1,20,0.0,20,1e-05,True,passed,195c20b3124af54c5dd40c644bae78af3144ae176204982c4c2f7b5effd69190
+dev_v1.1,E2.3_20261009T190608331743Z_6edaf199,20,20x1x256x256,1,5,0.0,5,1e-05,True,passed,030c021ff5cdce1fd9a158afa59ec33f0119eb8d782be5392adf6fc7a56c091a

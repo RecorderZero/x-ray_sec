@@ -22,10 +22,13 @@
 | `README.md` | 本索引；回答「檔案在哪裡、做什麼、是否仍使用」。 |
 | `PROPOSAL.md` | 研究方法、威脅模型、S0/S1/S2 與論文主張邊界。 |
 | `WORKFLOW.md` | 八週任務、子任務 ID、pass criteria 與交付項目。 |
+| `PROGRESS_summary.md` | 每週摘要（論文撰寫與討論用）：檔首為每週撰寫規範；每週列範圍與狀態、重點、結果分析、論文可用素材、決策、稽核狀態、限制與下週計畫。數字一律引用 `appendix/week<N>/` 的素材編號。 |
 | `PROGRESS.md` | 只增不改的實驗日誌；所有新條目使用最新七段式格式。 |
 | `loop_engineering_spec.md` | loop、安全閘門、長任務狀態機、重試與 Git 規則。 |
 | `.gitignore` | 排除 dataset、checkpoint、cache、run-level/per-sample 大型輸出與 secrets。 |
 | `AUDIT.md` | 稽核方的 finding 與複驗紀錄；實作方唯讀，回覆追加於 `PROGRESS.md`。 |
+| `appendix/README.md` | 論文素材附錄規範：`week<N>/` 結構、`W<N>-F<k>`／`W<N>-T<k>` 編號、MANIFEST 欄位、產生方式與使用原則。 |
+| `appendix/week1/` | Week 1 論文素材：6 張圖、10 張表與 `MANIFEST.csv`（含圖說草稿、建議用途、來源 SHA-256 與 run ID）；由 builder 產生，不手動編輯。 |
 | `audit/README.md` | 稽核程式與輸出索引；由稽核方維護。 |
 
 ## E0/E1 可重現程式
@@ -53,6 +56,7 @@
 | `scripts/a3_bruteforce.py` | A3.2：縮小空間（2^20）暴力搜尋正控制，對 S0（合成 d=4096、真實 d=65536 預篩）與 S1（符號/置換拆開）各還原祕密 seed，含負控制與 2^32 外推。 | A3.2 brute-force 正控制。 |
 | `scripts/a3_keyspace_audit.py` | A3.1：從程式路徑證明 legacy 金鑰有效位元上界（S0 password 32、S1 password 64、整數 seed 模式 32），含 sha256[:4] 碰撞與整數 seed 低 32 位截斷的數值驗證。 | A3.1 金鑰空間稽核。 |
 | `scripts/a3_t1_gallery.py` | A3.4：T1（精確 latent）magnitude／sorted-magnitude／norm gallery linkage；P 正控制、shuffle 負控制；Top-1/5、mAP、CMC 與 bootstrap 95% CI。CPU，讀 E2.3 cache。 | A3.4 攻擊上限；A4 為其 T2-WB 版本。 |
+| `scripts/build_weekly_appendix.py` | 從已提交的結果檔產生 `appendix/week<N>/` 的圖、表與 MANIFEST；每週素材清單登記在 `WEEKS[<N>]`；重建須逐位元相同。 | 每週撰寫 `PROGRESS_summary.md` 前執行。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 

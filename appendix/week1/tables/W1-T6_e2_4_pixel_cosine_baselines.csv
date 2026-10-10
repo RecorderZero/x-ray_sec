@@ -1,0 +1,7 @@
+comparison,psnr_db,cosine,statistic
+two different patients (190 pairs),11.126732346685115,0.884415702760365,median
+"two different patients, mean removed",,0.5323349881215402,median
+same image + noise,30.6,0.9986972044204684,mean of 20
+same image + noise,26.2,0.996424324976952,mean of 20
+y = 0.5 x (not equal),10.788170264513024,1.0,mean of 20
+predecessor reported (base vs decrypt output),30.23,0.998978,"thesis 05_experiments.tex:275,308 (literature value)"

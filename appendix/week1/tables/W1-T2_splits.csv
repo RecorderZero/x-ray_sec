@@ -1,0 +1,3 @@
+split,images,patients,healthy_label0,effusion_label1,selection,seed,split_sha256,notes
+dev_v1.1,20,20,10,10,CheXpert valid; first 10 patients per class by patient_id,deterministic,7b3e77a86026081bab8c71897536944d7a8795ab795661a56c05caf92a738aa4,dev/smoke only; hash excludes local_path
+security_v1,200,200,100,100,AF-012(a): legacy sample_n=16000/class random_state=1911 reproduced; excluded patients,1911,5843da54d027cbe5b7d518349a374f859b5d2c0e07b9b66ea5f89c9530a94490,22253 training-sample patients excluded; patient-disjoint; formal N=200 (user decision)

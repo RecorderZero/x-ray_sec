@@ -1,0 +1,4 @@
+batch_size,forward_half_cycle_s,generation_half_cycle_s_guidance_m1,generation_half_cycle_s_guidance_0,full_cycle_s_guidance_m1,peak_vram_bytes
+1,7.734,7.82,15.396,15.554,800531968
+4,6.309,6.333,12.589,12.642,1707956224
+8,5.542,5.524,11.011,11.066,2919994880

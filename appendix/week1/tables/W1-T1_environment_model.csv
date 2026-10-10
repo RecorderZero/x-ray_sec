@@ -1,0 +1,36 @@
+item,value
+python,3.10.19
+pytorch,2.14.0+cu130
+cuda_build,13.0
+cudnn,92400
+gpu,NVIDIA GeForce RTX 5090
+numpy,1.23.0
+scipy,1.10.0
+pillow,8.4.0
+opencv,4.7.0
+checkpoint_sha256,3f61b80a2b2df4f5f1780fe9a7ce639f6a94ddb5057e5f9e88dc300de4786b14
+checkpoint_strict_load,True
+missing_unexpected_keys,0/0
+model_parameters,113998722
+diffusion_timesteps,1000
+model_attention_resolutions,16
+model_class_cond,True
+model_diffusion_steps,1000
+model_image_size,256
+model_in_channels,1
+model_learn_sigma,True
+model_noise_schedule,linear
+model_num_channels,128
+model_num_classes,2
+model_num_heads,1
+model_num_res_blocks,2
+model_rescale_learned_sigmas,False
+model_rescale_timesteps,False
+model_timestep_respacing,ddim1000
+model_use_scale_shift_norm,False
+noise_level_T,"500 (DDIM, ddim1000 respacing)"
+inversion_conditioning,null=True (unconditional)
+generation_conditioning,"y=0 healthy class, single call, no CFG mixing (guidance_scale=-1)"
+pipeline,legacy_anonymization:ddim_sample_loop_anonymization
+batch_size_formal,1 (bit-exact recomputation; see W1-T9)
+preprocessing,"grayscale; histogram equalization; INTER_AREA 256x256; JPEG q100; per-image min-max [0,1]"
