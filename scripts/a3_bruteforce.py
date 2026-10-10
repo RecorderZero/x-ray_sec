@@ -93,6 +93,10 @@ FULL_BITS = 32
 SMALL_SHAPE = (1, 64, 64)  # d = 4096
 FULL_SHAPE = (1, 256, 256)  # d = 65536
 SCREEN_M = 64  # screened key prefix length for E2/E3
+COA_BITS = 14  # ciphertext-only reduced seed space (2^14), matching the auditor's AF-027 protocol
+COA_RANGE = 2**COA_BITS
+COA_REAL_INDEX_S0 = 0  # real latent used for the S0 ciphertext-only attack
+COA_REAL_INDEX_S1 = 1  # independent real latent for the S1 ciphertext-only attack
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +290,124 @@ def s1_split_search(z: torch.Tensor, secret_sign_seed: int, secret_perm_seed: in
 
 
 # ---------------------------------------------------------------------------
+# E5/E6 : ciphertext-only attacks (AF-027). No plaintext is used.
+# ---------------------------------------------------------------------------
+def s0_coa_score(c_flat: np.ndarray, candidate_key_flat: np.ndarray) -> float:
+    """Normalized correlation of a candidate sign key with one ciphertext.
+
+    c = k (.) z with z_i having a positive mean (noise level 500, x0 in [0,1]).
+    score(k') = sum_i k'_i c_i / (rms(c) * sqrt(d)).  For k' = k this is
+    sqrt(d) * mean(z) / rms(z); for a random k' it is distributed N(0, 1), so the
+    raw score is already in units of sigma against the wrong-key distribution.
+    """
+    d = c_flat.size
+    rms = float(np.sqrt(np.mean(c_flat * c_flat)))
+    return float(candidate_key_flat @ c_flat) / (rms * np.sqrt(d))
+
+
+def _adjacent_corr_abs(flat: np.ndarray, side: int = 256) -> float:
+    """Mean horizontal+vertical adjacent-pixel correlation of |flat| as a side x side image."""
+    image = np.abs(flat).reshape(side, side)
+    centered = image - image.mean()
+    denom = float((centered * centered).sum())
+    if denom == 0:
+        return 0.0
+    horizontal = float((centered[:, 1:] * centered[:, :-1]).sum())
+    vertical = float((centered[1:, :] * centered[:-1, :]).sum())
+    return (horizontal + vertical) / (2.0 * denom)
+
+
+def s0_coa_search(shape, z: torch.Tensor, secret_seed: int, space: int) -> dict:
+    """Plant a secret sign seed, then score every candidate against ONE ciphertext."""
+    key = RademacherKey(shape=shape, seed=secret_seed)
+    c_flat = encrypt(shape, z, key, False).numpy().reshape(-1).astype(np.float64)
+    correct = s0_coa_score(c_flat, key.key.numpy().reshape(-1).astype(np.float64))
+    t0 = time.perf_counter()
+    scores = np.empty(space, dtype=np.float64)
+    best_seed, best_score = -1, -np.inf
+    for seed in range(space):
+        score = s0_coa_score(c_flat, RademacherKey._generate_key(shape, seed).numpy().reshape(-1).astype(np.float64))
+        scores[seed] = score
+        if score > best_score:
+            best_score, best_seed = score, seed
+    wall = time.perf_counter() - t0
+    wrong = np.delete(scores, secret_seed) if secret_seed < space else scores
+    return {
+        "d": int(z.numel()), "secret_seed": secret_seed, "secret_in_range": secret_seed < space,
+        "correct_score_sigma": correct, "ranked_first": best_seed == secret_seed,
+        "best_seed": best_seed, "best_score_sigma": best_score,
+        "wrong_max_sigma": float(wrong.max()), "wrong_mean": float(wrong.mean()), "wrong_std": float(wrong.std()),
+        "candidates_tested": space, "wall": wall,
+    }
+
+
+def s1_coa_search(shape, z: torch.Tensor, secret_sign_seed: int, secret_perm_seed: int, space: int) -> dict:
+    """Two-stage ciphertext-only attack on S1 from ONE ciphertext (AF-027/AUD-20261011-02)."""
+    d = int(z.numel())
+    side = int(round(d**0.5))
+    key = SignedPermutationKey(
+        shape=shape,
+        rademacher_key=RademacherKey(shape=shape, seed=secret_sign_seed),
+        permutation_key=PermutationKey(size=d, seed=secret_perm_seed),
+    )
+    c_flat = encrypt(shape, z, key, True).numpy().reshape(-1).astype(np.float64)
+
+    # Stage 1: the correct inverse permutation restores the spatial structure of |.|.
+    t0 = time.perf_counter()
+    perm_scores = np.empty(space, dtype=np.float64)
+    best_perm, best_perm_corr = -1, -np.inf
+    for seed in range(space):
+        inverse = PermutationKey(size=d, seed=seed).inverse_permutation.numpy()
+        corr = _adjacent_corr_abs(c_flat[inverse], side)
+        perm_scores[seed] = corr
+        if corr > best_perm_corr:
+            best_perm_corr, best_perm = corr, seed
+    wall_perm = time.perf_counter() - t0
+    perm_wrong = np.delete(perm_scores, secret_perm_seed) if secret_perm_seed < space else perm_scores
+    perm_sigma = (perm_scores[secret_perm_seed] - perm_wrong.mean()) / perm_wrong.std() if secret_perm_seed < space else float("nan")
+
+    # Stage 2: with the permutation known, undo it and run the S0 score for the sign seed.
+    inverse_correct = PermutationKey(size=d, seed=secret_perm_seed).inverse_permutation.numpy()
+    u_flat = c_flat[inverse_correct]  # = k (.) z
+    t0 = time.perf_counter()
+    sign_scores = np.empty(space, dtype=np.float64)
+    best_sign, best_sign_score = -1, -np.inf
+    for seed in range(space):
+        score = s0_coa_score(u_flat, RademacherKey._generate_key(shape, seed).numpy().reshape(-1).astype(np.float64))
+        sign_scores[seed] = score
+        if score > best_sign_score:
+            best_sign_score, best_sign = score, seed
+    wall_sign = time.perf_counter() - t0
+    sign_wrong = np.delete(sign_scores, secret_sign_seed) if secret_sign_seed < space else sign_scores
+    return {
+        "d": d, "n_ciphertexts": 1,
+        "permutation_secret_seed": secret_perm_seed, "permutation_ranked_first": best_perm == secret_perm_seed,
+        "permutation_correct_sigma": float(perm_sigma), "permutation_wrong_max_corr": float(perm_wrong.max()),
+        "permutation_correct_corr": float(perm_scores[secret_perm_seed]) if secret_perm_seed < space else float("nan"),
+        "sign_secret_seed": secret_sign_seed, "sign_ranked_first": best_sign == secret_sign_seed,
+        "sign_correct_sigma": float(sign_scores[secret_sign_seed]) if secret_sign_seed < space else float("nan"),
+        "sign_wrong_max_sigma": float(sign_wrong.max()),
+        "candidates_tested": 2 * space, "wall_perm": wall_perm, "wall_sign": wall_sign,
+    }
+
+
+def s1_coa_negative_control(shape, z: torch.Tensor, secret_perm_seed_out: int, space: int) -> dict:
+    """Permutation stage when the ciphertext's permutation seed is OUTSIDE the candidate range."""
+    d = int(z.numel())
+    side = int(round(d**0.5))
+    key = SignedPermutationKey(
+        shape=shape,
+        rademacher_key=RademacherKey(shape=shape, seed=0),
+        permutation_key=PermutationKey(size=d, seed=secret_perm_seed_out),
+    )
+    c_flat = encrypt(shape, z, key, True).numpy().reshape(-1).astype(np.float64)
+    corrs = np.array([_adjacent_corr_abs(c_flat[PermutationKey(size=d, seed=seed).inverse_permutation.numpy()], side)
+                      for seed in range(space)])
+    return {"secret_perm_seed_outside_range": secret_perm_seed_out, "candidates_tested": space,
+            "max_sigma_over_candidates": float((corrs.max() - corrs.mean()) / corrs.std())}
+
+
+# ---------------------------------------------------------------------------
 # throughput benchmarks (for the extrapolation)
 # ---------------------------------------------------------------------------
 def bench(fn, n: int, warmup: int = 10) -> float:
@@ -317,7 +439,8 @@ def run_benchmarks() -> dict:
 def extrapolate(rate: float) -> dict:
     full = 2.0**FULL_BITS
     return {
-        "candidates_per_s": rate,
+        "candidates_per_s_cpu_single_thread": rate,
+        "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
         "worst_case_2_32": human(full / rate),
         "expected_half_2_31": human(full / 2 / rate),
     }
@@ -359,6 +482,15 @@ def main() -> None:
     e3 = screened_s0_search(FULL_SHAPE, z_real, encrypt(FULL_SHAPE, z_real, key_e3, False), RANGE)
     # E4
     e4 = s1_split_search(z_s1, secret_sign, secret_perm, z_s1_fresh)
+    # E5 / E6 : ciphertext-only attacks (AF-027), independent real latents, single ciphertext
+    secret_e5 = int(seed_rng.integers(0, COA_RANGE))
+    secret_e6_sign = int(seed_rng.integers(0, COA_RANGE))
+    secret_e6_perm = int(seed_rng.integers(0, COA_RANGE))
+    secret_e6_neg = int(seed_rng.integers(COA_RANGE, 2**FULL_BITS))
+    z_real_s1 = torch.from_numpy(np.array(latents[COA_REAL_INDEX_S1], dtype=np.float32))
+    e5 = s0_coa_search(FULL_SHAPE, z_real, secret_e5, COA_RANGE)
+    e6 = s1_coa_search(FULL_SHAPE, z_real_s1, secret_e6_sign, secret_e6_perm, COA_RANGE)
+    e6_neg = s1_coa_negative_control(FULL_SHAPE, z_real_s1, secret_e6_neg, COA_RANGE)
 
     benchmarks = run_benchmarks()
 
@@ -374,6 +506,9 @@ def main() -> None:
         "E4_kpa_exact": e4["kpa_recovers_sign_and_permutation_exactly"],
         "E4_generalises": e4["recovered_key_encrypts_fresh_latent_identically"],
         "E2_no_false_survivors": e2["screen_false_survivors"] == 0,
+        "E5_coa_ranked_first": e5["ranked_first"] and e5["correct_score_sigma"] > e5["wrong_max_sigma"],
+        "E6_coa_permutation_first": e6["permutation_ranked_first"],
+        "E6_coa_sign_first": e6["sign_ranked_first"],
     }
     if not all(checks.values()):
         raise SystemExit(f"positive/negative control failed: {checks}")
@@ -403,6 +538,8 @@ def main() -> None:
             "secret_seed_recovered": e2["recovered_seed"] == secret_e2, "recovered_seed": e2["recovered_seed"],
             "candidates_tested": e2["candidates_tested"], "screen_prefix_coordinates": e2["screen_prefix_coordinates"],
             "screen_survivors": e2["screen_survivors"], "screen_false_survivors": e2["screen_false_survivors"],
+            "analytic_false_survivor_rate": ("[fact] a 64-coordinate prefix screen matches a random key with probability 2^-64; "
+                                             "over the full 2^32 seed space the expected false survivors are 2^32 * 2^-64 = 2^-32"),
         },
         "e3_negative_control": {
             "description": "same search as E2 over the whole [0, 2^20) range, but z_enc was produced with a seed outside the range; nothing may be found",
@@ -421,7 +558,35 @@ def main() -> None:
             "secret_sign_seed": secret_sign, "secret_permutation_seed": secret_perm,
             "secret_seed_draw": "same rng as E1, draws 4 and 5",
             **{k: v for k, v in e4.items() if not k.startswith("wall_")},
-            "split_search_bits_equivalent": float(np.log2(e4["total_candidates_tested"])),
+            "worst_case_candidates_separable": 2 * S1_RANGE,
+            "joint_search_candidates_without_splitting": S1_RANGE * S1_RANGE,
+            "note": ("[fact] total_candidates_tested reflects early stopping at the planted seeds; the attacker's work is "
+                     "2 * 2^18 (separable) versus 2^36 (joint), not log2(total_tested)"),
+        },
+        "e5_s0_ciphertext_only_d65536": {
+            "description": ("S0 ciphertext-only: ONE exact ciphertext latent, no plaintext. Score each candidate sign key by "
+                            "sum_i k'_i c_i / (rms(c) sqrt(d)); the latent's positive mean makes the correct key an outlier."),
+            "reduced_space_bits": COA_BITS, "search_range": [0, COA_RANGE],
+            "latent": f"real E2.3 inversion latent, index {REAL_LATENT_INDEX}",
+            "secret_seed": secret_e5, "secret_seed_recovered": e5["ranked_first"], "recovered_seed": e5["best_seed"],
+            "correct_score_sigma": e5["correct_score_sigma"], "wrong_candidate_max_sigma": e5["wrong_max_sigma"],
+            "wrong_candidate_mean": e5["wrong_mean"], "wrong_candidate_std": e5["wrong_std"],
+            "candidates_tested": e5["candidates_tested"],
+            "note": "[fact] a single ciphertext latent is enough; score is already in sigma units (wrong keys ~ N(0,1))",
+        },
+        "e6_s1_ciphertext_only_d65536": {
+            "description": ("S1 ciphertext-only from ONE ciphertext: stage 1 finds the permutation seed by the adjacent-pixel "
+                            "correlation of the inverse-permuted |c| (restored spatial structure); stage 2 finds the sign seed "
+                            "with the S0 score on the de-permuted latent. No plaintext, no key reuse."),
+            "reduced_space_bits_each_stage": COA_BITS, "search_range_each": [0, COA_RANGE], "n_ciphertexts": 1,
+            "latent": f"real E2.3 inversion latent, index {COA_REAL_INDEX_S1}",
+            "permutation_secret_seed": secret_e6_perm, "permutation_ranked_first": e6["permutation_ranked_first"],
+            "permutation_correct_sigma": e6["permutation_correct_sigma"], "permutation_wrong_max_corr": e6["permutation_wrong_max_corr"],
+            "sign_secret_seed": secret_e6_sign, "sign_ranked_first": e6["sign_ranked_first"],
+            "sign_correct_sigma": e6["sign_correct_sigma"], "sign_wrong_max_sigma": e6["sign_wrong_max_sigma"],
+            "candidates_tested": e6["candidates_tested"],
+            "negative_control": e6_neg,
+            "note": "[fact] a single S1 ciphertext suffices; no key reuse required (stronger than the >=10 ciphertexts earlier estimated)",
         },
         "checks": checks,
         "legacy_seed_positions": {
@@ -456,6 +621,15 @@ def main() -> None:
                 (legacy_sign + 1) / benchmarks["s0_prefix_screen_m64_candidates_per_s"]
             ),
         },
+        "ciphertext_only_extrapolation": {
+            "assumptions": ("[assumption] wrong candidates score ~ N(0,1); the expected maximum over M candidates is about "
+                            "sqrt(2 ln M). For M = 2^32 that is ~6.66 sigma, far below the correct key's score, so the correct "
+                            "key stays rank 1 at full scale. CPU single thread."),
+            "expected_max_wrong_sigma_2_14": float((2 * np.log(COA_RANGE)) ** 0.5),
+            "expected_max_wrong_sigma_2_32": float((2 * np.log(2**FULL_BITS)) ** 0.5),
+            "s0_coa_score_per_s": extrapolate(benchmarks["s0_full_key_d65536_candidates_per_s"]),
+            "s1_coa_permutation_score_per_s": extrapolate(benchmarks["s1_permutation_d65536_candidates_per_s"]),
+        },
     }
 
     created_at = datetime.now(timezone.utc).isoformat()
@@ -485,8 +659,9 @@ def main() -> None:
             "real_latent_index": REAL_LATENT_INDEX,
             "synthetic_latents": "N(0,1) float32, seed 1911 streams (E1: stream 1, E4: streams 2 and 3)",
         },
-        "oracle_assumption": ("The attacker holds one known plaintext/ciphertext latent pair (z, z_enc); the secret seed is chosen by this "
-                              "script inside the reduced range, so the controls verify the search procedure, not the success rate of a real attack"),
+        "oracle_assumption": ("E1-E4 use one known plaintext/ciphertext pair (T3 KPA). E5/E6 use ciphertext only (T1 COA): a single exact "
+                              "ciphertext latent. In all experiments the secret seed is planted inside the reduced range, so the controls verify "
+                              "the search and the oracle, not the base rate of a real attack."),
         "reduced_space_bits": REDUCED_BITS,
         "secret_seed_recovered": checks["E1_recovered"] and checks["E2_recovered"],
         "candidates_tested": {"e1_s0_naive_d4096": e1["candidates_tested"], "e2_s0_screened_d65536": e2["candidates_tested"]},
@@ -497,12 +672,28 @@ def main() -> None:
             f"d=4096 簡單窮舉測試 {e1['candidates_tested']:,} 個候選後找回 seed {secret_e1}；d=65536（真實 latent）以 64 座標預篩加全維驗證，"
             f"測試 {e2['candidates_tested']:,} 個候選後找回 seed {secret_e2}；祕密 seed 在範圍外的 negative control 掃完 2^{REDUCED_BITS} 個候選皆無結果；"
             f"S1 把符號 seed 與置換 seed 分開搜尋，共 {e4['total_candidates_tested']:,} 個候選（聯合搜尋為 2^{2 * S1_BITS}）即找回兩者。"
-            "[推定] 外推到 2^32 的時間見 timing_nondeterministic.extrapolation_to_2_32（吞吐量隨機器而異，假設線性縮放、單執行緒）。"
-            "[假設] 真實攻擊需要一對已知明文/密文；無已知明文時是否存在可用 oracle 本任務未驗證。"
+            f"[事實] 唯密文（COA，無任何明文）：S0 單一密文 latent 的正確金鑰分數 {e5['correct_score_sigma']:.1f}σ，"
+            f"2^{COA_BITS} 個錯誤候選最高僅 {e5['wrong_max_sigma']:.1f}σ，正確金鑰排第 1；"
+            f"S1 單一密文分兩階段，置換 seed {e6['permutation_correct_sigma']:.1f}σ、符號 seed {e6['sign_correct_sigma']:.1f}σ，皆排第 1，"
+            "不需金鑰重用。分數本身即以 σ 為單位（錯誤金鑰 ~ N(0,1)）。"
+            "[推定] 2^32 個 N(0,1) 錯誤候選的期望最大值約 6.7σ，仍遠低於正確金鑰，故全尺度下正確金鑰仍排第 1；"
+            "外推時間見 timing_nondeterministic（CPU 單執行緒，非 GPU）。"
+            "[結論] 前作在 T1 下不需要已知明文：單一密文即可在 32-bit seed 空間中辨識金鑰，密碼強度幾乎無關。"
         ),
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    def _json_default(value):
+        if isinstance(value, (np.bool_,)):
+            return bool(value)
+        if isinstance(value, np.integer):
+            return int(value)
+        if isinstance(value, np.floating):
+            return float(value)
+        raise TypeError(f"not JSON serializable: {type(value).__name__}")
+
+    OUTPUT.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False, default=_json_default) + "\n", encoding="utf-8"
+    )
     print(f"wrote {OUTPUT.relative_to(ROOT)}")
     print(f"E1 tested={e1['candidates_tested']:,} recovered={e1['recovered_seed']} (secret {secret_e1}) wall={e1['wall']:.1f}s")
     print(f"E2 tested={e2['candidates_tested']:,} recovered={e2['recovered_seed']} (secret {secret_e2}) wall={e2['wall']:.1f}s")

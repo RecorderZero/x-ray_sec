@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "task_id": "A3.2",
-  "created_at": "2026-10-10T03:56:17.304119+00:00",
+  "created_at": "2026-10-10T17:57:35.621780+00:00",
   "command": "scripts/run_cfg_ddim.sh python -m scripts.a3_bruteforce",
-  "script_sha256": "1ab3f8a819d0112717d779b8f48c02e89ea2e6e69e8718c3afa7e04859567ef6",
-  "git_commit": "91bf0ff515ae8397f0b9a0a7b9f6058421bda3f1",
-  "git_dirty_tracked_files": false,
+  "script_sha256": "df727e32803d881bf8c747e05998eca8797c16f9b403de82994bb1d83db04285",
+  "git_commit": "401c4e97e394b9ea91c69e44a248313eaff9d7dd",
+  "git_dirty_tracked_files": true,
   "seed": 1911,
   "seed_streams": "np.random.default_rng for each of np.random.SeedSequence(1911).spawn(8); torch seeds are the candidate seeds themselves",
   "numpy_version": "1.23.0",
@@ -28,7 +28,7 @@
     "real_latent_index": 0,
     "synthetic_latents": "N(0,1) float32, seed 1911 streams (E1: stream 1, E4: streams 2 and 3)"
   },
-  "oracle_assumption": "The attacker holds one known plaintext/ciphertext latent pair (z, z_enc); the secret seed is chosen by this script inside the reduced range, so the controls verify the search procedure, not the success rate of a real attack",
+  "oracle_assumption": "E1-E4 use one known plaintext/ciphertext pair (T3 KPA). E5/E6 use ciphertext only (T1 COA): a single exact ciphertext latent. In all experiments the secret seed is planted inside the reduced range, so the controls verify the search and the oracle, not the base rate of a real attack.",
   "reduced_space_bits": 20,
   "secret_seed_recovered": true,
   "candidates_tested": {
@@ -93,7 +93,8 @@
       "screen_survivors": [
         580344
       ],
-      "screen_false_survivors": 0
+      "screen_false_survivors": 0,
+      "analytic_false_survivor_rate": "[fact] a 64-coordinate prefix screen matches a random key with probability 2^-64; over the full 2^32 seed space the expected false survivors are 2^32 * 2^-64 = 2^-32"
     },
     "e3_negative_control": {
       "description": "same search as E2 over the whole [0, 2^20) range, but z_enc was produced with a seed outside the range; nothing may be found",
@@ -136,7 +137,52 @@
       "total_candidates_tested": 156997,
       "joint_search_space_candidates": 68719476736,
       "recovered_key_encrypts_fresh_latent_identically": true,
-      "split_search_bits_equivalent": 17.260377465869166
+      "worst_case_candidates_separable": 524288,
+      "joint_search_candidates_without_splitting": 68719476736,
+      "note": "[fact] total_candidates_tested reflects early stopping at the planted seeds; the attacker's work is 2 * 2^18 (separable) versus 2^36 (joint), not log2(total_tested)"
+    },
+    "e5_s0_ciphertext_only_d65536": {
+      "description": "S0 ciphertext-only: ONE exact ciphertext latent, no plaintext. Score each candidate sign key by sum_i k'_i c_i / (rms(c) sqrt(d)); the latent's positive mean makes the correct key an outlier.",
+      "reduced_space_bits": 14,
+      "search_range": [
+        0,
+        16384
+      ],
+      "latent": "real E2.3 inversion latent, index 0",
+      "secret_seed": 9268,
+      "secret_seed_recovered": true,
+      "recovered_seed": 9268,
+      "correct_score_sigma": 37.07004193057575,
+      "wrong_candidate_max_sigma": 3.6973438327292243,
+      "wrong_candidate_mean": 0.009109268079284853,
+      "wrong_candidate_std": 1.0065246255524058,
+      "candidates_tested": 16384,
+      "note": "[fact] a single ciphertext latent is enough; score is already in sigma units (wrong keys ~ N(0,1))"
+    },
+    "e6_s1_ciphertext_only_d65536": {
+      "description": "S1 ciphertext-only from ONE ciphertext: stage 1 finds the permutation seed by the adjacent-pixel correlation of the inverse-permuted |c| (restored spatial structure); stage 2 finds the sign seed with the S0 score on the de-permuted latent. No plaintext, no key reuse.",
+      "reduced_space_bits_each_stage": 14,
+      "search_range_each": [
+        0,
+        16384
+      ],
+      "n_ciphertexts": 1,
+      "latent": "real E2.3 inversion latent, index 1",
+      "permutation_secret_seed": 5382,
+      "permutation_ranked_first": true,
+      "permutation_correct_sigma": 11.99363359463543,
+      "permutation_wrong_max_corr": 0.010795344910794693,
+      "sign_secret_seed": 12795,
+      "sign_ranked_first": true,
+      "sign_correct_sigma": 36.95247012526798,
+      "sign_wrong_max_sigma": 4.190649467964695,
+      "candidates_tested": 32768,
+      "negative_control": {
+        "secret_perm_seed_outside_range": 4292946196,
+        "candidates_tested": 16384,
+        "max_sigma_over_candidates": 3.7870666498946535
+      },
+      "note": "[fact] a single S1 ciphertext suffices; no key reuse required (stronger than the >=10 ciphertexts earlier estimated)"
     },
     "checks": {
       "E1_recovered": true,
@@ -145,7 +191,10 @@
       "E4_recovered": true,
       "E4_kpa_exact": true,
       "E4_generalises": true,
-      "E2_no_false_survivors": true
+      "E2_no_false_survivors": true,
+      "E5_coa_ranked_first": true,
+      "E6_coa_permutation_first": true,
+      "E6_coa_sign_first": true
     },
     "legacy_seed_positions": {
       "note": "[inference] positions of the legacy password-derived seeds (A3.1 V1) in an ascending enumeration of all 2^32 seeds; an attacker without the password would not know the position and expects to test 2^31 candidates on average",
@@ -161,71 +210,107 @@
     "platform": "Linux-6.14.0-28-generic-x86_64-with-glibc2.39",
     "processor": "x86_64",
     "wall_time_s": {
-      "e1_s0_naive_d4096": 34.80203526397236,
-      "e2_s0_screened_d65536": 1.380800250917673,
-      "e3_negative_screened_d65536": 2.4402762319659814,
-      "e4_sign_search_d4096": 4.164551920024678,
-      "e4_permutation_search_d4096": 0.6766179440310225
+      "e1_s0_naive_d4096": 34.984366777935065,
+      "e2_s0_screened_d65536": 1.3798266790108755,
+      "e3_negative_screened_d65536": 2.4911169479601085,
+      "e4_sign_search_d4096": 4.176510845078155,
+      "e4_permutation_search_d4096": 0.6861282519530505
     },
     "candidates_per_s_in_controls": {
-      "e1_s0_naive_d4096": 23261.886664371923,
-      "e2_s0_screened_d65536": 420296.1287226777,
-      "e3_negative_screened_d65536": 429695.61653076723
+      "e1_s0_naive_d4096": 23140.650369312872,
+      "e2_s0_screened_d65536": 420592.6793762377,
+      "e3_negative_screened_d65536": 420926.04317860043
     },
     "benchmarks": {
-      "s0_full_key_d65536_candidates_per_s": 1927.79996768554,
-      "s0_prefix_screen_m64_candidates_per_s": 494697.93869766576,
-      "s0_full_key_d4096_candidates_per_s": 25814.791319964686,
-      "s1_permutation_d65536_candidates_per_s": 5688.072792629537,
-      "s1_permutation_d4096_candidates_per_s": 79077.1869466242
+      "s0_full_key_d65536_candidates_per_s": 1931.3529197618716,
+      "s0_prefix_screen_m64_candidates_per_s": 484119.376381346,
+      "s0_full_key_d4096_candidates_per_s": 25797.639972570727,
+      "s1_permutation_d65536_candidates_per_s": 5699.021749165168,
+      "s1_permutation_d4096_candidates_per_s": 79037.7045528334
     },
     "extrapolation_to_2_32": {
       "assumptions": "[assumption] linear in the number of candidates, single thread, no per-candidate oracle cost beyond key regeneration/screening; scales ~linearly with cores only if candidates are split across workers",
       "s0_naive_full_key_d65536": {
-        "candidates_per_s": 1927.79996768554,
+        "candidates_per_s_cpu_single_thread": 1931.3529197618716,
+        "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
         "worst_case_2_32": {
-          "seconds": 2227911.28125,
-          "hours": 618.8642447916667,
-          "days": 25.78601019965278
+          "seconds": 2223812.775,
+          "hours": 617.7257708333333,
+          "days": 25.73857378472222
         },
         "expected_half_2_31": {
-          "seconds": 1113955.640625,
-          "hours": 309.43212239583335,
-          "days": 12.89300509982639
+          "seconds": 1111906.3875,
+          "hours": 308.86288541666664,
+          "days": 12.86928689236111
         }
       },
       "s0_prefix_screen_m64_d65536": {
-        "candidates_per_s": 494697.93869766576,
+        "candidates_per_s_cpu_single_thread": 484119.376381346,
+        "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
         "worst_case_2_32": {
-          "seconds": 8681.99958,
-          "hours": 2.41166655,
-          "days": 0.10048610625
+          "seconds": 8871.711205,
+          "hours": 2.464364223611111,
+          "days": 0.10268184265046296
         },
         "expected_half_2_31": {
-          "seconds": 4340.99979,
-          "hours": 1.205833275,
-          "days": 0.050243053125
+          "seconds": 4435.8556025,
+          "hours": 1.2321821118055556,
+          "days": 0.05134092132523148
         }
       },
       "s1_permutation_naive_randperm_d65536": {
-        "candidates_per_s": 5688.072792629537,
+        "candidates_per_s_cpu_single_thread": 5699.021749165168,
+        "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
         "worst_case_2_32": {
-          "seconds": 755083.0399999999,
-          "hours": 209.74528888888887,
-          "days": 8.739387037037035
+          "seconds": 753632.375,
+          "hours": 209.3423263888889,
+          "days": 8.72259693287037
         },
         "expected_half_2_31": {
-          "seconds": 377541.51999999996,
-          "hours": 104.87264444444443,
-          "days": 4.369693518518518
+          "seconds": 376816.1875,
+          "hours": 104.67116319444445,
+          "days": 4.361298466435185
         }
       },
       "legacy_sign_seed_ascending_with_screen": {
-        "seconds": 2882.765799983571,
-        "hours": 0.8007682777732141,
-        "days": 0.03336534490721726
+        "seconds": 2945.757531251232,
+        "hours": 0.8182659809031201,
+        "days": 0.03409441587096333
+      }
+    },
+    "ciphertext_only_extrapolation": {
+      "assumptions": "[assumption] wrong candidates score ~ N(0,1); the expected maximum over M candidates is about sqrt(2 ln M). For M = 2^32 that is ~6.66 sigma, far below the correct key's score, so the correct key stays rank 1 at full scale. CPU single thread.",
+      "expected_max_wrong_sigma_2_14": 4.4054649080066985,
+      "expected_max_wrong_sigma_2_32": 6.6604368892615815,
+      "s0_coa_score_per_s": {
+        "candidates_per_s_cpu_single_thread": 1931.3529197618716,
+        "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
+        "worst_case_2_32": {
+          "seconds": 2223812.775,
+          "hours": 617.7257708333333,
+          "days": 25.73857378472222
+        },
+        "expected_half_2_31": {
+          "seconds": 1111906.3875,
+          "hours": 308.86288541666664,
+          "days": 12.86928689236111
+        }
+      },
+      "s1_coa_permutation_score_per_s": {
+        "candidates_per_s_cpu_single_thread": 5699.021749165168,
+        "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
+        "worst_case_2_32": {
+          "seconds": 753632.375,
+          "hours": 209.3423263888889,
+          "days": 8.72259693287037
+        },
+        "expected_half_2_31": {
+          "seconds": 376816.1875,
+          "hours": 104.67116319444445,
+          "days": 4.361298466435185
+        }
       }
     }
   },
-  "conclusion": "[事實] 在縮小至 2^20 的 seed 空間中，以一對已知明文/密文 latent，窮舉重新產生前作金鑰即可找回祕密 seed：d=4096 簡單窮舉測試 809,561 個候選後找回 seed 809560；d=65536（真實 latent）以 64 座標預篩加全維驗證，測試 580,345 個候選後找回 seed 580344；祕密 seed 在範圍外的 negative control 掃完 2^20 個候選皆無結果；S1 把符號 seed 與置換 seed 分開搜尋，共 156,997 個候選（聯合搜尋為 2^36）即找回兩者。[推定] 外推到 2^32 的時間見 timing_nondeterministic.extrapolation_to_2_32（吞吐量隨機器而異，假設線性縮放、單執行緒）。[假設] 真實攻擊需要一對已知明文/密文；無已知明文時是否存在可用 oracle 本任務未驗證。"
+  "conclusion": "[事實] 在縮小至 2^20 的 seed 空間中，以一對已知明文/密文 latent，窮舉重新產生前作金鑰即可找回祕密 seed：d=4096 簡單窮舉測試 809,561 個候選後找回 seed 809560；d=65536（真實 latent）以 64 座標預篩加全維驗證，測試 580,345 個候選後找回 seed 580344；祕密 seed 在範圍外的 negative control 掃完 2^20 個候選皆無結果；S1 把符號 seed 與置換 seed 分開搜尋，共 156,997 個候選（聯合搜尋為 2^36）即找回兩者。[事實] 唯密文（COA，無任何明文）：S0 單一密文 latent 的正確金鑰分數 37.1σ，2^14 個錯誤候選最高僅 3.7σ，正確金鑰排第 1；S1 單一密文分兩階段，置換 seed 12.0σ、符號 seed 37.0σ，皆排第 1，不需金鑰重用。分數本身即以 σ 為單位（錯誤金鑰 ~ N(0,1)）。[推定] 2^32 個 N(0,1) 錯誤候選的期望最大值約 6.7σ，仍遠低於正確金鑰，故全尺度下正確金鑰仍排第 1；外推時間見 timing_nondeterministic（CPU 單執行緒，非 GPU）。[結論] 前作在 T1 下不需要已知明文：單一密文即可在 32-bit seed 空間中辨識金鑰，密碼強度幾乎無關。"
 }
