@@ -57,6 +57,7 @@
 | `scripts/a3_keyspace_audit.py` | A3.1：從程式路徑證明 legacy 金鑰有效位元上界（S0 password 32、S1 password 64、整數 seed 模式 32），含 sha256[:4] 碰撞與整數 seed 低 32 位截斷的數值驗證。 | A3.1 金鑰空間稽核。 |
 | `scripts/a3_t1_gallery.py` | A3.4：T1（精確 latent）magnitude／sorted-magnitude／norm gallery linkage；P 正控制、shuffle 負控制；Top-1/5、mAP、CMC 與 bootstrap 95% CI。CPU，讀 E2.3 cache。 | A3.4 攻擊上限；A4 為其 T2-WB 版本。 |
 | `scripts/build_weekly_appendix.py` | 從已提交的結果檔產生 `appendix/week<N>/` 的圖、表與 MANIFEST；每週素材清單登記在 `WEEKS[<N>]`；重建須逐位元相同。 | 每週撰寫 `PROGRESS_summary.md` 前執行。 |
+| `scripts/output_guard.py` | AF-029：寫入 results/、paper_assets/、reports/、image/、appendix/ 的腳本共用；輸出檔已存在時預設拒絕，需 `--force` 才覆寫。 | 所有會寫追蹤檔的腳本啟動時。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 
@@ -118,6 +119,7 @@
 | `tests/unit/test_roundtrip_runner.py` | E2.5 runner 的 cache 載入檢查：有效 cache 正控制；split hash、樣本順序、latent hash 被竄改時拒絕；bootstrap 摘要可重現。 |
 | `tests/unit/test_run_artifacts.py` | 共用 run 目錄寫入：standalone run 通過 validator 且 git commit 取自 run 開始時；`git_dirty` 不計未追蹤檔；manifest 記錄 import 的專案模組 SHA-256；run 期間原始碼被修改時 finalize 失敗；managed 模式沿用 `EXPERIMENT_RUN_DIR`。 |
 | `tests/unit/test_m1_storage.py` | AF-024：任意值域（含負值、>1）`decode(encode(x))` 誤差 ≤ (hi−lo)/510；lo/hi 精確保存；常數影像；缺值域 metadata 與非有限值 fail closed；對超出 [0,1] 的影像優於前作 min-max。 |
+| `tests/unit/test_output_guard.py` | AF-029：已存在的輸出無 `--force` 時被拒絕且檔案不變；不存在或加 `--force` 時允許；預設 `force=False`。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
 | `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |
 | `tests/test_legacy_repro.py` | E2.2：P/S0/S1 transform 精確可逆；GPU 比對 P/S0/S1 anonymize／deanonymize wrapper 與 legacy sampler bit-exact、guidance −1 與 0 逐位元相同（AF-021），以及恆等金鑰 P 等同無金鑰的 legacy forward→backward（AF-017）；cached x_T 路徑（invert → key → generate）與完整 legacy sampler bit-exact（E2.3）。 |

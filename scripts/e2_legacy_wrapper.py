@@ -28,6 +28,7 @@ import numpy as np
 import torch
 
 from scripts.e1_ddim_runner import create_runtime, git_value, preprocess, sha256_file
+from scripts.output_guard import add_force_flag, refuse_overwrite
 
 
 LEGACY_PASSWORD = "Ki@13579"
@@ -334,7 +335,9 @@ def main() -> None:
     parser.add_argument("--sample-index", type=int, default=0)
     parser.add_argument("--noise-level", type=int, default=500)
     parser.add_argument("--output", type=Path, default=Path("results/E2.2.json"))
+    add_force_flag(parser)
     args = parser.parse_args()
+    refuse_overwrite([args.output], args.force)
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required for E2.2 full-pipeline verification")
 

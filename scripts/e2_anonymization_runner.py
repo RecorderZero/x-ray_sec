@@ -46,6 +46,7 @@ from PIL import Image, ImageDraw
 from skimage.metrics import structural_similarity
 
 from scripts.e1_ddim_runner import Tee, create_runtime, load_split, preprocess
+from scripts.output_guard import add_force_flag, refuse_overwrite
 from scripts.e2_legacy_wrapper import (
     GENERATION_CONDITIONING,
     LEGACY_GUIDANCE_SCALE,
@@ -448,7 +449,9 @@ def main() -> None:
     parser.add_argument("--done-output", type=Path, default=Path("results/E2.3_DONE.json"))
     parser.add_argument("--artifacts-root", type=Path, default=Path("artifacts/runs"))
     parser.add_argument("--task-id", default=None, help="defaults to AF021_ANON_BENCH / AF017_P_SMOKE / E2.3")
+    add_force_flag(parser)
     args = parser.parse_args()
+    refuse_overwrite({'benchmark': [args.benchmark_output], 'p-smoke': [args.smoke_output, args.contact_sheet], 'cache': [args.done_output]}[args.mode], args.force)
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required")
     task_id = args.task_id or {

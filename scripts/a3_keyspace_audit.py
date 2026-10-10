@@ -37,6 +37,10 @@ import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys
+if str(ROOT) not in _sys.path:
+    _sys.path.insert(0, str(ROOT))
+from scripts.output_guard import add_force_flag, refuse_overwrite
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -499,6 +503,12 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description=(__doc__ or '').strip().splitlines()[0])
+    add_force_flag(parser)
+    args = parser.parse_args()
+    refuse_overwrite([CSV_OUT, NOTE_OUT], args.force)
     anchors = verify_anchors()
     checks = run_checks()
     rows = build_rows()

@@ -28,6 +28,7 @@ import numpy as np
 import torch
 
 from scripts.e1_ddim_runner import Tee, create_runtime, load_split, preprocess
+from scripts.output_guard import add_force_flag, refuse_overwrite
 from scripts.e2_anonymization_runner import image_pair_metrics
 from scripts.e2_legacy_wrapper import apply_legacy_key, legacy_generate
 from scripts.run_artifacts import finalize_run, open_run, sha256_file
@@ -85,7 +86,9 @@ def main() -> None:
     parser.add_argument("--figure-output", type=Path, default=Path("image/P3.1_attack_overview.png"))
     parser.add_argument("--artifacts-root", type=Path, default=Path("artifacts/runs"))
     parser.add_argument("--task-id", default="P3.1")
+    add_force_flag(parser)
     args = parser.parse_args()
+    refuse_overwrite([args.figure_output], args.force)
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required")
     stdout_capture, stderr_capture = io.StringIO(), io.StringIO()

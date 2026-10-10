@@ -40,6 +40,10 @@ import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys
+if str(ROOT) not in _sys.path:
+    _sys.path.insert(0, str(ROOT))
+from scripts.output_guard import add_force_flag, refuse_overwrite
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -170,6 +174,12 @@ def input_stats(z: np.ndarray) -> dict:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description=(__doc__ or '').strip().splitlines()[0])
+    add_force_flag(parser)
+    args = parser.parse_args()
+    refuse_overwrite([OUTPUT], args.force)
     keys = build_keys()
     anonymizers = {
         "S0": DiffusionAnonymizer(latent_shape=KEY_SHAPE, mask_type="full", margin=0, use_permutation=False),

@@ -9,6 +9,10 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any
+try:
+    from scripts.output_guard import add_force_flag, refuse_overwrite
+except ModuleNotFoundError:
+    from output_guard import add_force_flag, refuse_overwrite
 
 
 def without_timing(value: Any) -> Any:
@@ -51,7 +55,9 @@ def main() -> None:
     parser.add_argument("--sweep", type=Path, required=True)
     parser.add_argument("--csv", type=Path, default=Path("canonical_preflight.csv"))
     parser.add_argument("--report", type=Path, default=Path("reports/evidence_reset.md"))
+    add_force_flag(parser)
     args = parser.parse_args()
+    refuse_overwrite([args.csv, args.report], args.force)
 
     p4096 = json.loads(args.d4096.read_text(encoding="utf-8"))
     p65536 = json.loads(args.d65536.read_text(encoding="utf-8"))

@@ -40,6 +40,10 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys as _sys
+if str(ROOT) not in _sys.path:
+    _sys.path.insert(0, str(ROOT))
+from scripts.output_guard import add_force_flag, refuse_overwrite
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -294,6 +298,12 @@ def cross_check(a: dict, b_exact: dict, b_clip: dict, c: dict) -> dict:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description=(__doc__ or '').strip().splitlines()[0])
+    add_force_flag(parser)
+    args = parser.parse_args()
+    refuse_overwrite([OUTPUT], args.force)
     rows = load_split(SPLIT)
     sample_ids = [r["sample_id"] for r in rows]
     patients = [r["patient_id"] for r in rows]

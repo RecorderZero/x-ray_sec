@@ -43,6 +43,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "past/SourceCode"))
 
 from scripts.e2_legacy_wrapper import build_legacy_components  # noqa: E402
+from scripts.output_guard import add_force_flag, refuse_overwrite
 
 SCHEMES = ("P", "S0", "S1")
 SCORERS = ("abs", "sorted_abs", "norm")
@@ -150,7 +151,9 @@ def main() -> None:
     parser.add_argument("--table-output", type=Path, default=ROOT / "paper_assets/tables/table_T1_magnitude.csv")
     parser.add_argument("--cmc-output", type=Path, default=ROOT / "image/A3.4_T1_cmc.png")
     parser.add_argument("--json-output", type=Path, default=ROOT / "results/A3.4_T1_gallery.json")
+    add_force_flag(parser)
     args = parser.parse_args()
+    refuse_overwrite([args.table_output, args.cmc_output, args.json_output], args.force)
 
     latents, cache_manifest = load_cache(args.latent_cache)
     gallery_size = latents.shape[0]

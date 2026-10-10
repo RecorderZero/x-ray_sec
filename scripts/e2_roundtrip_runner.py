@@ -41,6 +41,7 @@ import torch
 from PIL import Image, ImageDraw
 
 from scripts.e1_ddim_runner import Tee, create_runtime, load_split, preprocess
+from scripts.output_guard import add_force_flag, refuse_overwrite
 from scripts.e2_anonymization_runner import (
     _sync,
     _to_u8,
@@ -246,7 +247,9 @@ def main() -> None:
     parser.add_argument("--artifacts-root", type=Path, default=Path("artifacts/runs"))
     parser.add_argument("--task-id", default="E2.5")
     parser.add_argument("--limit", type=int, default=0, help="only the first N images (smoke)")
+    add_force_flag(parser)
     args = parser.parse_args()
+    refuse_overwrite([args.per_sample_output, args.table_output, args.grid_output], args.force)
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required")
     stdout_capture, stderr_capture = io.StringIO(), io.StringIO()

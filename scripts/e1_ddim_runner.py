@@ -36,9 +36,11 @@ from skimage.metrics import structural_similarity
 
 try:
     from scripts.env_guard import enforce_active_prefix
+    from scripts.output_guard import add_force_flag, refuse_overwrite
     from scripts.run_artifacts import finalize_run, open_run
 except ModuleNotFoundError:
     from env_guard import enforce_active_prefix
+    from output_guard import add_force_flag, refuse_overwrite
     from run_artifacts import finalize_run, open_run
 
 enforce_active_prefix({
@@ -500,7 +502,9 @@ def main() -> None:
     parser.add_argument("--smoke-output", type=Path, default=Path("results/E1.4_ddim_smoke.csv"))
     parser.add_argument("--contact-sheet", type=Path, default=Path("image/E1.4_ddim_smoke_contact_sheet.png"))
     parser.add_argument("--artifacts-root", type=Path, default=Path("artifacts/runs"))
+    add_force_flag(parser)
     args = parser.parse_args()
+    refuse_overwrite(([args.benchmark_output] if args.mode == 'benchmark' else [args.smoke_output, args.contact_sheet]), args.force)
     args._stdout_capture = io.StringIO()
     args._stderr_capture = io.StringIO()
     if not torch.cuda.is_available():

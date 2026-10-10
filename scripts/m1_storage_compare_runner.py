@@ -33,6 +33,7 @@ import numpy as np
 import torch
 
 from scripts.e1_ddim_runner import Tee, create_runtime, load_split, preprocess
+from scripts.output_guard import add_force_flag, refuse_overwrite
 from scripts.e2_anonymization_runner import image_pair_metrics, latent_pair_metrics
 from scripts.e2_legacy_wrapper import (
     GENERATION_CONDITIONING,
@@ -178,7 +179,9 @@ def main() -> None:
     parser.add_argument("--table-output", type=Path, default=Path("paper_assets/tables/table_m1_storage_comparison.csv"))
     parser.add_argument("--artifacts-root", type=Path, default=Path("artifacts/runs"))
     parser.add_argument("--task-id", default="AF024_M1_STORAGE")
+    add_force_flag(parser)
     args = parser.parse_args()
+    refuse_overwrite([args.per_sample_output, args.table_output], args.force)
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required")
     stdout_capture, stderr_capture = io.StringIO(), io.StringIO()

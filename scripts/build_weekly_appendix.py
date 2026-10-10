@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
+from scripts.output_guard import add_force_flag, refuse_overwrite
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -390,7 +391,9 @@ def build(week: int) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--week", type=int, required=True)
+    add_force_flag(parser)
     args = parser.parse_args()
+    refuse_overwrite([ROOT / 'appendix' / f'week{args.week}' / 'MANIFEST.csv'], args.force)
     target = build(args.week)
     print(f"wrote {target.relative_to(ROOT)}/MANIFEST.csv")
 
