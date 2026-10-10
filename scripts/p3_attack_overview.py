@@ -51,16 +51,25 @@ def build_figure(panels: list[dict], output: Path) -> None:
     fig, axes = plt.subplots(len(panels), 5, figsize=(16, 3.4 * len(panels)))
     if len(panels) == 1:
         axes = axes[None, :]
-    titles = ("original x0", "latent z", "sorted |·| profile", "S0 anonymous", "S1 anonymous")
+    titles = ("original x0", "latent z", "sorted |z| difference", "S0 anonymous", "S1 anonymous")
     for row, panel in enumerate(panels):
+        other = panels[1 - row]  # the other fixed case
         axes[row][0].imshow(_u8(panel["x0"]), cmap="gray")
         axes[row][1].imshow(panel["z"], cmap="gray")
         ax = axes[row][2]
-        ax.plot(panel["sorted_z"], label="z", linewidth=1.0)
-        ax.plot(panel["sorted_s0"], "--", label="S0 z_ano", linewidth=1.0)
-        ax.plot(panel["sorted_s1"], ":", label="S1 z_ano", linewidth=1.2)
-        ax.set_xlabel("coordinate rank"); ax.set_ylabel("|value|")
-        ax.legend(fontsize=8); ax.grid(True, alpha=0.3)
+        # Within one patient z, S0 z_ano and S1 z_ano share the same sorted |.|
+        # (exact invariant, A3.3), so the gallery scorer matches a query to its
+        # own image at distance 0. The linkage signal is the per-rank difference
+        # BETWEEN patients: small but non-zero, so every other gallery entry is
+        # farther away (AF-028).
+        diff = panel["sorted_z"] - other["sorted_z"]
+        ax.axhline(0.0, color="#898781", linewidth=0.8)
+        ax.plot(diff, color="#2a78d6", linewidth=1.0)
+        rmse = float(np.sqrt(np.mean(diff**2)))
+        ax.set_xlabel("coordinate rank")
+        ax.set_ylabel(f"sorted |z|: {panel['sample_id']} - {other['sample_id']}", fontsize=8)
+        ax.set_title(f"per-patient difference (RMSE {rmse:.3f}; within patient z=S0=S1)", fontsize=8)
+        ax.grid(True, alpha=0.3)
         axes[row][3].imshow(_u8(panel["s0_img"]), cmap="gray")
         axes[row][4].imshow(_u8(panel["s1_img"]), cmap="gray")
         for column in (0, 1, 3, 4):
@@ -69,7 +78,7 @@ def build_figure(panels: list[dict], output: Path) -> None:
         if row == 0:
             for column, title in enumerate(titles):
                 axes[row][column].set_title(title, fontsize=11)
-    fig.suptitle("P3.1 attack overview: magnitude invariants behind A3.4", fontsize=13)
+    fig.suptitle("P3.1 attack overview: the sorted-|z| fingerprint is a per-patient invariant the cipher preserves (A3.4)", fontsize=12)
     fig.tight_layout()
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=150)
