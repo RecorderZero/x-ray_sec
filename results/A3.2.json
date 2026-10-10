@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "task_id": "A3.2",
+  "created_at": "2026-10-10T03:56:17.304119+00:00",
+  "command": "scripts/run_cfg_ddim.sh python -m scripts.a3_bruteforce",
+  "script_sha256": "1ab3f8a819d0112717d779b8f48c02e89ea2e6e69e8718c3afa7e04859567ef6",
+  "git_commit": "91bf0ff515ae8397f0b9a0a7b9f6058421bda3f1",
+  "git_dirty_tracked_files": false,
+  "seed": 1911,
+  "seed_streams": "np.random.default_rng for each of np.random.SeedSequence(1911).spawn(8); torch seeds are the candidate seeds themselves",
+  "numpy_version": "1.23.0",
+  "torch_version": "2.14.0+cu130",
+  "python_version": "3.10.19",
+  "device": "cpu (CUDA_VISIBLE_DEVICES='' set before importing torch)",
+  "inputs": {
+    "predecessor_source": "past/SourceCode/guided_diffusion/anonymization.py",
+    "predecessor_source_sha256": "5e71401a648a734979432ccf07d92deae02387352ad9ac00a33a89d9d8f38bb1",
+    "predecessor_functions_used": [
+      "RademacherKey._generate_key",
+      "PermutationKey._generate_permutation",
+      "RademacherKey",
+      "PermutationKey",
+      "SignedPermutationKey",
+      "DiffusionAnonymizer.anonymize_latent"
+    ],
+    "real_latent_cache": "artifacts/runs/E2.3/E2.3_20261009T183736363217Z_84cf642a/latents.npy",
+    "real_latent_cache_sha256": "195c20b3124af54c5dd40c644bae78af3144ae176204982c4c2f7b5effd69190",
+    "real_latent_index": 0,
+    "synthetic_latents": "N(0,1) float32, seed 1911 streams (E1: stream 1, E4: streams 2 and 3)"
+  },
+  "oracle_assumption": "The attacker holds one known plaintext/ciphertext latent pair (z, z_enc); the secret seed is chosen by this script inside the reduced range, so the controls verify the search procedure, not the success rate of a real attack",
+  "reduced_space_bits": 20,
+  "secret_seed_recovered": true,
+  "candidates_tested": {
+    "e1_s0_naive_d4096": 809561,
+    "e2_s0_screened_d65536": 580345
+  },
+  "results": {
+    "prefix_property_check": {
+      "prefix_length": 64,
+      "seeds_checked": 64,
+      "seeds": "np.linspace(0, 2^32-1, 64) as int",
+      "prefix_mismatches": 0,
+      "thread_independence_seeds_checked": 8,
+      "thread_independence_mismatches": 0
+    },
+    "e1_s0_naive_d4096": {
+      "description": "S0, brute force over seeds [0, 2^20), full 4096-dim candidate keys regenerated with RademacherKey._generate_key",
+      "reduced_space_bits": 20,
+      "search_range": [
+        0,
+        1048576
+      ],
+      "key_shape": [
+        1,
+        64,
+        64
+      ],
+      "d": 4096,
+      "latent": "synthetic N(0,1) float32, numpy default_rng(SeedSequence(1911).spawn(8)[1])",
+      "oracle": "known pair (z, z_enc); candidate k accepted iff k (.) z == z_enc exactly (equivalent to k == sign(z_enc*z) because z has no zero)",
+      "secret_seed": 809560,
+      "secret_seed_draw": "default_rng(SeedSequence(1911).spawn(8)[0]).integers(0, 2^20), draw 1",
+      "secret_seed_recovered": true,
+      "recovered_seed": 809560,
+      "candidates_tested": 809561,
+      "wrong_candidates": 809560,
+      "max_sign_agreement_of_wrong_candidates": 2209,
+      "mean_sign_agreement_of_wrong_candidates": 2047.9584576807154,
+      "expected_agreement_of_random_key": 2048.0
+    },
+    "e2_s0_full_d65536_screened": {
+      "description": "S0 at the real latent size d = 65536, seeds [0, 2^20); 64-coordinate prefix screen, survivors verified on all coordinates",
+      "reduced_space_bits": 20,
+      "search_range": [
+        0,
+        1048576
+      ],
+      "key_shape": [
+        1,
+        256,
+        256
+      ],
+      "d": 65536,
+      "latent": "real E2.3 inversion latent, index 0 of latents.npy",
+      "oracle": "screen: first 64 key coordinates == sign(z_enc*z); verify: k (.) z == z_enc on all 65536 coordinates",
+      "secret_seed": 580344,
+      "secret_seed_draw": "same rng as E1, draw 2",
+      "secret_seed_recovered": true,
+      "recovered_seed": 580344,
+      "candidates_tested": 580345,
+      "screen_prefix_coordinates": 64,
+      "screen_survivors": [
+        580344
+      ],
+      "screen_false_survivors": 0
+    },
+    "e3_negative_control": {
+      "description": "same search as E2 over the whole [0, 2^20) range, but z_enc was produced with a seed outside the range; nothing may be found",
+      "reduced_space_bits": 20,
+      "search_range": [
+        0,
+        1048576
+      ],
+      "d": 65536,
+      "secret_seed_outside_range": 3003175404,
+      "secret_seed_draw": "same rng as E1, draw 3, integers(2^20, 2^32)",
+      "recovered_seed": null,
+      "candidates_tested": 1048576,
+      "screen_survivors": [],
+      "false_positives": 0
+    },
+    "e4_s1_split_search": {
+      "description": "S1 with independent sign seed and permutation seed (password-mode structure), each in [0, 2^18), d = 4096; known pair -> exact (k, pi) via magnitude ordering and signs, then the two seeds are searched separately",
+      "reduced_space_bits_each_seed": 18,
+      "search_range_each": [
+        0,
+        262144
+      ],
+      "joint_search_bits_without_splitting": 36,
+      "key_shape": [
+        1,
+        64,
+        64
+      ],
+      "latent": "synthetic N(0,1) float32 with pairwise distinct magnitudes (asserted)",
+      "secret_sign_seed": 107064,
+      "secret_permutation_seed": 49931,
+      "secret_seed_draw": "same rng as E1, draws 4 and 5",
+      "d": 4096,
+      "kpa_recovers_sign_and_permutation_exactly": true,
+      "recovered_sign_seed": 107064,
+      "sign_candidates_tested": 107065,
+      "recovered_permutation_seed": 49931,
+      "permutation_candidates_tested": 49932,
+      "total_candidates_tested": 156997,
+      "joint_search_space_candidates": 68719476736,
+      "recovered_key_encrypts_fresh_latent_identically": true,
+      "split_search_bits_equivalent": 17.260377465869166
+    },
+    "checks": {
+      "E1_recovered": true,
+      "E2_recovered": true,
+      "E3_nothing_found": true,
+      "E4_recovered": true,
+      "E4_kpa_exact": true,
+      "E4_generalises": true,
+      "E2_no_false_survivors": true
+    },
+    "legacy_seed_positions": {
+      "note": "[inference] positions of the legacy password-derived seeds (A3.1 V1) in an ascending enumeration of all 2^32 seeds; an attacker without the password would not know the position and expects to test 2^31 candidates on average",
+      "sign_seed": 1426098298,
+      "sign_seed_ascending_candidates": 1426098299,
+      "permutation_seed": 595789506,
+      "permutation_seed_ascending_candidates": 595789507
+    }
+  },
+  "timing_nondeterministic": {
+    "note": "machine dependent; excluded from determinism comparison",
+    "torch_num_threads": 1,
+    "platform": "Linux-6.14.0-28-generic-x86_64-with-glibc2.39",
+    "processor": "x86_64",
+    "wall_time_s": {
+      "e1_s0_naive_d4096": 34.80203526397236,
+      "e2_s0_screened_d65536": 1.380800250917673,
+      "e3_negative_screened_d65536": 2.4402762319659814,
+      "e4_sign_search_d4096": 4.164551920024678,
+      "e4_permutation_search_d4096": 0.6766179440310225
+    },
+    "candidates_per_s_in_controls": {
+      "e1_s0_naive_d4096": 23261.886664371923,
+      "e2_s0_screened_d65536": 420296.1287226777,
+      "e3_negative_screened_d65536": 429695.61653076723
+    },
+    "benchmarks": {
+      "s0_full_key_d65536_candidates_per_s": 1927.79996768554,
+      "s0_prefix_screen_m64_candidates_per_s": 494697.93869766576,
+      "s0_full_key_d4096_candidates_per_s": 25814.791319964686,
+      "s1_permutation_d65536_candidates_per_s": 5688.072792629537,
+      "s1_permutation_d4096_candidates_per_s": 79077.1869466242
+    },
+    "extrapolation_to_2_32": {
+      "assumptions": "[assumption] linear in the number of candidates, single thread, no per-candidate oracle cost beyond key regeneration/screening; scales ~linearly with cores only if candidates are split across workers",
+      "s0_naive_full_key_d65536": {
+        "candidates_per_s": 1927.79996768554,
+        "worst_case_2_32": {
+          "seconds": 2227911.28125,
+          "hours": 618.8642447916667,
+          "days": 25.78601019965278
+        },
+        "expected_half_2_31": {
+          "seconds": 1113955.640625,
+          "hours": 309.43212239583335,
+          "days": 12.89300509982639
+        }
+      },
+      "s0_prefix_screen_m64_d65536": {
+        "candidates_per_s": 494697.93869766576,
+        "worst_case_2_32": {
+          "seconds": 8681.99958,
+          "hours": 2.41166655,
+          "days": 0.10048610625
+        },
+        "expected_half_2_31": {
+          "seconds": 4340.99979,
+          "hours": 1.205833275,
+          "days": 0.050243053125
+        }
+      },
+      "s1_permutation_naive_randperm_d65536": {
+        "candidates_per_s": 5688.072792629537,
+        "worst_case_2_32": {
+          "seconds": 755083.0399999999,
+          "hours": 209.74528888888887,
+          "days": 8.739387037037035
+        },
+        "expected_half_2_31": {
+          "seconds": 377541.51999999996,
+          "hours": 104.87264444444443,
+          "days": 4.369693518518518
+        }
+      },
+      "legacy_sign_seed_ascending_with_screen": {
+        "seconds": 2882.765799983571,
+        "hours": 0.8007682777732141,
+        "days": 0.03336534490721726
+      }
+    }
+  },
+  "conclusion": "[事實] 在縮小至 2^20 的 seed 空間中，以一對已知明文/密文 latent，窮舉重新產生前作金鑰即可找回祕密 seed：d=4096 簡單窮舉測試 809,561 個候選後找回 seed 809560；d=65536（真實 latent）以 64 座標預篩加全維驗證，測試 580,345 個候選後找回 seed 580344；祕密 seed 在範圍外的 negative control 掃完 2^20 個候選皆無結果；S1 把符號 seed 與置換 seed 分開搜尋，共 156,997 個候選（聯合搜尋為 2^36）即找回兩者。[推定] 外推到 2^32 的時間見 timing_nondeterministic.extrapolation_to_2_32（吞吐量隨機器而異，假設線性縮放、單執行緒）。[假設] 真實攻擊需要一對已知明文/密文；無已知明文時是否存在可用 oracle 本任務未驗證。"
+}
