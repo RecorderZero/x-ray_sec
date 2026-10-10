@@ -46,6 +46,8 @@
 | `scripts/e2_roundtrip_runner.py` | E2.5：從 E2.3 cache 出發，對 P/S0/S1 分報 transform-only、T1（精確 latent）與 T2-WB／M1（學長 PNG 交接為主、float 交接為上限）；影像指標對 x0 與對 P 輸出兩種基準，latent 另報攻擊者視角（ẑ_ano vs z_ano）與解密後保真度（各方案專屬正控制量）；bootstrap 95% CI。 | E2.5 dev round-trip；之後 S2a/S2 沿用同一路徑定義。 |
 | `scripts/e2_metric_semantics.py` | E2.4（AF-022）：CPU、seed 1911，量測像素空間 cosine 基準（不同病人、加雜訊至指定 PSNR、去均值、cosine 對 PSNR 表）與「cosine=1 不等於相等」反例，並與稽核方數字比對。 | 指標語意報告的數字來源。 |
 | `scripts/perf_probe.py` | 診斷用 batch 1 吞吐探針：eager／CUDA Graphs（以快取同一 CPU 運算結果的 monkey-patch 讓 legacy `timestep_embedding` 可被 capture）與多行程並行，並比對 latent SHA-256。 | 決定正式 run 的加速方式前重新量測。 |
+| `scripts/m1_storage.py` | AF-024：M1 存檔協定 `range_preserving_png/v1`，以真實 8-bit 灰階 PNG 儲存，float32 lo/hi 以 IEEE-754 位元保存在 PNG text chunk 與紀錄中，`np.rint` 量化，讀回 `q/255·(hi−lo)+lo`；缺值域時拒絕解碼。前作 `legacy_png_handoff` 不變。 | 本專案 M1 存檔；S2 的 HMAC 須涵蓋 lo/hi（D5）。 |
+| `scripts/m1_storage_compare_runner.py` | AF-024：從 E2.3 dev cache 對 P/S0/S1 以 range-preserving PNG 重跑 M1，逐張驗證匿名影像與 E2.5 相同，再唯讀併入 E2.5 的 legacy PNG／float 結果，輸出三欄並列表。 | P/S0/S1 存檔協定對照；S2a/S2 沿用同一協定。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 
@@ -96,6 +98,7 @@
 | `tests/unit/test_split_hash.py` | 驗證更換 local path 前綴不改變 split hash。 |
 | `tests/unit/test_roundtrip_runner.py` | E2.5 runner 的 cache 載入檢查：有效 cache 正控制；split hash、樣本順序、latent hash 被竄改時拒絕；bootstrap 摘要可重現。 |
 | `tests/unit/test_run_artifacts.py` | 共用 run 目錄寫入：standalone run 通過 validator 且 git commit 取自 run 開始時；`git_dirty` 不計未追蹤檔；manifest 記錄 import 的專案模組 SHA-256；managed 模式沿用 `EXPERIMENT_RUN_DIR`。 |
+| `tests/unit/test_m1_storage.py` | AF-024：任意值域（含負值、>1）`decode(encode(x))` 誤差 ≤ (hi−lo)/510；lo/hi 精確保存；常數影像；缺值域 metadata 與非有限值 fail closed；對超出 [0,1] 的影像優於前作 min-max。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
 | `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |
 | `tests/test_legacy_repro.py` | E2.2：P/S0/S1 transform 精確可逆；GPU 比對 P/S0/S1 anonymize／deanonymize wrapper 與 legacy sampler bit-exact、guidance −1 與 0 逐位元相同（AF-021），以及恆等金鑰 P 等同無金鑰的 legacy forward→backward（AF-017）；cached x_T 路徑（invert → key → generate）與完整 legacy sampler bit-exact（E2.3）。 |
