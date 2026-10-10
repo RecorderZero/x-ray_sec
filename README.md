@@ -48,6 +48,7 @@
 | `scripts/perf_probe.py` | 診斷用 batch 1 吞吐探針：eager／CUDA Graphs（以快取同一 CPU 運算結果的 monkey-patch 讓 legacy `timestep_embedding` 可被 capture）與多行程並行，並比對 latent SHA-256。 | 決定正式 run 的加速方式前重新量測。 |
 | `scripts/m1_storage.py` | AF-024：M1 存檔協定 `range_preserving_png/v1`，以真實 8-bit 灰階 PNG 儲存，float32 lo/hi 以 IEEE-754 位元保存在 PNG text chunk 與紀錄中，`np.rint` 量化，讀回 `q/255·(hi−lo)+lo`；缺值域時拒絕解碼。前作 `legacy_png_handoff` 不變。 | 本專案 M1 存檔；S2 的 HMAC 須涵蓋 lo/hi（D5）。 |
 | `scripts/m1_storage_compare_runner.py` | AF-024：從 E2.3 dev cache 對 P/S0/S1 以 range-preserving PNG 重跑 M1，逐張驗證匿名影像與 E2.5 相同，再唯讀併入 E2.5 的 legacy PNG／float 結果，輸出三欄並列表。 | P/S0/S1 存檔協定對照；S2a/S2 沿用同一協定。 |
+| `scripts/p3_attack_overview.py` | P3.1：固定病例（dev_v1.1_000／_010）的原圖、latent、sorted-|·| profile（z／S0／S1 重合）與 S0／S1 匿名圖；GPU 生成 4 張匿名圖。 | P3.1 攻擊示意圖。 |
 | `scripts/a3_t1_gallery.py` | A3.4：T1（精確 latent）magnitude／sorted-magnitude／norm gallery linkage；P 正控制、shuffle 負控制；Top-1/5、mAP、CMC 與 bootstrap 95% CI。CPU，讀 E2.3 cache。 | A3.4 攻擊上限；A4 為其 T2-WB 版本。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
@@ -86,6 +87,7 @@
 | `image/E2.5_roundtrip_grid.png` | 預先固定的 dev_v1.1_000（健康）與 _010（積水）在 P/S0/S1 下的原圖、匿名圖、T1 還原、M1 PNG 還原與固定色階差異圖。 |
 | `paper_assets/tables/table_m1_storage_comparison.csv` | AF-024 三欄並列表：P/S0/S1 × legacy PNG／range-preserving PNG／float × 10 項指標的平均、bootstrap 95% CI、中位數與範圍。 |
 | `paper_assets/tables/table_T1_magnitude.csv` | A3.4 主表：P/S0/S1 × abs/sorted_abs/norm 的 Top-1/5、mAP、median rank 與負控制。 |
+| `image/P3.1_attack_overview.png` | P3.1 攻擊示意圖：magnitude 不變量如何支撐 A3.4 的 gallery linkage。 |
 | `image/A3.4_T1_cmc.png` | A3.4 CMC 曲線（三 scorer 分欄，P/S0/S1）。 |
 | `image/E1.4_ddim_smoke_contact_sheet.png` | 四列視覺檢查圖；每列是 original、reconstruction、absolute difference。 |
 | `artifacts/preflight/canonical_direction_candidates_d4096_n100.json` | d=4,096、N=100 canonical preflight 原始輸出。 |
