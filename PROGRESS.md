@@ -579,3 +579,54 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * Week 2：A3.1–A3.4；A4 依兩種存檔協定產生 security_v1 的 T2-WB 資料。
+
+## 2026-10-10 · W2 · Track A · A3.1–A3.4、P3.1：前作金鑰空間與 magnitude 攻擊
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：A3.1、A3.2、A3.3、A3.4、P3.1。
+* 證明前作 short-seed 與幅值不變量；在精確 latent（T1）上以 gallery linkage 量化 magnitude／sorted-magnitude／norm 攻擊，附正負控制。
+* [注意] AF-025（MAJOR）在 A3 開始前已由稽核方確認不影響 A3（A3 使用精確 latent 與金鑰空間分析，不涉及影像存檔）；AF-025 的兩欄存檔與 norm 旁道要求屬 A4／D7。
+
+### 2. 執行動作 (Actions Taken)
+* [A3.1] commit `0a1042e`｜新增 `scripts/a3_keyspace_audit.py`、`paper_assets/tables/table_keyspace.csv`、`reports/keyspace_method_note.md`。
+* [A3.2] commit `da7d940`｜新增 `scripts/a3_bruteforce.py`、`results/A3.2.json`。
+* [A3.3] commit `ab2a221`｜新增 `scripts/a3_invariants.py`、`results/A3.3.json`。
+* [A3.4] commit `188eaf9`｜新增 `scripts/a3_t1_gallery.py`、`results/A3.4_T1_gallery.json`、`paper_assets/tables/table_T1_magnitude.csv`、`image/A3.4_T1_cmc.png`。
+* [P3.1] commit `91bf0ff`｜新增 `scripts/p3_attack_overview.py`、`image/P3.1_attack_overview.png`。
+* 分工：A3.1–A3.3 由實作方指派的 subagent（CPU、唯讀前作程式）完成，實作方獨立複核四項關鍵宣稱；A3.4、P3.1 由實作方完成。
+* 指令：A3.1–A3.3 皆 `scripts/run_cfg_ddim.sh python -m scripts.<module>`；A3.4 `scripts/run_cfg_ddim.sh python -m scripts.a3_t1_gallery --latent-cache artifacts/runs/E2.3/E2.3_20261009T183736363217Z_84cf642a`；P3.1 經 `managed_run.py`（dev cache）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `scripts/run_cfg_ddim.sh python -m pytest -q tests/unit tests/integration tests/test_legacy_repro.py` → `54 passed`；`past/SourceCode` 未改動。
+* [事實] A3.1 金鑰空間（實作方獨立複核皆成立）：
+  * S0 password 有效位元上界 32；S1 **password 模式上界 64**（符號 seed 取自 `sha256(pw)[:4]`、置換 seed 取自 `sha256(pw+"_permutation")[:4]`，兩個獨立 32-bit 值）；S1 整數 seed 模式才是 32（`perm_seed = seed + 1000000` 耦合）。
+  * 宣稱為 S0 2^d=65,536 bits、S1 2^d·d!≈1,019,573 bits。
+  * sha256[:4] 碰撞（如 `pw57085`/`pw89039`）產生逐位元相同的 Rademacher 金鑰；torch 整數 seed 只保留低 32 位；password 優先於啟動命令的 `seed=42`（故 seed 42 無作用）。
+* [更正] 前作探索腳本 `attack/attack_keyspace.py` 的平直「32 bits」在 S1 password 模式不精確，正確上界為 64 bits。PROPOSAL §2.1 的「sign 與 permutation 由相同短 seed 產生」只在整數 seed 模式成立；在 password 模式是兩個獨立短 seed。兩者都遠小於宣稱，§2.1 的結論（宣稱不成立）不變，但機制描述待使用者／稽核裁決是否修訂 §2.1。
+* [事實] A3.2 縮小空間（2^20）暴力搜尋：S0 合成 d=4096 還原 seed 809560、真實 d=65536 預篩還原 580344（無假陽性）；負控制掃完 2^20 找不到；S1 拆開搜尋還原符號/置換兩 seed，並以找回金鑰加密新 latent 逐位元復現。單執行緒吞吐外推到 2^32：S0 64 座標預篩約平均 1.2 GPU-h、S1 簡單搜尋約 8.7 天。
+* [事實] A3.3 不變量（5 合成＋5 真實 latent × password/seed 金鑰）：S0 逐座標 |z_enc|=|z| 最大差 0；S1 sorted(|z_enc|)=sorted(|z|) 最大差 0，被置換改變的座標比例 0.99997–1.0；norm：S0 差 0、S1 float64 相對差 ≤8.0e-16／float32 ≤3.7e-7（歸約順序效應，非解析偏離）；negative control sorted 差 0.25–0.53。
+* [事實] A3.4 T1 gallery（security_v1 200 張，精確 latent 上限，隨機 Top-1=0.5%）：
+
+  | scorer | P | S0 | S1 |
+  |---|---|---|---|
+  | abs（逐座標 \|z\|） | 1.00 | 1.00 | **0.005** |
+  | sorted_abs | 1.00 | 1.00 | 1.00 |
+  | norm | 0.99 | 0.99 | 0.985 |
+
+  * 負控制（shuffle）Top-1 ≈ 0.005–0.010。符合解析預期：S0 保留逐座標幅值，S1 打散逐座標但保留排序後多重集合與 norm。
+  * norm 的 0.99（非 1.0）來自兩張影像 norm 幾乎相同（cache 中 norm 最小間距 0），悲觀 tie-break 下 max_rank=2。
+* [事實] P3.1：固定病例 dev_v1.1_000／_010 的 `abs_equal_s0`、`sorted_abs_equal_s1` 皆為 0；sorted-|·| 的 z／S0／S1 三曲線重合，匿名圖視覺打亂。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：A3.1–A3.4 與 P3.1 的工程閘門（確定性、file:line 驗證、正負控制、tie-break、CI）與證據閘門（versioned CSV/JSON、script/cache hash、seed）皆完成。科學結果（攻擊 Top-k）只報告。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 未失敗。A3.4 是 T1 上限；A4 為其 T2-WB（含 inversion 誤差）版本，且依 AF-025 須兩種存檔協定分欄並加 norm-only／lo-hi 旁道。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- PROPOSAL §2.1 對 S1 金鑰耦合的機制描述（「相同短 seed」）在 password 模式不精確（實為兩個獨立 32-bit seed，上界 64）。結論不變，是否修訂 §2.1 文字需使用者／稽核裁決；本輪未改 PROPOSAL。
+
+### 7. 下一步
+* 請稽核方複驗 A3.1–A3.4、P3.1。
+* 進入 A4：T2-WB anonymous-image inversion、magnitude gallery、KPA、CPA、tamper baseline；依 AF-025 兩種存檔協定分欄，magnitude 類加 norm-only（含偏差校正）與 lo/hi 旁道。
