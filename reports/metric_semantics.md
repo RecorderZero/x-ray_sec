@@ -131,14 +131,15 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 * **雜訊處理**（AF-019，`reports/t2wb_protocol.md` §1）：
   * 推論（病灶定位）流程 `ddim_sample_loop_known_progressive` 在 inversion 前有 t=0 的 `q_sample` 雜訊。E1 因此分開報告 `latent_reinversion_shared_noise_*`（第二次 inversion 重用同一份雜訊，樂觀上限）與 `latent_reinversion_unknown_noise_*`（獨立雜訊，種子偏移 `UNKNOWN_NOISE_SEED_OFFSET = 1_000_000`，`e1_ddim_runner.py:73`、`:460-462`）。`[事實]` 稽核方與實作方的未知雜訊平均 cosine 約 0.371（AUDIT.md AUD-20261010-01 §3 AF-019 列），共用雜訊的 0.906 只能標為「共用雜訊、樂觀上限」。
   * P/S0/S1 使用的**加密流程** `ddim_sample_loop_anonymization` 沒有 t=0 雜訊，inversion 是確定性的，「共用／未知雜訊」的區分不適用；E2 起的 latent 指標都在這條流程上量測（`e2_anonymization_runner.py`）。
-* 每個 latent 數字必須註明：流程（推論流程或加密流程）、雜訊條件（共用／未知／不適用）、交接方式（float 或前作 PNG：per-image min-max＋uint8 截斷，`e2_anonymization_runner.py:123`）。
+* 每個 latent 數字必須註明：流程（推論流程或加密流程）、雜訊條件（共用／未知／不適用）、交接方式（float、legacy PNG：per-image min-max＋uint8 截斷、丟棄值域，`legacy_png_handoff`；或 range-preserving PNG：保存 lo/hi、`np.rint` 量化，`scripts/m1_storage.py`，見 §7）。
 
 ### 3.3 影像指標
 
 * 主指標：**PSNR**（峰值 1，−10·log10 MSE）、**SSIM**（`skimage` `data_range=1.0`）、**L∞**、**uint8 pixel equality**（`rint(clip(x,0,1)·255)` 相等的比例）、**float32 bit-exact rate**（`e2_anonymization_runner.py:101-120` `image_pair_metrics`；`e1_ddim_runner.py:313-335`）。MSE、RMSE、MAE 照常記錄；影像 cosine 只作診斷。
 * **不 clip**：PSNR、SSIM、L∞、MSE、MAE、cosine 與 float32 bit-exact 都直接用生成輸出計算，**沒有**先 clip 到 [0,1]；只有 uint8 pixel equality 先 `clip(·,0,1)` 再量化。生成輸出會略微超出 [0,1]（`clip_denoised` 只限制 x0 預測在 [−1,1]），所以與「先 clip 再算」的慣例相比，PSNR 會有小差異（稽核方在 E2.5 逐張比對中觀察到 ≤ 0.042 dB，AUD-20261010-03 §3）。本專案維持不 clip 的定義（使用者 2026-10-10 裁決：只註明、不修改），E2.5 與之後的結果都沿用此定義。
 * **一律並列兩種參照**：「對 x0」與「對 P 輸出」。只報其中一種不得下可逆性結論。
-* 主路徑採前作的 PNG 交接（`legacy_png_handoff`），float 交接只作上限對照。可逆性判定以影像端端到端指標為準（`reports/t2wb_protocol.md` §2）。
+* 存檔交接分兩欄：前作重現的主路徑是 legacy PNG（`legacy_png_handoff`）；本專案的 M1 協定是 range-preserving PNG（AF-024，§7）。float 交接只作上限對照。可逆性判定以影像端端到端指標為準（`reports/t2wb_protocol.md` §2）。
+* **存檔協定必須標明**（AF-024）：每個影像指標數字都要註明匿名影像的交接／存檔協定，只能是 legacy PNG（前作：per-image min-max＋uint8 截斷，丟棄值域）、range-preserving PNG（`range_preserving_png/v1`，本專案 M1 協定）或 float（診斷用上限）三者之一；沒有標明者不得放入論文。上一條的「主路徑」僅指「前作重現」；本專案 M1 協定與兩種 PNG 協定的分欄報告見 §7。
 * 影像 cosine 若出現，必須同列 PSNR 與 L∞。前作表格中的 MaxAbsError 0.676–0.928（`05_experiments.tex:306-317`）和 cosine 0.998 同時存在，正是 cosine 看不到局部大誤差的例子（見下）。
 
 ### 3.4 cosine = 1 不等於 equality
@@ -193,7 +194,7 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 * English: "The predecessor's reported 'Cosine Sim 0.9989' is the pixel-space cosine between the base-pipeline output image and the encrypt/decrypt-pipeline output image (no mean subtraction), at a PSNR of 30.23 dB. It is not a latent cosine and does not imply pixel- or bit-level equality. On our dev set, adding noise to a PSNR of 30.6 dB already gives 0.9987."
 * 本專案的可逆性敘述格式：「（流程）下，（交接方式）的 M1 端到端還原，對 x0 的 PSNR／SSIM／L∞ 為……，對 P 輸出為……；latent MaxAbs／RMSE 為……（診斷）。」
 
-**每個指標數字都要標註**：空間（latent／影像）、比較對象（x0／P 輸出／前作舊定義）、流程（推論／加密）、交接（float／PNG）、雜訊條件（共用／未知／不適用）、縮放（[0,1] float；是否去均值）。缺任何一項，不得放入論文。
+**每個指標數字都要標註**：空間（latent／影像）、比較對象（x0／P 輸出／前作舊定義）、流程（推論／加密）、交接（float／legacy PNG／range-preserving PNG）、雜訊條件（共用／未知／不適用）、縮放（[0,1] float；是否去均值）。缺任何一項，不得放入論文。
 
 ---
 
@@ -217,7 +218,7 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 | 解密後 latent 對 z（float）：cosine | 0.292 | 0.9999 | 0.9999 |
 
 * `[事實]` 「還原圖對 P 輸出」只是前作比較方式的**類比**：前作實際比較的是 base 與加解密兩條路徑第 3 步的偽健康 `samples`（§1.2、§6 第 2 點），本專案沒有重現那一對影像。這個類比量在本專案得到 S1 30.20 dB／影像 cosine 0.9985，與論文 30.23 dB／0.998978 同等級；但同一批還原圖**對原圖 x0** 只有 31.3 dB、L∞ 0.42，uint8 相等比例 8%。
-* `[事實]` T1（保存精確 latent）時，S0/S1 的 transform 逐位元可逆（60/60），生成器的輸入與 P 完全相同，所以輸出也相同（42.23 dB）。這是依構造成立：runner 在 transform 逐位元可逆時直接沿用 P 的輸出（`scripts/e2_roundtrip_runner.py` 的 `t1_reused_p_output=1`，60/60 列），不是另外生成後比對的結果。T1 的損失因此全部來自 DDIM 反演＋生成本身。M1 的額外損失主要來自 PNG 儲存（S0/S1 float 交接 38.7–39.4 dB，PNG 交接 31.3–31.5 dB）。
+* `[事實]` T1（保存精確 latent）時，S0/S1 的 transform 逐位元可逆（60/60），生成器的輸入與 P 完全相同，所以輸出也相同（42.23 dB）。這是依構造成立：runner 在 transform 逐位元可逆時直接沿用 P 的輸出（`scripts/e2_roundtrip_runner.py` 的 `t1_reused_p_output=1`，60/60 列），不是另外生成後比對的結果。T1 的損失因此全部來自 DDIM 反演＋生成本身。M1 的額外損失主要來自 legacy PNG 存檔（per-image min-max 後未保存值域；S0/S1 float 交接 38.7–39.4 dB，legacy PNG 交接 31.3–31.5 dB）；保存值域後的結果見 §7。
 * `[事實]` 對正交的 S0/S1/P 而言，攻擊者視角（ẑ_ano 對 z_ano）與合法解密（ẑ 對 z）的全域 latent 指標相同（兩者差一個相同的正交變換），因此 S0/S1 的 T2-WB 攻擊者能取得與解密者同等保真度的 \|z\|（Pearson 0.976）。這是 A4 T2-WB magnitude 攻擊的前提，攻擊本身待 A4 實測。
 * 本節數字與稽核方以獨立程式量測的結果（下表）在四捨五入內一致。
 
@@ -239,7 +240,7 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 | 同上，影像 cosine（前作 Cosine_Sim 公式的類比量） | 0.9999 | 0.9986 | 0.9985 |
 
 * `[事實]`（稽核方）以學長的程式與參數，在「還原圖對 P 輸出」這個類比量上得到 **S1 30.2 dB、影像 cosine 0.9985**，與前作論文的 30.23 dB、0.9989 同等級。稽核方已在 AUD-20261010-03 AF-023 第 2 點更正：這不是重現前作比較的同一對影像（前作比的是偽健康輸出）。
-* `[事實]`（稽核方）S0/S1 解密後 latent 與原始 latent 的真實 cosine 約 0.990（PNG）／0.9999（float）；對應影像只有約 31 dB，所以「零失真」不成立。影像劣化主要來自 PNG 儲存（float 交接 38.7–39.4 dB，PNG 交接 31.3–31.5 dB）。
+* `[事實]`（稽核方）S0/S1 解密後 latent 與原始 latent 的真實 cosine 約 0.990（PNG）／0.9999（float）；對應影像只有約 31 dB，所以「零失真」不成立。影像劣化主要來自 PNG 儲存（float 交接 38.7–39.4 dB，PNG 交接 31.3–31.5 dB）。〔註：稽核方其後在 AUD-20261010-04 細分，損失幾乎全部來自 per-image min-max 未保存值域，而非 8-bit 量化；此處「PNG」指 legacy PNG。〕
 * `[事實]` 本專案 §2.3 的雜訊基準（30 dB → 0.9985、30.6 dB → 0.9987）與 S1 的 0.9985／30.2 dB 一致。`[推定]` 在這類誤差下，這個影像 cosine 的大小可由 PSNR 預測。
 
 ---
@@ -259,3 +260,70 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 **限制**：N = 20、單一資料集（CheXpert dev），像素基準用的是預處理後的輸入影像而非前作的模型輸出；`[推定]` 兩者的影像統計相近，故基準可作為量級參考，但不能用來重建前作的確切數值。雜訊為高斯 i.i.d.，真實的 DDIM 誤差有空間結構，其 cosine 與 PSNR 的關係會略有不同（稽核方的 S1 量測與高斯基準的吻合支持量級一致，見 §5）。
 
 **確定性檢查**：同一指令連續執行兩次，`results/E2.4_metric_semantics.json` 在剖析後除 `created_at` 外完全相同（種子 1911、numpy 1.23.0）。
+
+---
+
+## 7. M1 存檔協定與值域保存（AF-024）
+
+> 依據：使用者裁決 2026-10-10（AUDIT.md AUD-20261010-05）；稽核方診斷 AUD-20261010-04。實作：`scripts/m1_storage.py`（`range_preserving_png/v1`）。標記規則同本報告開頭。
+
+### 7.1 兩種存檔協定的定義
+
+| 項目 | legacy PNG（前作原樣交接） | range-preserving PNG（本專案 M1 協定） |
+|---|---|---|
+| 實作 | `legacy_png_handoff`（`scripts/e2_anonymization_runner.py:123`） | `range_preserving_png/v1`（`scripts/m1_storage.py`：`encode_range_preserving_png`、`decode_range_preserving_png`、`range_preserving_png_handoff`） |
+| 角色 | P/S0/S1「前作重現」的唯一主路徑；E2.2／E2.5 的既有結果不改寫 | 本專案的 M1 協定；P/S0/S1/S2a/S2 都以此協定跑，使方案間的比較只差在加密方法，不差在存檔方式 |
+| 正規化 | per-image min-max：`stored = ((x − low)/(high − low)·255).to(uint8)` | `lo = min(x)`、`hi = max(x)`（float32，每張影像各一組） |
+| 量化 | 截斷（`.to(uint8)`），不是四捨五入 | `q = clip(np.rint((x − lo)/(hi − lo)·255), 0, 255)`（round-half-to-even）；`hi = lo` 時 `q` 全為 0；8-bit 灰階 PNG |
+| 值域 | **丟棄**；讀回時對 `stored/255` 再做一次 min-max，輸出值域恆為 [0,1] | `lo`、`hi` 以 IEEE-754 float32 的位元樣式原值保存（PNG text chunk `x-range-lo-float32-bits`／`x-range-hi-float32-bits`，storage record 的 `lo_float32_bits`／`hi_float32_bits`），不經十進位字串 |
+| 讀回 | `x̂ = (stored/255 − r_low)/(r_high − r_low)`，`r_low`、`r_high` 為讀回影像自己的最小、最大值 | `x̂ = q/255·(hi − lo) + lo`，值域回到原值；PNG 缺少 `lo`／`hi` 時拒絕讀回，不猜測值域 |
+| 記錄 | 前作未記錄值域 | manifest／storage record 記 `storage_protocol`、`quantization`（量化方式字串）、`lo`、`hi` 與其位元樣式、PNG 的 SHA-256 與位元組數 |
+
+* `[事實]`（程式讀取）兩者的程式出處如上表；legacy 的描述同 `legacy_png_handoff` 的 docstring：前作存 `(visualize(sample)·255).astype(uint8)`，載入時 min-max 正規化。
+* `[事實]`（數學）round-half-to-even 的量化使逐像素讀回誤差不超過半個量化階 `(hi − lo)/510`（另加 float32 運算誤差）。`tests/unit/test_m1_storage.py` 檢查這個上界（含負值、超過 1 的值域）；legacy 協定沒有這個保證，因為它讀回後的值域被強制成 [0,1]。
+
+### 7.2 歸因（使用者裁決 2026-10-10）
+
+* `[決定]` 前作 M1 還原品質（約 30–32 dB）的主要損失，來自存檔流程的 per-image min-max 正規化後沒有保存原值域，屬於**工程失真**，**不是**翻號／置換加密本身的限制。論文與報告須如此歸因（AUD-20261010-05 §1）。
+* `[決定]` 之後所有以影像形式保存的輸出（匿名影像，以及任何需要再 inversion 或還原的影像），都必須記錄影像的實際值域，讀回時還原回原值域。
+* `[事實]` 本報告 §5 及其稽核方交叉驗證表中的「M1 PNG」「PNG 交接」都是 legacy PNG（E2.5 與稽核方都使用 `legacy_png_handoff` 的 per-image min-max＋uint8 截斷）。
+* `[推定]` §5 表中 S0/S1 與 float 交接的差距（legacy PNG 約 31 dB 對 float 38.7–39.4 dB）依本節歸因於未保存值域的 min-max，不應讀成「8-bit PNG 本身造成」或「加密造成」。稽核方的分解只在 4 張影像上做（§7.3）；dev 20 張的實測見 §7.5，結果支持此歸因。
+* `[決定]` §3.2 與 §4 要求的「交接方式」標註，由原來的「float 或前作 PNG」擴充為三種：float、legacy PNG、range-preserving PNG（見 §3.3 新增條目）。
+
+### 7.3 稽核方診斷（AUD-20261010-04）
+
+以下是**稽核方的量測**，不是本專案實作方的量測。來源：AUDIT.md AUD-20261010-04 §2；腳本 `audit/e2_png_handoff_decomposition.py`，輸出 `audit/out/e2_png_handoff_decomposition.json`；4 張 dev 影像（與 `e2_wht_smoke` 同一組影像與金鑰），PSNR 對 x0。以下數字依 AUDIT.md 原文引用，並已用該 JSON 的 `per_sample` 重算核對（`[事實]`，本報告重算）：四個方案各 4 張的平均與 AUDIT.md 表一致；min-max 交接 RMSE 與 legacy PNG 還原 PSNR 的 Pearson／Spearman 重算為 −0.884／−0.803（n=16，與 AUDIT.md 相符）。
+
+* `[事實]`（稽核方）加密方案的「只做 min-max」與 legacy PNG 的還原 PSNR 相差 ≤ 0.3 dB；「只做 8-bit 量化、保留 lo/hi」與 float 交接相差 ≤ 0.6 dB。因此 legacy PNG 交接的損失幾乎全部來自 per-image min-max，8-bit 量化本身影響很小。
+  * `[事實]`（本報告重算）上述兩個界限都是**逐方案的 4 張平均**：只做 min-max 與 legacy PNG 的差為 0.02–0.25 dB（逐張最大 0.25 dB）；只做量化與 float 的差為 0.21–0.46 dB（P 0.46、S0 0.31、S1 0.45、WHT R=1 0.38、WHT R=2 0.21），但**逐張最大達 0.78 dB**。「≤ 0.6 dB」不可寫成逐張的保證。
+* `[事實]`（稽核方）加密後生成的匿名影像值域約為 [−0.4, 0.7–1.0]，不在 [0,1]；min-max 讀回等於對整張圖做一次亮度／對比的仿射改變（交接 RMSE 約 0.3），再經 inversion 與金鑰反運算放大成還原誤差。P 的輸出值域本來就接近 [0,1]，所以不受影響。
+* `[事實]`（稽核方）16 個加密樣本中，min-max 交接 RMSE 與 legacy PNG 還原 PSNR 的 Pearson 相關為 −0.884（Spearman −0.803）。
+* `[事實]`（稽核方）R=2 減 R=1 的逐張差不顯著（配對 t 檢定 p=0.27）。`[推定]`（稽核方）legacy PNG 下 R=1 看起來較差，是各金鑰剛好生成了值域不同的匿名影像，與 R 無關。
+* 稽核方當時的 `[假設]`「range-preserving PNG 下 S0/S1 的還原 PSNR 會回到接近 float 交接」，已由 §7.5 的 dev 20 張實測確認（平均差 0.26／0.23 dB）。科學數值只報告，不作門檻。
+
+### 7.4 完整性要求（HMAC 涵蓋值域）
+
+* `[決定]` `lo`、`hi` 會直接決定讀回數值，只改它們而不動像素資料，也會改變還原結果。S2 的 HMAC／authenticated metadata 必須涵蓋 `storage_protocol`、`quantization`、`lo`、`hi`（PROPOSAL §4.4）。
+* `[決定]` 這些欄位的 MAC 驗證成功之前，不得以 `lo`／`hi` 讀回影像，也不得進行 inverse transform、inversion 或 diffusion generation（WORKFLOW §2.3）。
+* `[決定]` T4 竄改測試必須包含「只修改 lo/hi」的情境，且必須被拒絕；在 Week 3 D5.5／D5.6 的 authenticated container 與 tamper matrix 實作。
+* `[事實]` 目前 repo 沒有 `src/` 目錄，也沒有任何 HMAC 程式（本報告撰寫時以 `grep -il hmac` 檢查 `.py`，排除 `audit/`、`past/`、`refpaper/`），所以本節的完整性要求尚未實作，只有 `scripts/m1_storage.py` 產生的 storage record 可供日後納入認證。
+* `[決定]` `lo`／`hi` 是公開的儲存 metadata，不是秘密；T2-WB 攻擊者取得匿名影像時同時取得它們，因此 range-preserving PNG 欄的 T2-WB 攻擊以含值域還原的讀回評估（`reports/t2wb_protocol.md` §2 第 4 點、§3）。
+
+### 7.5 dev 實測：三種存檔交接並列（本專案實作方量測）
+
+* 來源：`results/AF024_m1_storage_per_sample.csv`、`paper_assets/tables/table_m1_storage_comparison.csv`；managed run `AF024_M1_STORAGE_20261010T023636939496Z_278c5ed8`（`scripts/m1_storage_compare_runner.py`，commit `f5c967e`）。range-preserving 欄由本 run 產生；legacy PNG 與 float 欄唯讀併入 E2.5 run `E2.5_20261009T191319376995Z_f990c7d7`。本 run 重新生成的 60 張匿名影像，`anon_vs_x0_psnr_db` 皆與 E2.5 逐值相同（`anon_matches_e2_5=1`），所以三欄比較的是同一批匿名影像。
+* 設定同 §5：dev_v1.1 20 張、學長加密流程、guidance −1、T=500、batch 1；平均與 bootstrap 95% CI（B=10,000，seed 1911）；影像指標未 clip（§3.3）。標記：`[事實]`；科學數值只報告，不作門檻。
+
+| 還原對 x0 | legacy PNG | range-preserving PNG | float 交接（上限） |
+|---|---|---|---|
+| P：PSNR／SSIM／L∞ | 37.71 dB／0.975／0.232 | 37.81 [37.32, 38.19] dB／0.975／0.205 | 37.62 dB／0.975／0.254 |
+| S0：PSNR／SSIM／L∞ | 31.47 dB／0.927／0.558 | **38.44 [37.98, 38.85] dB**／0.972／0.267 | 38.70 dB／0.973／0.264 |
+| S1：PSNR／SSIM／L∞ | 31.30 dB／0.898／0.416 | **39.17 [38.98, 39.34] dB**／0.973／0.155 | 39.40 dB／0.973／0.135 |
+| S0／S1 還原對 P 輸出：PSNR | 30.75／30.20 dB | 43.13／45.42 dB | 43.97／46.29 dB |
+| S0／S1 解密 latent：cosine | 0.990／0.990 | 0.9997／0.9998 | 0.9999／0.9999 |
+| S0／S1 攻擊者視角 \|z\| Pearson | 0.976／0.976 | **0.9993／0.9994** | 0.9998／0.9998 |
+
+* `[事實]` 保存值域後，S0/S1 的 M1 還原從 legacy PNG 的約 31.3–31.5 dB 回到 38.4–39.2 dB，與 float 交接的平均差 0.26 dB（S0）／0.23 dB（S1）；逐張差範圍 S0 −1.04～+2.14 dB、S1 −0.39～+1.37 dB。P 幾乎不受存檔協定影響（37.6–37.8 dB）。
+* `[事實]` dev 20 張中，加密匿名影像的值域下界 lo 最低到 −0.53，上界 hi 最高為 1.0，與稽核方 4 張的觀察（約 [−0.4, 0.7–1.0]）一致。
+* `[結論]` 本實測支持 §7.2 的歸因：前作約 31 dB 的 M1 損失，主要是 legacy PNG 存檔未保存值域造成的工程失真，不是翻號／置換加密本身。
+* `[事實]` 保存值域同樣提升了 T2-WB 攻擊者看到的 latent 保真度：S0/S1 攻擊者視角的 \|z\| Pearson 由 0.976 升到 0.999。`[推定]` 在 range-preserving 協定下，A4 的 magnitude／sorted-magnitude 攻擊至少不會比 legacy PNG 弱；這正是 AF-024 要求兩欄分開報告的原因，待 A4 實測。

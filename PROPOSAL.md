@@ -77,7 +77,7 @@ x_0
 | Rademacher key | password SHA-256 後只取前 4 bytes | 實際有效空間只有 2^32 |
 | Signed Permutation | sign 與 permutation 由相同短 seed 產生 | 宣稱的巨大 key space 不成立 |
 | nonce | 無 | 所有影像重用相同 transform |
-| 匿名影像 | per-image min-max 後存 uint8 PNG | 遺失尺度與量化資訊 |
+| 匿名影像 | per-image min-max 後存 uint8 PNG | 遺失尺度與量化資訊：原值域 lo/hi 被丟棄，是前作 M1 還原損失的主要來源（AUD-20261010-04）；本專案 M1 改為保存值域，見 §4.5 |
 | 解密 | 從匿名 PNG 重新 DDIM inversion | 會引入反演與量化誤差 |
 | 評估 | reported cosine 0.9989 並非 byte equality | 不能據此宣稱 lossless |
 
@@ -206,6 +206,10 @@ z_{r+1}
 - tag 比對使用 constant-time API。
 - latent-payload 模式認證 latent bytes。
 - image-only 模式認證實際儲存的 lossless image bytes 與穩定 metadata；若 PACS 轉碼或修改被認證欄位，系統應明確拒絕，而不是靜默解密。
+- image-only 模式的 authenticated metadata 必須包含 `storage_protocol`（例如 `range_preserving_png/v1`）、`quantization`（量化方式）與每張影像的 `lo`、`hi`（float32，以原值的 IEEE-754 位元樣式認證，不經十進位字串四捨五入）。讀回公式為 `x = q/255·(hi−lo)+lo`，所以只改 `lo`／`hi` 而不動像素資料，也會直接改變還原結果；這種修改必須被 tag 拒絕（T4 竄改測試須含「只改 lo/hi」，AF-024、AUD-20261010-05）。
+- 上述 MAC 驗證成功之前，不得以 `lo`／`hi` 讀回影像，也不得進行 inverse transform、inversion 或 diffusion generation。
+- `lo`／`hi` 同時存在於 PNG text chunk 與 storage record；MAC 須同時涵蓋 PNG 位元組（或其 SHA-256）與 record 中的 `lo`／`hi`，讀回前並檢查兩份值逐位元一致，避免只改其中一份的缺口（D5 實作）。
+- `lo`／`hi` 是公開的儲存 metadata，不是秘密；T2-WB 攻擊者取得匿名影像時同時取得它們（`reports/t2wb_protocol.md` §2）。
 - MAC 提供 tamper detection，不改變此線性變換的 confidentiality 邊界。
 
 ### 4.5 部署模式
@@ -216,6 +220,10 @@ z_{r+1}
 - 解密由 anonymous image inversion 開始。
 - 優點：維持既有流程。
 - 缺點：受 PNG／DICOM 量化及 DDIM inversion error 影響。
+- 本專案的影像存檔協定為 `range_preserving_png/v1`（AF-024，實作 `scripts/m1_storage.py`）：每張影像以自身實際值域 [lo, hi] 量化為 8-bit 灰階 PNG，`q = clip(rint((x−lo)/(hi−lo)·255), 0, 255)`（四捨五入）；`lo`、`hi` 以 float32 原值逐位元保存（manifest 與 PNG text chunk），讀回時 `x = q/255·(hi−lo)+lo`。缺少值域的 PNG 一律拒絕讀回，不猜測值域。任何需要再 inversion 或還原的影像都依此保存（使用者裁決 2026-10-10，AUD-20261010-05）。
+- 前作的 per-image min-max uint8 PNG（截斷、丟棄值域，`legacy_png_handoff`）只保留作「前作重現」的主路徑，不是本專案的 M1 協定。P／S0／S1 兩種存檔協定都跑；S2a／S2 使用 range-preserving PNG；表格以「legacy PNG」與「range-preserving PNG」分欄報告，使方案間的比較只差在加密方法，不差在存檔方式。
+- `[決定]` 歸因（使用者裁決 2026-10-10，AUD-20261010-05）：前作 M1 還原品質約 30–32 dB 的主要損失，來自存檔流程的 per-image min-max 後未保存原值域，屬工程失真，**不是**翻號／置換加密本身的限制。依據是稽核方診斷 `[事實]`（AUD-20261010-04，`audit/out/e2_png_handoff_decomposition.json`）：稽核方在 4 張 dev 影像上量到，只做 8-bit 量化、保留 lo/hi 時與 float 交接相差 ≤ 0.6 dB（逐方案的 4 張平均）。論文須如此歸因，不得把這部分損失寫成加密造成的。
+- 認證欄位見 §4.4：`storage_protocol`、`quantization`、`lo`、`hi` 皆須被 HMAC 涵蓋，驗證通過前不得讀回影像。
 
 #### M2：latent payload＋anonymous preview
 

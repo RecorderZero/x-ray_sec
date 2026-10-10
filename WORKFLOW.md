@@ -64,8 +64,10 @@
 
 | 模式 | ciphertext／資料 | 用途 |
 |---|---|---|
-| M1 image-only | anonymous image＋nonce＋tag＋manifest | 最接近前作，受 inversion error 影響 |
+| M1 image-only | anonymous image（range_preserving_png：保存 lo/hi）＋nonce＋tag＋manifest | 最接近前作，受 inversion error 影響 |
 | M2 latent payload | authenticated z_ano＋anonymous preview | 可逆性上限與部署對照 |
+
+前作的 per-image min-max uint8 PNG（`legacy_png_handoff`，不保存值域）只保留作 P/S0/S1「前作重現」的主路徑；本專案的 M1 協定是 `range_preserving_png`（P/S0/S1/S2a/S2 皆跑），結果表以「legacy PNG」與「range-preserving PNG」分欄報告（AF-024、AUD-20261010-05）。
 
 ### 1.4 優先級
 
@@ -130,6 +132,7 @@ HMAC 不再排在後期加分項。Week 3 建立 authenticated container，Week 
 - 不得執行 inverse transform。
 - 不得送入 diffusion generation。
 - 不得輸出部分 plaintext。
+- 不得以 lo/hi 解碼或讀回 M1 匿名影像（AF-024）。
 
 ### 2.4 Nonce 規則
 
@@ -326,8 +329,8 @@ G0：E0.1、E1.1–E1.5、E2.1–E2.5 全過；所有後續攻擊都能從固定
 
 | ID | 子任務 | 通過條件 | 交付 |
 |---|---|---|---|
-| A4.1 | T2-WB anonymous-image inversion | 使用目標 checkpoint；逐筆保存 S0/S1 的 z_ano vs zhat_ano cosine 與 error | table_T2_WB_inversion.csv |
-| A4.2 | T2-WB magnitude gallery | 相同 scorer、split、controls；與 T1 並排 | table_T2_WB_magnitude.csv |
+| A4.1 | T2-WB anonymous-image inversion | 使用目標 checkpoint；逐筆保存 S0/S1 的 z_ano vs zhat_ano cosine 與 error；legacy PNG 與 range-preserving PNG 兩種存檔分欄（AF-024） | table_T2_WB_inversion.csv |
+| A4.2 | T2-WB magnitude gallery | 相同 scorer、split、controls；與 T1 並排；兩種存檔協定分欄（AF-024） | table_T2_WB_magnitude.csv |
 | A4.3 | KPA | S0 positive control 一對恢復；S1 按排序／符號驗證 | table_KPA.csv |
 | A4.4 | CPA | verify_cpa.py 的 d-query Q recovery 成功；明列 fixed Q 前提 | table_CPA.csv |
 | A4.5 | tamper baseline | 修改 image／latent 後 S0/S1 不會拒絕；保存影響指標 | table_tamper_baseline.csv |
@@ -348,8 +351,8 @@ G1：W1–W5 的 baseline evidence 完整；若未完成則取消 P2，並下修
 | D5.2 | HKDF domain separation | RFC 5869 vectors全過；每輪 sign-pre/perm/sign-post 與 mac label 互異 | tests/test_kdf.py |
 | D5.3 | CSPRNG sign／permutation | permutation 合法、決定性 test vector、rejection sampling 無 modulo bias | src/crypto/prng.py、tests |
 | D5.4 | nonce registry | 100,000 次測試無 collision；顯式 reuse 被拒絕 | tests/test_nonce.py、result JSON |
-| D5.5 | authenticated container | version、nonce、params、ciphertext ref、AAD schema 可 serialize；未知版本 fail closed | container schema、tests |
-| D5.6 | HMAC | tag/ciphertext/header/AAD/wrong-key tamper 全部拒絕；未竄改全接受 | src/crypto/mac.py、tamper matrix |
+| D5.5 | authenticated container | version、nonce、params、ciphertext ref、AAD schema（含 M1 的 storage_protocol、quantization、lo/hi）可 serialize；未知版本 fail closed | container schema、tests |
+| D5.6 | HMAC | tag/ciphertext/header/AAD（含 M1 的 lo/hi，含「只改 lo/hi」）/wrong-key tamper 全部拒絕；未竄改全接受 | src/crypto/mac.py、tamper matrix |
 | D5.7 | no-pickle key format | 新流程不使用 torch.load 載入 key material | tests/test_no_pickle.py |
 
 本週禁止自行實作 SHA、ChaCha 或 HMAC primitive，必須使用成熟函式庫。

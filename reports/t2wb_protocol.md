@@ -28,12 +28,18 @@
 1. **主指標是影像端端到端**：x0 對 M1 還原影像的 PSNR、SSIM、L∞、uint8 pixel equality、float32 bit-exact。
 2. latent 指標（cosine、RMSE、MaxAbs、bit-exact、norm ratio）照常報告，但只作診斷；另報低頻（8×8 區塊平均，32×32）與高頻 cosine、|z| Pearson 相關，用來說明 inversion 誤差落在哪個頻段。
 3. 三條路徑分開報告（PROPOSAL §7.2）：transform-only、T1（精確 latent）、T2-WB／M1（匿名影像 → 目標模型 inversion → 解密 → 生成）。
-4. M1 的主路徑採**學長實際的儲存方式**：匿名影像經 per-image min-max 後以 uint8 PNG 保存（truncation），重新讀入後 inversion（`legacy_png_handoff`）。float 交接只作上限對照。
+4. M1 的存檔協定**分兩欄報告**（AF-024、使用者裁決 2026-10-10，AUD-20261010-05）：
+   - 「legacy PNG」：學長實際的儲存方式，匿名影像經 per-image min-max 後以 uint8 PNG 保存（truncation、丟棄值域），重新讀入後 inversion（`legacy_png_handoff`）。這是**前作重現的唯一主路徑**（P/S0/S1；E2.2／E2.5 的既有結果不改寫）。
+   - 「range-preserving PNG」：**本專案的 M1 協定**（`range_preserving_png/v1`，`scripts/m1_storage.py`）。每張匿名影像保存實際值域 `lo`、`hi`（float32 原值），四捨五入量化為 8-bit 灰階 PNG，讀回 `x = q/255·(hi−lo)+lo`。P/S0/S1/S2a/S2 都以此協定跑，讓方案間的比較只差在加密方法，不差在存檔方式。
+   - float 交接維持**診斷用的上限對照**，不是主路徑。
+   - `lo`／`hi` 是公開的儲存 metadata。`[決定]` T2-WB 攻擊者取得保存的匿名影像時，同時取得 `lo`、`hi`，因此 range-preserving PNG 欄的 T2-WB 攻擊（inversion、linkage、正控制）一律以**含值域還原的讀回**評估；legacy PNG 欄則沿用丟棄值域的讀回。
+   - `[事實]`（稽核方，AUD-20261010-04；`audit/out/e2_png_handoff_decomposition.json`）加密後匿名影像的值域約為 [−0.4, 0.7–1.0]；legacy PNG 交接造成的損失幾乎全部來自 per-image min-max（讀回時等於對整張圖做一次未保存的仿射改變），只做 8-bit 量化、保留 lo/hi 時與 float 交接相差 ≤ 0.6 dB（逐方案的 4 張平均，逐張最大 0.78 dB，見 `metric_semantics.md` §7.3）。
+   - `[決定]`（使用者裁決 2026-10-10，AUD-20261010-05）legacy PNG 的還原損失歸因於存檔流程的工程失真，不是翻號／置換加密本身的限制；論文與報告須如此歸因。
 
 ## 3. T2-WB 攻擊的正控制與負控制（A4／D7 實作）
 
 - Gallery：E2.3 cache 的原圖 latent `z_i = ddim_anonymization_forward(x0_i)`，`security_v1`，N=200。
-- Query（方案 s）：攻擊者對保存的匿名 PNG 自行 inversion 得 `ẑ_j^s`；T1 則直接取精確 `z_ano,j^s`。
+- Query（方案 s）：攻擊者對保存的匿名 PNG 自行 inversion 得 `ẑ_j^s`；T1 則直接取精確 `z_ano,j^s`。T2-WB 的 query 對**兩種存檔協定各產生一組**（legacy PNG 讀回、range-preserving PNG 讀回，後者含 `lo`／`hi`，見 §2 第 4 點），兩組分欄報告，不混用。
 - 特徵與 scorer 在 T1、T2-WB、所有方案間完全相同：S0 用 `|z|`，S1 用 `sort(|z|)`，另報 norm-only `‖z‖`；可加報低頻 `|z|` 區塊平均作為 re-inversion 穩健特徵（`[假設]` 身分資訊主要在低頻，見 AUD-20261008-03 §3.3）。
 - **正控制**（依 §4 裁決）：每個方案各自的正控制，即以正確金鑰把 re-inversion 得到的 `ẑ_ano` 解密成 `ẑ` 後，以 latent 相關對 gallery 做 linkage。P（恆等金鑰）的 re-inversion linkage 只作參考，不用來判定其他方案。
 - **負控制**：gallery ID 以 seed 1911 隨機重排後的 Top-1（預期約 1/N）。
@@ -51,7 +57,7 @@
    - 正控制通過 → 只能寫「T2-WB 下此特徵的 linkage 未達顯著（正控制通過）」；依 PROPOSAL §5，這仍不是安全性宣稱。
 3. 每個方案都報告解密後 latent 的保真度（cosine、RMSE、低頻 cosine、\|z\| Pearson）。P 的 re-inversion 保真度只作參考，**不再**用來判定其他方案。
 4. T1 的正控制（P 精確 latent，Top-1 應為 1）一律報告，作為 scorer 正確性的檢查。
-5. 匿名影像維持學長的 per-image min-max uint8 PNG 儲存；改為無損儲存不在本次裁決範圍內（AUD-20261010-01 §5-Q2）。
+5. ~~匿名影像維持學長的 per-image min-max uint8 PNG 儲存；改為無損儲存不在本次裁決範圍內（AUD-20261010-01 §5-Q2）。~~ **已被取代**：使用者 2026-10-10 後續裁決（AUD-20261010-05、AF-024）要求 M1 存檔保存實際值域（`range_preserving_png/v1`），legacy PNG 只保留作前作重現；兩種存檔協定分欄報告（§2 第 4 點）。
 
 ## 5. 診斷：latent 距離不能預測影像可逆性
 
