@@ -1,0 +1,556 @@
+{
+  "schema_version": 1,
+  "task_id": "A4.5",
+  "created_at": "2026-10-12T13:52:44.707223+00:00",
+  "command": "scripts/run_cfg_ddim.sh python -m scripts.a4_5_tamper",
+  "script_sha256": "05aec8e258574dcef699f4ca15e5455c81aabab7d26177e1999da4c7ac2635ec",
+  "git_commit": "859dc8ea1438ca3c34c7a3012c620a82abf671e3",
+  "seed": 1911,
+  "seed_streams": "np.random.default_rng(np.random.SeedSequence(1911).spawn(8)[0]); draw order: scheme S0 then S1, latent 0,1,2; per latent: flipped coordinate, noise, pixel row/col",
+  "numpy_version": "1.23.0",
+  "torch_version": "2.14.0+cu130",
+  "python_version": "3.10.19",
+  "device": "cpu (CUDA_VISIBLE_DEVICES='' set before importing torch)",
+  "inputs": {
+    "predecessor_source": "past/SourceCode/guided_diffusion/anonymization.py",
+    "predecessor_source_sha256": "5e71401a648a734979432ccf07d92deae02387352ad9ac00a33a89d9d8f38bb1",
+    "real_latent_cache": "artifacts/runs/E2.3/E2.3_20261009T183736363217Z_84cf642a/latents.npy",
+    "real_latent_cache_sha256": "195c20b3124af54c5dd40c644bae78af3144ae176204982c4c2f7b5effd69190",
+    "latent_indices": [
+      0,
+      1,
+      2
+    ],
+    "key": "legacy S0/S1 full-mask key via scripts.e2_legacy_wrapper.apply_legacy_key (d=65536); key material not written",
+    "storage_protocol": "scripts.m1_storage range_preserving_png/v1",
+    "noise_sigma": 0.05,
+    "hi_scale": 1.05
+  },
+  "raw_key_material_recorded": false,
+  "acceptance_definition": "accepted=True iff the legacy inverse-key step (and the storage decoder for storage cases) ran without raising and returned a finite tensor",
+  "predecessor_integrity_scan": {
+    "raise_or_assert_count_in_data_path_functions": {
+      "apply": 0,
+      "apply_inverse": 0,
+      "apply_key": 0,
+      "anonymize_latent": 0,
+      "deanonymize_latent": 0
+    },
+    "contains_hmac_text": false,
+    "contains_mac_or_tag_verification_text": false,
+    "verify_functions_are_developer_self_tests": [
+      "verify_reversibility",
+      "verify_security",
+      "verify_signed_permutation_security"
+    ],
+    "verify_function_arguments": {
+      "verify_reversibility": [
+        "anonymizer",
+        "z_t",
+        "key",
+        "rtol",
+        "atol"
+      ],
+      "verify_signed_permutation_security": [
+        "shape",
+        "num_tests"
+      ],
+      "verify_security": [
+        "anonymizer",
+        "z_t",
+        "correct_key",
+        "wrong_key"
+      ]
+    },
+    "hashlib_used_only_for_key_derivation": true
+  },
+  "impact_ranges_over_all_rows": {
+    "flip_one_sign": {
+      "cosine": [
+        0.9998624304362347,
+        0.9999999225960253
+      ],
+      "rmse": [
+        0.0003817034885287285,
+        0.016079043969511986
+      ],
+      "max_abs": [
+        0.09771609306335449,
+        4.116235256195068
+      ]
+    },
+    "gaussian_noise": {
+      "cosine": [
+        0.9986631069215074,
+        0.9986797294070856
+      ],
+      "rmse": [
+        0.04986698616213477,
+        0.050225715642229496
+      ],
+      "max_abs": [
+        0.20165109634399414,
+        0.2413502335548401
+      ]
+    },
+    "storage_range_hi": {
+      "cosine": [
+        0.9923010557856353,
+        0.9937433462125344
+      ],
+      "rmse": [
+        0.11400173770403388,
+        0.12604224566104708
+      ],
+      "max_abs": [
+        0.21518993377685547,
+        0.2400798797607422
+      ]
+    },
+    "storage_pixel": {
+      "cosine": [
+        0.9997988134013467,
+        0.9998365963501645
+      ],
+      "rmse": [
+        0.017527369782328606,
+        0.01946377195417881
+      ],
+      "max_abs": [
+        4.487006664276123,
+        4.982725620269775
+      ]
+    }
+  },
+  "untampered_controls": [
+    {
+      "scheme": "S0",
+      "latent_index": 0,
+      "untampered_latent_round_trip_bit_exact": true,
+      "untampered_storage_round_trip_vs_original_latent": {
+        "cosine": 0.9999385929768854,
+        "rmse": 0.010744684063577873,
+        "max_abs": 0.01863868534564972,
+        "n_changed_coordinates": 65534
+      },
+      "tampered_pixel_position": [
+        141,
+        215
+      ]
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 1,
+      "untampered_latent_round_trip_bit_exact": true,
+      "untampered_storage_round_trip_vs_original_latent": {
+        "cosine": 0.9999326301625445,
+        "rmse": 0.0112618660614427,
+        "max_abs": 0.019463717937469482,
+        "n_changed_coordinates": 65535
+      },
+      "tampered_pixel_position": [
+        43,
+        17
+      ]
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 2,
+      "untampered_latent_round_trip_bit_exact": true,
+      "untampered_storage_round_trip_vs_original_latent": {
+        "cosine": 0.9999452894240594,
+        "rmse": 0.010140929314730469,
+        "max_abs": 0.017526626586914062,
+        "n_changed_coordinates": 65534
+      },
+      "tampered_pixel_position": [
+        23,
+        78
+      ]
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 0,
+      "untampered_latent_round_trip_bit_exact": true,
+      "untampered_storage_round_trip_vs_original_latent": {
+        "cosine": 0.9999385929768854,
+        "rmse": 0.010744684063577873,
+        "max_abs": 0.01863868534564972,
+        "n_changed_coordinates": 65534
+      },
+      "tampered_pixel_position": [
+        99,
+        203
+      ]
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 1,
+      "untampered_latent_round_trip_bit_exact": true,
+      "untampered_storage_round_trip_vs_original_latent": {
+        "cosine": 0.9999326301625445,
+        "rmse": 0.0112618660614427,
+        "max_abs": 0.019463717937469482,
+        "n_changed_coordinates": 65535
+      },
+      "tampered_pixel_position": [
+        193,
+        133
+      ]
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 2,
+      "untampered_latent_round_trip_bit_exact": true,
+      "untampered_storage_round_trip_vs_original_latent": {
+        "cosine": 0.9999452894240594,
+        "rmse": 0.010140929314730469,
+        "max_abs": 0.017526626586914062,
+        "n_changed_coordinates": 65534
+      },
+      "tampered_pixel_position": [
+        246,
+        149
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "scheme": "S0",
+      "latent_index": 0,
+      "tamper_case": "flip_one_sign",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9999998915558715,
+      "rmse": 0.00045153277460485697,
+      "max_abs": 0.11559239029884338,
+      "n_changed_coordinates": 1,
+      "tampered_coordinates": 1
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 0,
+      "tamper_case": "gaussian_noise",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9986747949496254,
+      "rmse": 0.04998247000558049,
+      "max_abs": 0.20165109634399414,
+      "n_changed_coordinates": 65536,
+      "noise_sigma": 0.05
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 0,
+      "tamper_case": "storage_range_hi",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9929295582540382,
+      "rmse": 0.1211725394814592,
+      "max_abs": 0.2329854965209961,
+      "n_changed_coordinates": 65535,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 0,
+      "tamper_case": "storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9998152348176013,
+      "rmse": 0.018638797104358673,
+      "max_abs": 4.77153205871582,
+      "n_changed_coordinates": 1,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 1,
+      "tamper_case": "flip_one_sign",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9999999225960253,
+      "rmse": 0.0003817034885287285,
+      "max_abs": 0.09771609306335449,
+      "n_changed_coordinates": 1,
+      "tampered_coordinates": 1
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 1,
+      "tamper_case": "gaussian_noise",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9986784390394239,
+      "rmse": 0.04992525733697679,
+      "max_abs": 0.2413502335548401,
+      "n_changed_coordinates": 65536,
+      "noise_sigma": 0.05
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 1,
+      "tamper_case": "storage_range_hi",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9923010557856353,
+      "rmse": 0.12604224566104708,
+      "max_abs": 0.2400798797607422,
+      "n_changed_coordinates": 65535,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 1,
+      "tamper_case": "storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9997988134013467,
+      "rmse": 0.01946377195417881,
+      "max_abs": 4.982725620269775,
+      "n_changed_coordinates": 1,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 2,
+      "tamper_case": "flip_one_sign",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9999930583064852,
+      "rmse": 0.003611867083236575,
+      "max_abs": 0.9246379733085632,
+      "n_changed_coordinates": 1,
+      "tampered_coordinates": 1
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 2,
+      "tamper_case": "gaussian_noise",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9986741060690163,
+      "rmse": 0.04997342101690979,
+      "max_abs": 0.23496654629707336,
+      "n_changed_coordinates": 65536,
+      "noise_sigma": 0.05
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 2,
+      "tamper_case": "storage_range_hi",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9937433462125344,
+      "rmse": 0.11400173770403388,
+      "max_abs": 0.21518993377685547,
+      "n_changed_coordinates": 65535,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 2,
+      "tamper_case": "storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9998365963501645,
+      "rmse": 0.017527369782328606,
+      "max_abs": 4.487006664276123,
+      "n_changed_coordinates": 1,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 0,
+      "tamper_case": "flip_one_sign",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9999974339287868,
+      "rmse": 0.0021964465267956257,
+      "max_abs": 0.5622903108596802,
+      "n_changed_coordinates": 1,
+      "tampered_coordinates": 1
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 0,
+      "tamper_case": "gaussian_noise",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9986753154415916,
+      "rmse": 0.04995031548546392,
+      "max_abs": 0.22128331661224365,
+      "n_changed_coordinates": 65535,
+      "noise_sigma": 0.05
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 0,
+      "tamper_case": "storage_range_hi",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9929295582540382,
+      "rmse": 0.1211725394814592,
+      "max_abs": 0.2329854965209961,
+      "n_changed_coordinates": 65535,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 0,
+      "tamper_case": "storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9998152554573588,
+      "rmse": 0.018638795241713524,
+      "max_abs": 4.771531581878662,
+      "n_changed_coordinates": 1,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 1,
+      "tamper_case": "flip_one_sign",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.999998717846953,
+      "rmse": 0.001553511479869485,
+      "max_abs": 0.39769893884658813,
+      "n_changed_coordinates": 1,
+      "tampered_coordinates": 1
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 1,
+      "tamper_case": "gaussian_noise",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9986631069215074,
+      "rmse": 0.050225715642229496,
+      "max_abs": 0.2035989761352539,
+      "n_changed_coordinates": 65536,
+      "noise_sigma": 0.05
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 1,
+      "tamper_case": "storage_range_hi",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9923010557856353,
+      "rmse": 0.12604224566104708,
+      "max_abs": 0.2400798797607422,
+      "n_changed_coordinates": 65535,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 1,
+      "tamper_case": "storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9997988178539468,
+      "rmse": 0.01946377195417881,
+      "max_abs": 4.982725620269775,
+      "n_changed_coordinates": 1,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 2,
+      "tamper_case": "flip_one_sign",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9998624304362347,
+      "rmse": 0.016079043969511986,
+      "max_abs": 4.116235256195068,
+      "n_changed_coordinates": 1,
+      "tampered_coordinates": 1
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 2,
+      "tamper_case": "gaussian_noise",
+      "accepted": true,
+      "error": null,
+      "reference": "original_latent",
+      "cosine": 0.9986797294070856,
+      "rmse": 0.04986698616213477,
+      "max_abs": 0.2102685421705246,
+      "n_changed_coordinates": 65536,
+      "noise_sigma": 0.05
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 2,
+      "tamper_case": "storage_range_hi",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9937433462125344,
+      "rmse": 0.11400173770403388,
+      "max_abs": 0.21518993377685547,
+      "n_changed_coordinates": 65535,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 2,
+      "tamper_case": "storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_stored_record",
+      "cosine": 0.9998365889465295,
+      "rmse": 0.01752737257629633,
+      "max_abs": 4.48700737953186,
+      "n_changed_coordinates": 1,
+      "record_png_sha256_matches_payload": false,
+      "decoder_consults_record_sha256": false
+    }
+  ],
+  "checks": {
+    "all_tamper_cases_accepted": true,
+    "tamper_row_count": true,
+    "untampered_latent_round_trip_bit_exact": true,
+    "every_tamper_changes_the_recovered_latent": true,
+    "flip_one_sign_changes_exactly_one_coordinate": true,
+    "all_metrics_finite": true,
+    "harness_detects_rejection_when_decoder_raises": true,
+    "predecessor_data_path_has_no_raise_or_assert": true,
+    "predecessor_has_no_hmac_or_tag_verification": true,
+    "decoder_ignores_record_sha256_on_modified_payload": true
+  },
+  "conclusion": "[事實] 前作 S0/S1 沒有任何完整性檢查：24 個竄改案例（2 種方案 x 3 張真實 latent x 4 種竄改）全部被接受（accepted=True）——逆金鑰步驟照常執行、輸出皆為有限值、沒有任何例外或拒絕，而恢復結果與未竄改版本不同。影響範圍：翻轉單一座標符號只改變恢復 latent 的 1 個座標（max_abs 0.0977–4.12，cosine 0.999862430–0.999999923）；加入 σ=0.05 高斯雜訊使 RMSE 約 0.0499–0.0502；改動儲存紀錄中的 hi 值（x1.05）使 RMSE 0.114–0.126；改動單一儲存像素使 max_abs 4.49–4.98。未竄改的 latent 層往返為 bit-exact（對照），且解碼器對格式錯誤的紀錄（缺少 lo/hi 文字）仍會拋例外，表示 accepted=False 在機制上可被觀察，而內容被竄改時卻沒有任何拒絕。靜態檢查：前作金鑰模組的資料路徑函式沒有 raise/assert，沒有 HMAC／認證字樣；其 verify_* 是持有原始 latent 的開發者自我測試，不是對儲存紀錄的驗證。[推定] S2 的 transform-then-MAC 會在驗證階段拒絕這些竄改（D5 實作、AF-024/AF-030），本表是無完整性保護的 baseline，S2 的拒絕行為需另以 D5 的測試驗證，本腳本不實作 HMAC。[假設] 這裡的 accepted 指金鑰步驟與儲存解碼器層級（無 GPU）；完整管線（含擴散生成）的下游表現不在本表範圍。"
+}
