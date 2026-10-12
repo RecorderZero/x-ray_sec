@@ -817,3 +817,40 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * AF-025 的處置方向待使用者裁決。
 * G1（10/18）：Week 2 baseline evidence 檢視。之後進入 Week 3 D5（key pipeline、HKDF、CSPRNG、nonce、container、HMAC；AF-024/AF-030）。
 * 尚未處理（屬 D5/D6/D7）：AF-024 HMAC 涵蓋 lo/hi、AF-030 CSPRNG 金鑰材料、AF-025 處置與 D7 結構探測。
+
+## 2026-10-13 · W2 · Track A · AF-033～AF-036 修復
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：A4.2（scorer）、A4.4、A4.5、P4.1。
+* 回應稽核：AUD-20261012-05 的 AF-033、AF-034、AF-035、AF-036；並落實該輪 §2 使用者裁決（AF-025 依 S2a/S2 於 D7 決定，前作部署欄為 legacy）。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-033] 已修正（待複驗）｜commit `a5b8896`｜`scripts/a4_t2wb_gallery.py` 新增尺度不變 scorer `abs_unit`／`sorted_abs_unit`（特徵先除自身 L2 norm）；選擇規則以 dev_v1.1 凍結；`reports/t2wb_protocol.md` §3 記錄規則與 dev 證據；重跑 formal A4.2。
+* [AF-035] 已修正（待複驗）｜commit `b1423f2`｜`scripts/a4_4_cpa.py` 新增 1 次查詢攻擊（d=4096 與 d=65536，fresh max-abs 0）、執行 `attack/verify_cpa.py` 作 structured_transform_reference、deviation_from_workflow 說明、修 f-string、補 provenance。
+* [AF-036] 已修正（待複驗）｜commits `3208e8d`、`764b432`｜`a4_5_tamper.py` 補 legacy 存檔竄改列；`a4_3/a4_5` 補 git_dirty 與 imported_project_modules；新增 `scripts/a4_5_deployment_tamper.py`（GPU managed run `A4.5_DEPLOY_20261012T182847866867Z_acb4e5a1`）補部署路徑。
+* [AF-034] 已修正（待複驗）｜commit `341e319`｜`scripts/build_attack_package.py` headline 修正，C7 以 legacy 欄與尺度不變 scorer 為主、C8 移除 AF-025 已驗證框定。
+* 分工：AF-033／AF-034／部署路徑 GPU 由實作方；AF-035／AF-036 CPU 部分由 subagent（中途因用量上限中止），實作方重建驗證確定性與 provenance 後完成並 commit。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 測試 `66 passed`；`past/SourceCode` 未改動。
+* [事實] **A4.2 尺度不變 scorer（AF-033）**：選擇以 dev 凍結（尺度不變版一律 ≥ 原始：S1 legacy sorted 0.75→0.80、S0 legacy 0.40→0.50）。formal（security_v1，Top-1，legacy／range）：S1 sorted 0.465／0.995、S0 sorted 0.145／0.975；abs 與 norm 不變。
+* [更正] 先前「S1 sorted 0.19→0.975」把存檔效果誇大了，其中一部分是 scorer 弱點。更正後前作部署（legacy）下 S1 T2-WB 為 **0.465**，保存值域為 0.995，即 0.465→0.995。
+* [更正] AF-025 框定：依 AUD-20261012-05 §2 使用者裁決，**S0/S1 的存檔對比不作 AF-025 裁決依據**（前作部署本就不保存值域，對應 legacy 欄）；AF-025 的處置依 S2a/S2 於 D7 的跨存檔攻擊決定。先前 PROGRESS／attack package 寫「AF-025 得到 security_v1 正式驗證」在此更正。
+* [事實] **A4.4 CPA（AF-035）**：前作實際 CPA 成本為 **1 次查詢**（S0 全一向量讀 k；S1 相異明文讀 (k,π)），d=4096 與 d=65536 皆 fresh max-abs 0；另執行 WORKFLOW 指名的 `verify_cpa.py`（SOT-WHT，D=1024，重建 Q、unseen max-abs 3.6e-15）作參考。
+* [事實] **A4.5 tamper（AF-036）**：container/latent 層新增 legacy 存檔竄改（共 30 列，皆 accepted=True）；部署路徑（匿名影像→存檔→inversion→逆金鑰→生成）2 張亦 accepted=True、輸出有限且與未竄改不同——前作管線無任何驗證步驟。
+* [事實] A4.3–A4.5 結果檔已補 git_dirty 與 imported_project_modules；script_sha256 與 HEAD 一致、連跑兩次確定。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：AF-033～AF-036 的實作方驗收條件完成，狀態 `FIXED?`，待稽核複驗。AF-033 的尺度不變 scorer 已凍結供 D7.2 沿用。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 教訓：T2-WB 下攻擊者反推 latent 帶共用尺度偏差，magnitude scorer 必須尺度不變，否則低估前作部署的攻擊；此 scorer 已凍結，D7 評估 S2a/S2 時沿用。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。AF-025 框定與 scorer 選擇皆依使用者裁決與 dev 證據。
+
+### 7. 下一步
+* 請稽核方複驗 AF-033～AF-036。
+* G1（10/18）後進入 Week 3 D5（key pipeline、HKDF、CSPRNG、nonce、container、HMAC；AF-024/AF-030，CPU 為主）。
+* AF-025 的處置待 D7 S2a/S2 跨存檔攻擊結果與使用者裁決。
