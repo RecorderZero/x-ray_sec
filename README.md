@@ -25,10 +25,12 @@
 | `WORKFLOW.md` | 八週任務、子任務 ID、pass criteria 與交付項目。 |
 | `PROGRESS_summary.md` | 每週摘要（論文撰寫與討論用）：檔首為每週撰寫規範；每週列範圍與狀態、重點、結果分析、論文可用素材、決策、稽核狀態、限制與下週計畫。數字一律引用 `appendix/week<N>/` 的素材編號。 |
 | `PROGRESS.md` | 只增不改的實驗日誌；所有新條目使用最新七段式格式。 |
+| `CLAUDE.md` | 每個 session 自動載入的執行規則：角色與語言、subagent 自主、GPU >30 分鐘需使用者裁決、既有常規摘要。 |
 | `loop_engineering_spec.md` | loop、安全閘門、長任務狀態機、重試與 Git 規則。 |
 | `.gitignore` | 排除 dataset、checkpoint、cache、run-level/per-sample 大型輸出與 secrets。 |
 | `AUDIT.md` | 稽核方的 finding 與複驗紀錄；實作方唯讀，回覆追加於 `PROGRESS.md`。 |
 | `appendix/README.md` | 論文素材附錄規範：`week<N>/` 結構、`W<N>-F<k>`／`W<N>-T<k>` 編號、MANIFEST 欄位、產生方式與使用原則。 |
+| `paper_assets/attack_package/` | P4.1 攻擊素材包：`claims.csv`（11 claim × 表／圖／run ID）與 `index.md`。 |
 | `appendix/week1/` | Week 1 論文素材：6 張圖、10 張表與 `MANIFEST.csv`（含圖說草稿、建議用途、來源 SHA-256 與 run ID）；由 builder 產生，不手動編輯。 |
 | `audit/README.md` | 稽核程式與輸出索引；由稽核方維護。 |
 
@@ -62,6 +64,7 @@
 | `scripts/a4_5_tamper.py` | A4.5 tamper baseline：S0/S1 無完整性檢查，竄改 latent／儲存紀錄皆被接受並量化影響。 | A4.5。 |
 | `scripts/a4_t2wb_gallery.py` | A4.2：T2-WB magnitude／sorted-magnitude／norm gallery linkage（兩種存檔分欄、方案專屬解密正控制、shuffle 負控制、Wilson CI、Inconclusive 判定、AF-025 norm 校正與 lo/hi 旁道）。CPU，讀 E2.3 gallery 與 A4.1 query cache。 | A4.2 攻擊。 |
 | `scripts/a4_t2wb_inversion.py` | A4.1：從 security/dev E2.3 cache 生成 S0/S1 anonymous image，分別經 legacy PNG 與 range-preserving PNG 讀回後用目標模型 inversion；逐筆記錄 z_ano 對 zhat_ano 指標，並把 query latent cache 留在受控 run 目錄。 | 先以 `--limit` smoke；正式 N=200 必須由 `managed_run.py --validate-artifacts` 執行。 |
+| `scripts/build_attack_package.py` | P4.1：從已追蹤結果檔組 Track A 攻擊素材包（每 claim 對應表／圖／JSON／run ID；數字不手抄）。 | 攻擊章節 claim-evidence 對照。 |
 | `scripts/build_weekly_appendix.py` | 從已提交的結果檔產生 `appendix/week<N>/` 的圖、表與 MANIFEST；每週素材清單登記在 `WEEKS[<N>]`；重建須逐位元相同。 | 每週撰寫 `PROGRESS_summary.md` 前執行。 |
 | `scripts/output_guard.py` | AF-029：寫入 results/、paper_assets/、reports/、image/、appendix/ 的腳本共用；輸出檔已存在時預設拒絕，需 `--force` 才覆寫。 | 所有會寫追蹤檔的腳本啟動時。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
