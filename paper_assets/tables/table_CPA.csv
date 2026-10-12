@@ -1,3 +1,5 @@
-scheme,d,query_count,reconstructs_decryption_map,fresh_plaintext_max_abs_error,fixed_key_premise
-S0,4096,4096,True,0.0,True
-S1,4096,4096,True,0.0,True
+scheme,d,query_count,query_count_minimal,reconstructs_decryption_map,fresh_plaintext_max_abs_error,minimal_attack_fresh_plaintext_max_abs_error,key_source,fixed_key_premise
+S0,4096,4096,1,True,0.0,0.0,seed_key_oracle_d4096,True
+S1,4096,4096,1,True,0.0,0.0,seed_key_oracle_d4096,True
+S0,65536,65536,1,True,0.0,0.0,predecessor_legacy_key_d65536,True
+S1,65536,65536,1,True,0.0,0.0,predecessor_legacy_key_d65536,True

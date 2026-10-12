@@ -1,12 +1,37 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "task_id": "A4.4",
-  "created_at": "2026-10-12T13:52:42.399186+00:00",
+  "created_at": "2026-10-12T18:27:26.668741+00:00",
   "command": "scripts/run_cfg_ddim.sh python -m scripts.a4_4_cpa",
-  "script_sha256": "0fc4425254194f3c4763791f07dfca4947644b6afafb11f9234cd4709beccf48",
-  "git_commit": "859dc8ea1438ca3c34c7a3012c620a82abf671e3",
+  "script_sha256": "f5c5fae33937f2bb77e3ebc54ffff9291588f535807efe5f06b1a48a73b08d3f",
+  "git_commit": "a5b8896ac4a15e3678cfe0e5313aae0162d376d2",
+  "git_dirty_tracked_files": [
+    "M paper_assets/attack_package/claims.csv",
+    " M paper_assets/attack_package/index.md",
+    " M paper_assets/tables/table_CPA.csv",
+    " M paper_assets/tables/table_tamper_baseline.csv",
+    " M results/A4.3.json",
+    " M results/A4.4.json",
+    " M results/A4.5.json",
+    " M scripts/a4_3_kpa.py",
+    " M scripts/a4_4_cpa.py",
+    " M scripts/a4_5_tamper.py",
+    " M scripts/build_attack_package.py"
+  ],
+  "git_dirty": true,
+  "imported_project_modules": {
+    "past/SourceCode/guided_diffusion/anonymization.py": "5e71401a648a734979432ccf07d92deae02387352ad9ac00a33a89d9d8f38bb1",
+    "scripts/a4_4_cpa.py": "f5c5fae33937f2bb77e3ebc54ffff9291588f535807efe5f06b1a48a73b08d3f",
+    "scripts/artifact_schema.py": "fc5b86cd0914f641fe7950672d36a7d8ecb458b2d9d1cee07d4a0c350af49424",
+    "scripts/e1_ddim_runner.py": "6f994025a373b70c18e915bd03bf0183e77bc2146670158dfd004324cb8f1606",
+    "scripts/e2_legacy_wrapper.py": "309c293933ec92c91263249325df958911f4658c242f8bcc57d958d1659e54dc",
+    "scripts/env_guard.py": "03e0c9fe9f3af36754bd0023d0167b20fe1012fd4c2294badb4f25eeab951d30",
+    "scripts/managed_run.py": "a2c41efd1292487ef31d650c70c21d785058dcc8285e38c3bb04a956d18a1d63",
+    "scripts/output_guard.py": "329e7f887394b175715e1288bd505ef8f1d30337a21130cc53654f6aa84fc007",
+    "scripts/run_artifacts.py": "35616546c0fb63a43dc2dd8dad87235e3755c7e0494c5fbe1c39bf4f84b3a28c"
+  },
   "seed": 1911,
-  "seed_streams": "np.random.default_rng for np.random.SeedSequence(1911).spawn(8): streams 0-1 S0 / 2-3 S1; fresh plaintext = stream 0 of the scheme's pair",
+  "seed_streams": "np.random.default_rng for np.random.SeedSequence(1911).spawn(8): streams 0-1 S0 / 2-3 S1 (d=4096 full basis; fresh plaintext = stream 0 of the pair, also reused as the d=4096 1-query victim, drawn from a fresh generator); streams 4-5 S0 / 6-7 S1 (d=65536: first stream = fresh Gaussian victim of the 1-query attack, second = probe/victim of the full basis; the negative controls derive their victim from SeedSequence child of stream 4/6 seed)",
   "numpy_version": "1.23.0",
   "torch_version": "2.14.0+cu130",
   "python_version": "3.10.19",
@@ -17,11 +42,34 @@
     "real_latent_cache": "artifacts/runs/E2.3/E2.3_20261009T183736363217Z_84cf642a/latents.npy",
     "real_latent_cache_sha256": "195c20b3124af54c5dd40c644bae78af3144ae176204982c4c2f7b5effd69190",
     "real_latent_index_for_fresh_slice": 7,
-    "oracle": "predecessor DiffusionAnonymizer.anonymize_latent, mask full, margin 0, shape (1, 64, 64), key seeds 1911 (attack) / 2026 (wrong-key control); seeds never written to disk as key material"
+    "real_latent_index_for_d65536_victim": 0,
+    "oracle_d4096": "predecessor DiffusionAnonymizer.anonymize_latent, mask full, margin 0, shape (1, 64, 64), key seeds 1911 (attack) / 2026 (wrong-key control); seeds never written to disk as key material",
+    "oracle_d65536": "scripts.e2_legacy_wrapper.apply_legacy_key (predecessor password-derived key, full mask, shape (1,256,256)); full basis via a batched oracle checked bit-identical to it",
+    "structured_reference_script": "attack/verify_cpa.py"
   },
   "premise": "FIXED key across all chosen-plaintext queries (state of the predecessor: one shared key for all images)",
   "raw_key_material_recorded": false,
-  "dimension_note": "d=4096 run; d=65536 extends by linearity at 16x the query count (not executed)",
+  "dimension_note": "[事實] d=4096 與 d=65536 的 d 次基底查詢皆已執行；d=65536 的 1 次查詢攻擊已在前作真實金鑰上執行。S2 的 WHT 在 d=65536 未執行（[推定]）。",
+  "query_cost": {
+    "general_linear_map_upper_bound": "d basis queries",
+    "predecessor_S0_minimal": 1,
+    "predecessor_S1_minimal": 1,
+    "S0_crafted_plaintext": "all ones -> ciphertext = k",
+    "S1_crafted_plaintext": "v_i = i + 1 (pairwise distinct) -> P(k*v) reveals (pi, k)"
+  },
+  "deviation_from_workflow": "WORKFLOW A4.4 names attack/verify_cpa.py, which tests only the structured SOT-WHT transform (D=1024). This script is a new one that covers the predecessor's S0/S1 keys (diagonal and signed-permutation) and, unlike verify_cpa.py, reports the actual predecessor cost: ONE query at d=65536 (the d-query basis attack is the upper bound for a general linear map). verify_cpa.py is therefore also executed unchanged and recorded as `structured_transform_reference`.",
+  "structured_transform_reference": {
+    "script": "attack/verify_cpa.py",
+    "script_sha256": "49c8a55d3bd6e8e759be47e56acc4df0580f0d34447d07ee23dd3867310a1b55",
+    "transform": "SOT-WHT (R=2), the structured transform of WORKFLOW A4.4",
+    "D": 1024,
+    "query_count": 1024,
+    "full_Q_reconstructed_from_D_queries": true,
+    "unseen_plaintext_max_abs_error": 3.552713678800501e-15,
+    "single_query_k2_bit_agreement_one_round": 1.0,
+    "stdout_lines": 23,
+    "label": "[事實] 執行 verify_cpa.py 原檔（D=1024）；它不涵蓋前作 S0/S1，亦未於 d=65536 執行"
+  },
   "results": {
     "S0": {
       "scheme": "S0",
@@ -106,6 +154,128 @@
       }
     }
   },
+  "one_query_attack_d4096": {
+    "S0": {
+      "query_count": 1,
+      "d": 4096,
+      "entries_are_pm1": true,
+      "fresh_plaintext_max_abs_error": {
+        "fresh_gaussian": 0.0
+      },
+      "bit_exact": {
+        "fresh_gaussian": true
+      },
+      "recovered_positions_form_permutation": true
+    },
+    "S1": {
+      "query_count": 1,
+      "d": 4096,
+      "query_image_is_permutation_of_1_to_d": true,
+      "fresh_plaintext_max_abs_error": {
+        "fresh_gaussian": 0.0
+      },
+      "bit_exact": {
+        "fresh_gaussian": true
+      },
+      "recovered_positions_form_permutation": true
+    }
+  },
+  "one_query_attack_d65536": {
+    "S0": {
+      "query_count": 1,
+      "d": 65536,
+      "entries_are_pm1": true,
+      "fresh_plaintext_max_abs_error": {
+        "fresh_gaussian": 0.0,
+        "real_latent_index_0": 0.0
+      },
+      "bit_exact": {
+        "fresh_gaussian": true,
+        "real_latent_index_0": true
+      },
+      "recovered_positions_form_permutation": true
+    },
+    "S1": {
+      "query_count": 1,
+      "d": 65536,
+      "query_image_is_permutation_of_1_to_d": true,
+      "fresh_plaintext_max_abs_error": {
+        "fresh_gaussian": 0.0,
+        "real_latent_index_0": 0.0
+      },
+      "bit_exact": {
+        "fresh_gaussian": true,
+        "real_latent_index_0": true
+      },
+      "recovered_positions_form_permutation": true
+    }
+  },
+  "one_query_controls_d65536": {
+    "S0": {
+      "per_query_nonce": {
+        "max_abs_error": 8.933305740356445,
+        "coordinate_mismatch_fraction": 0.498291015625
+      },
+      "fixed_key_positive_control_bit_exact": true
+    },
+    "S1": {
+      "per_query_nonce": {
+        "max_abs_error": 5.908300161361694,
+        "coordinate_mismatch_fraction": 1.0
+      },
+      "fixed_key_positive_control_bit_exact": true,
+      "s1_all_ones_query_does_not_reveal_pi": {
+        "max_abs_error": 6.919334650039673,
+        "coordinate_mismatch_fraction": 0.9999542236328125
+      }
+    }
+  },
+  "full_basis_d65536": {
+    "S0": {
+      "d": 65536,
+      "shape": [
+        1,
+        256,
+        256
+      ],
+      "query_count": 65536,
+      "batched_oracle_bit_identical_to_apply_legacy_key": true,
+      "every_column_has_exactly_one_nonzero": true,
+      "signs_are_pm1": true,
+      "recovered_positions_form_permutation": true,
+      "recovered_map_is_identity_permutation": true,
+      "fresh_plaintext_max_abs_error": {
+        "fresh_gaussian": 0.0,
+        "real_latent_index_0": 0.0
+      },
+      "bit_exact": {
+        "fresh_gaussian": true,
+        "real_latent_index_0": true
+      }
+    },
+    "S1": {
+      "d": 65536,
+      "shape": [
+        1,
+        256,
+        256
+      ],
+      "query_count": 65536,
+      "batched_oracle_bit_identical_to_apply_legacy_key": true,
+      "every_column_has_exactly_one_nonzero": true,
+      "signs_are_pm1": true,
+      "recovered_positions_form_permutation": true,
+      "recovered_map_is_identity_permutation": false,
+      "fresh_plaintext_max_abs_error": {
+        "fresh_gaussian": 0.0,
+        "real_latent_index_0": 0.0
+      },
+      "bit_exact": {
+        "fresh_gaussian": true,
+        "real_latent_index_0": true
+      }
+    }
+  },
   "checks": {
     "S0_query_count_equals_d": true,
     "S0_map_is_signed_permutation": true,
@@ -114,6 +284,17 @@
     "S0_missing_query_breaks_reconstruction": true,
     "S0_wrong_key_not_decrypted": true,
     "S0_per_query_rekey_defeats_cpa": true,
+    "S0_one_query_d65536_query_count_is_1": true,
+    "S0_one_query_d65536_recovered_map_is_signed_permutation": true,
+    "S0_one_query_d65536_fresh_plaintext_max_abs_error_zero": true,
+    "S0_one_query_d65536_bit_exact": true,
+    "S0_one_query_d4096_bit_exact": true,
+    "S0_full_basis_d65536_query_count_equals_d": true,
+    "S0_full_basis_d65536_oracle_matches_official_helper": true,
+    "S0_full_basis_d65536_signed_permutation": true,
+    "S0_full_basis_d65536_fresh_plaintext_bit_exact": true,
+    "S0_one_query_fixed_key_positive_control_on_generic_oracle": true,
+    "S0_one_query_per_query_nonce_defeats_attack_d65536": true,
     "S1_query_count_equals_d": true,
     "S1_map_is_signed_permutation": true,
     "S1_reconstructs_decryption_map": true,
@@ -121,7 +302,22 @@
     "S1_missing_query_breaks_reconstruction": true,
     "S1_wrong_key_not_decrypted": true,
     "S1_per_query_rekey_defeats_cpa": true,
-    "S0_map_is_diagonal": true
+    "S1_one_query_d65536_query_count_is_1": true,
+    "S1_one_query_d65536_recovered_map_is_signed_permutation": true,
+    "S1_one_query_d65536_fresh_plaintext_max_abs_error_zero": true,
+    "S1_one_query_d65536_bit_exact": true,
+    "S1_one_query_d4096_bit_exact": true,
+    "S1_full_basis_d65536_query_count_equals_d": true,
+    "S1_full_basis_d65536_oracle_matches_official_helper": true,
+    "S1_full_basis_d65536_signed_permutation": true,
+    "S1_full_basis_d65536_fresh_plaintext_bit_exact": true,
+    "S1_one_query_fixed_key_positive_control_on_generic_oracle": true,
+    "S1_one_query_per_query_nonce_defeats_attack_d65536": true,
+    "S0_map_is_diagonal": true,
+    "S0_full_basis_d65536_map_is_diagonal": true,
+    "S1_full_basis_d65536_map_is_not_diagonal": true,
+    "S1_all_ones_query_does_not_reveal_pi": true,
+    "verify_cpa_reference_reconstructs_Q": true
   },
-  "conclusion": "[事實] 固定金鑰下 d 次選擇明文即可重建等價解密映射，不需金鑰：d=4096（latent 形狀 (1, 64, 64)），S0 與 S1 各以 4096 次基底向量查詢 e_i 讀出整個映射（S0 為對角 diag(k)；S1 每個 e_i 回傳單一 ±1 於位置 π⁻¹(i)，同時得到 π 與 k），重建的映射解密全新的隨機明文與全新的真實 latent 片段，最大絕對誤差為 0.0 與 0.0（bit-exact）。[事實] 這是線性映射的通性（S0 對角、S1 簽名置換、S2 的 WHT 皆然）：任何固定的 d×d 線性映射都可由 d 個基底查詢讀出，並以 M⁻¹ 解密；此攻擊的維度擴展到 d=65536 只需 16 倍查詢（本腳本未執行，屬由線性性推得）。[事實] 前提是明列的：同一把固定金鑰跨所有查詢（fixed_key_premise=True）。對照實驗中，少一次基底查詢會使該座標無法解密（誤差 {results['S0']['negative_control_missing_one_query']['max_abs_error']:.3f}／{results['S1']['negative_control_missing_one_query']['max_abs_error']:.3f}）；用金鑰 A 學到的映射解金鑰 B 的密文（S0 座標錯誤率 0.497、S1 1.000）、以及每次查詢皆換金鑰的 oracle（S0 錯誤率 0.506、S1 1.000）皆無法解密。[推定] 阻止 CPA 跨影像的是 per-image nonce（S2），固定 Q 的前提在此明列；若 S2 對每張影像使用新的 nonce 衍生變換，d 次查詢所學到的映射不可跨影像重用，但這需由 S2 的實作與 nonce 唯一性檢查另行驗證，本表僅驗證前作（固定金鑰）基線。"
+  "conclusion": "[事實] 前作 S0／S1 的實際 CPA 成本是 1 次查詢（本腳本在 d=65536、前作以密碼導出的真實金鑰上執行）：S0 查詢全 1 明文，密文即為整把符號金鑰 k；S1 查詢兩兩相異的明文（v_i=i+1），密文 P(k⊙v) 的數值給出 π、正負號給出 k。各 query_count=1，重建的映射解密全新的隨機明文與真實 E2.3 latent（索引 0），最大絕對誤差為 0.0 與 0.0（bit-exact；d=4096 的 seed 金鑰 oracle 上同樣 1 次查詢 bit-exact）。[事實] 一般線性映射的上界 d 次查詢也已執行：d=4096（形狀 (1, 64, 64)，seed 金鑰 oracle）與 d=65536（形狀 (1, 256, 256)，前作真實金鑰；批次 oracle 已核對與 apply_legacy_key 逐位元一致）各以 d 次基底向量 e_i 讀出整個映射（S0 為對角 diag(k)；S1 每個 e_i 回傳單一 ±1 於位置 π⁻¹(i)），解密全新明文的最大絕對誤差為 d=4096 時 0.0／0.0、d=65536 時 0.0／0.0。[事實] 對照 verify_cpa.py（WORKFLOW A4.4 指名；SOT-WHT R=2、D=1024）原檔已一併執行：D 次查詢重建 Q，對未查詢過的新明文最大絕對誤差 3.553e-15；它只涵蓋結構化變換，不涵蓋前作 S0／S1。[推定] 「任何固定線性映射皆可由 d 次基底查詢讀出」對 S2 的 WHT 在 d=65536 的情形由線性性推得，本腳本未在 d=65536 對 S2 執行（僅 D=1024 的 SOT-WHT 由 verify_cpa.py 驗證）。[事實] 前提是明列的：同一把固定金鑰跨所有查詢（fixed_key_premise=True）。對照實驗（d=4096）中，少一次基底查詢會使該座標無法解密（誤差 0.010／1.107）；用金鑰 A 學到的映射解金鑰 B 的密文（S0 座標錯誤率 0.497、S1 1.000）、以及每次查詢皆換金鑰的 oracle（S0 錯誤率 0.506、S1 1.000）皆無法解密；d=65536 的 1 次查詢攻擊遇到每次查詢換金鑰（per-query nonce）的 oracle 時，座標錯誤率 S0 0.498、S1 1.000；S1 若查詢全 1（非相異）則無法得到 π（座標錯誤率 1.000）。[推定] 阻止 CPA 跨影像的是 per-image nonce（S2），固定 Q 的前提在此明列；若 S2 對每張影像使用新的 nonce 衍生變換，所學到的映射不可跨影像重用，但這需由 S2 的實作與 nonce 唯一性檢查另行驗證，本表僅驗證前作（固定金鑰）基線。"
 }
