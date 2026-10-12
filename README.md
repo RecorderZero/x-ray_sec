@@ -57,6 +57,9 @@
 | `scripts/a3_bruteforce.py` | A3.2：縮小空間（2^20）暴力搜尋正控制，對 S0（合成 d=4096、真實 d=65536 預篩）與 S1（符號/置換拆開）各還原祕密 seed，含負控制與 2^32 外推。 | A3.2 brute-force 正控制。 |
 | `scripts/a3_keyspace_audit.py` | A3.1：從程式路徑證明 legacy 金鑰有效位元上界（S0 password 32、S1 password 64、整數 seed 模式 32），含 sha256[:4] 碰撞與整數 seed 低 32 位截斷的數值驗證。 | A3.1 金鑰空間稽核。 |
 | `scripts/a3_t1_gallery.py` | A3.4：T1（精確 latent）magnitude／sorted-magnitude／norm gallery linkage；P 正控制、shuffle 負控制；Top-1/5、mAP、CMC 與 bootstrap 95% CI。CPU，讀 E2.3 cache。 | A3.4 攻擊上限；A4 為其 T2-WB 版本。 |
+| `scripts/a4_3_kpa.py` | A4.3 KPA：S0 一對精確還原金鑰；S1 真實 latent 量值重複需 2 對（合成 d=4096 一對即可）；held-out 解密驗證。 | A4.3。 |
+| `scripts/a4_4_cpa.py` | A4.4 CPA：固定金鑰下 d 次基底查詢重建 S0/S1 解密映射，全新明文 max-abs 0；明列 fixed-Q 前提。 | A4.4。 |
+| `scripts/a4_5_tamper.py` | A4.5 tamper baseline：S0/S1 無完整性檢查，竄改 latent／儲存紀錄皆被接受並量化影響。 | A4.5。 |
 | `scripts/a4_t2wb_gallery.py` | A4.2：T2-WB magnitude／sorted-magnitude／norm gallery linkage（兩種存檔分欄、方案專屬解密正控制、shuffle 負控制、Wilson CI、Inconclusive 判定、AF-025 norm 校正與 lo/hi 旁道）。CPU，讀 E2.3 gallery 與 A4.1 query cache。 | A4.2 攻擊。 |
 | `scripts/a4_t2wb_inversion.py` | A4.1：從 security/dev E2.3 cache 生成 S0/S1 anonymous image，分別經 legacy PNG 與 range-preserving PNG 讀回後用目標模型 inversion；逐筆記錄 z_ano 對 zhat_ano 指標，並把 query latent cache 留在受控 run 目錄。 | 先以 `--limit` smoke；正式 N=200 必須由 `managed_run.py --validate-artifacts` 執行。 |
 | `scripts/build_weekly_appendix.py` | 從已提交的結果檔產生 `appendix/week<N>/` 的圖、表與 MANIFEST；每週素材清單登記在 `WEEKS[<N>]`；重建須逐位元相同。 | 每週撰寫 `PROGRESS_summary.md` 前執行。 |
@@ -96,6 +99,9 @@
 | `paper_assets/tables/table_keyspace.csv` | A3.1 主表：各 scheme／模式的 claim_bits、key_upper_bound_bits、seed_search_bits_separable、kpa_full_pair_search_bits（=0）、ciphertext_only_seed_search_bits 與 file:line 依據（AF-026）。 |
 | `results/A3.3.json` | A3.3 不變量數值：S0/S1 的幅值與 norm 最大差、S1 被置換座標比例、float32/64 norm 殘差與 negative control。 |
 | `results/A3.2.json` | A3.2 暴力搜尋結果：還原的 seed、候選數、負控制、拆開搜尋與吞吐外推（吞吐/牆鐘在 timing_nondeterministic）。 |
+| `results/A4.3.json`、`paper_assets/tables/table_KPA.csv` | A4.3 KPA 結果與控制。 |
+| `results/A4.4.json`、`paper_assets/tables/table_CPA.csv` | A4.4 CPA 結果與控制（每查詢換金鑰的 nonce 模擬）。 |
+| `results/A4.5.json`、`paper_assets/tables/table_tamper_baseline.csv` | A4.5 tamper baseline 結果。 |
 | `results/A3.4_T1_gallery.json` | A3.4 逐 scheme×scorer 的 Top-1/5、mAP、CI、CMC 與正負控制（security_v1 200 張，T1）。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `paper_assets/tables/table_baseline_correctness.csv` | E2.5 主表：P/S0/S1 × 23 項指標的平均、bootstrap 95% CI（B=10,000、seed 1911）、中位數與範圍。 |

@@ -1,0 +1,330 @@
+{
+  "schema_version": 1,
+  "task_id": "A4.3",
+  "created_at": "2026-10-12T13:52:38.023101+00:00",
+  "command": "scripts/run_cfg_ddim.sh python -m scripts.a4_3_kpa",
+  "script_sha256": "1ee6912ed09ad583eced8009173b81be4e05faf3d5d54a3d79b707500374e440",
+  "git_commit": "859dc8ea1438ca3c34c7a3012c620a82abf671e3",
+  "seed": 1911,
+  "seed_streams": "np.random.default_rng for each of np.random.SeedSequence(1911).spawn(8): stream 0 = S0 synthetic latents, 1 = S1 synthetic latents, 7 = wrong-key control",
+  "numpy_version": "1.23.0",
+  "torch_version": "2.14.0+cu130",
+  "python_version": "3.10.19",
+  "device": "cpu (CUDA_VISIBLE_DEVICES='' set before importing torch)",
+  "inputs": {
+    "predecessor_source": "past/SourceCode/guided_diffusion/anonymization.py",
+    "predecessor_source_sha256": "5e71401a648a734979432ccf07d92deae02387352ad9ac00a33a89d9d8f38bb1",
+    "real_latent_cache": "artifacts/runs/E2.3/E2.3_20261009T183736363217Z_84cf642a/latents.npy",
+    "real_latent_cache_sha256": "195c20b3124af54c5dd40c644bae78af3144ae176204982c4c2f7b5effd69190",
+    "real_target_latent_indices": [
+      0,
+      1,
+      2
+    ],
+    "pair_latent_index_rule": "target t uses latents t + 3*j (j=0..3) as pairs",
+    "heldout_latent_index_rule": "t + 20",
+    "real_key": "legacy S0/S1 full-mask key (build_legacy_components, d=65536); key material compared in memory only, never written",
+    "synthetic_control": "N(0,1) float32, shape (1, 64, 64) (d=4096), key seed 1911 through the predecessor classes"
+  },
+  "premise": "one or more known (z, z_ano) pairs under ONE fixed key; held-out victim ciphertext made with the same key",
+  "raw_key_material_recorded": false,
+  "results": {
+    "S0_real": [
+      {
+        "latent_index": 0,
+        "heldout_latent_index": 20,
+        "pairs_used": 1,
+        "d": 65536,
+        "tied_magnitude_coords": 114,
+        "zero_coords": 0,
+        "key_exact_recovery": true,
+        "pair_reproduced_bit_exact": true,
+        "heldout_decrypt_bit_exact": true,
+        "heldout_cosine": 1.0000000000000002,
+        "heldout_mismatch_fraction": 0.0,
+        "heldout_decrypt_equals_legacy_deanonymize": true
+      },
+      {
+        "latent_index": 1,
+        "heldout_latent_index": 21,
+        "pairs_used": 1,
+        "d": 65536,
+        "tied_magnitude_coords": 150,
+        "zero_coords": 0,
+        "key_exact_recovery": true,
+        "pair_reproduced_bit_exact": true,
+        "heldout_decrypt_bit_exact": true,
+        "heldout_cosine": 1.0,
+        "heldout_mismatch_fraction": 0.0,
+        "heldout_decrypt_equals_legacy_deanonymize": true
+      },
+      {
+        "latent_index": 2,
+        "heldout_latent_index": 22,
+        "pairs_used": 1,
+        "d": 65536,
+        "tied_magnitude_coords": 144,
+        "zero_coords": 0,
+        "key_exact_recovery": true,
+        "pair_reproduced_bit_exact": true,
+        "heldout_decrypt_bit_exact": true,
+        "heldout_cosine": 1.0,
+        "heldout_mismatch_fraction": 0.0,
+        "heldout_decrypt_equals_legacy_deanonymize": true
+      }
+    ],
+    "S1_real": [
+      {
+        "latent_index": 0,
+        "pair_latent_indices": [
+          0,
+          3,
+          6,
+          9
+        ],
+        "heldout_latent_index": 20,
+        "d": 65536,
+        "distinct_magnitudes_single_latent": 65479,
+        "zero_coords": 0,
+        "series": [
+          {
+            "pairs_used": 1,
+            "tied_magnitude_coords": 114,
+            "coords_in_ambiguous_groups": 114,
+            "key_exact_recovery": false,
+            "permutation_mismatch_fraction": 0.000732421875,
+            "sign_mismatch_fraction": 0.000396728515625,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": false,
+            "heldout_mismatch_fraction": 0.000732421875,
+            "heldout_cosine": 0.9991761069414248,
+            "heldout_decrypt_equals_legacy_deanonymize": false
+          },
+          {
+            "pairs_used": 2,
+            "tied_magnitude_coords": 0,
+            "coords_in_ambiguous_groups": 0,
+            "key_exact_recovery": true,
+            "permutation_mismatch_fraction": 0.0,
+            "sign_mismatch_fraction": 0.0,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": true,
+            "heldout_mismatch_fraction": 0.0,
+            "heldout_cosine": 1.0000000000000002,
+            "heldout_decrypt_equals_legacy_deanonymize": true
+          },
+          {
+            "pairs_used": 3,
+            "tied_magnitude_coords": 0,
+            "coords_in_ambiguous_groups": 0,
+            "key_exact_recovery": true,
+            "permutation_mismatch_fraction": 0.0,
+            "sign_mismatch_fraction": 0.0,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": true,
+            "heldout_mismatch_fraction": 0.0,
+            "heldout_cosine": 1.0000000000000002,
+            "heldout_decrypt_equals_legacy_deanonymize": true
+          },
+          {
+            "pairs_used": 4,
+            "tied_magnitude_coords": 0,
+            "coords_in_ambiguous_groups": 0,
+            "key_exact_recovery": true,
+            "permutation_mismatch_fraction": 0.0,
+            "sign_mismatch_fraction": 0.0,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": true,
+            "heldout_mismatch_fraction": 0.0,
+            "heldout_cosine": 1.0000000000000002,
+            "heldout_decrypt_equals_legacy_deanonymize": true
+          }
+        ],
+        "minimal_pairs_for_exact_key": 2
+      },
+      {
+        "latent_index": 1,
+        "pair_latent_indices": [
+          1,
+          4,
+          7,
+          10
+        ],
+        "heldout_latent_index": 21,
+        "d": 65536,
+        "distinct_magnitudes_single_latent": 65461,
+        "zero_coords": 0,
+        "series": [
+          {
+            "pairs_used": 1,
+            "tied_magnitude_coords": 150,
+            "coords_in_ambiguous_groups": 150,
+            "key_exact_recovery": false,
+            "permutation_mismatch_fraction": 0.001068115234375,
+            "sign_mismatch_fraction": 0.00054931640625,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": false,
+            "heldout_mismatch_fraction": 0.001068115234375,
+            "heldout_cosine": 0.998896427749415,
+            "heldout_decrypt_equals_legacy_deanonymize": false
+          },
+          {
+            "pairs_used": 2,
+            "tied_magnitude_coords": 0,
+            "coords_in_ambiguous_groups": 0,
+            "key_exact_recovery": true,
+            "permutation_mismatch_fraction": 0.0,
+            "sign_mismatch_fraction": 0.0,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": true,
+            "heldout_mismatch_fraction": 0.0,
+            "heldout_cosine": 1.0,
+            "heldout_decrypt_equals_legacy_deanonymize": true
+          },
+          {
+            "pairs_used": 3,
+            "tied_magnitude_coords": 0,
+            "coords_in_ambiguous_groups": 0,
+            "key_exact_recovery": true,
+            "permutation_mismatch_fraction": 0.0,
+            "sign_mismatch_fraction": 0.0,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": true,
+            "heldout_mismatch_fraction": 0.0,
+            "heldout_cosine": 1.0,
+            "heldout_decrypt_equals_legacy_deanonymize": true
+          },
+          {
+            "pairs_used": 4,
+            "tied_magnitude_coords": 0,
+            "coords_in_ambiguous_groups": 0,
+            "key_exact_recovery": true,
+            "permutation_mismatch_fraction": 0.0,
+            "sign_mismatch_fraction": 0.0,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": true,
+            "heldout_mismatch_fraction": 0.0,
+            "heldout_cosine": 1.0,
+            "heldout_decrypt_equals_legacy_deanonymize": true
+          }
+        ],
+        "minimal_pairs_for_exact_key": 2
+      },
+      {
+        "latent_index": 2,
+        "pair_latent_indices": [
+          2,
+          5,
+          8,
+          11
+        ],
+        "heldout_latent_index": 22,
+        "d": 65536,
+        "distinct_magnitudes_single_latent": 65464,
+        "zero_coords": 0,
+        "series": [
+          {
+            "pairs_used": 1,
+            "tied_magnitude_coords": 144,
+            "coords_in_ambiguous_groups": 144,
+            "key_exact_recovery": false,
+            "permutation_mismatch_fraction": 0.00091552734375,
+            "sign_mismatch_fraction": 0.0006103515625,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": false,
+            "heldout_mismatch_fraction": 0.00091552734375,
+            "heldout_cosine": 0.9990244412122946,
+            "heldout_decrypt_equals_legacy_deanonymize": false
+          },
+          {
+            "pairs_used": 2,
+            "tied_magnitude_coords": 0,
+            "coords_in_ambiguous_groups": 0,
+            "key_exact_recovery": true,
+            "permutation_mismatch_fraction": 0.0,
+            "sign_mismatch_fraction": 0.0,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": true,
+            "heldout_mismatch_fraction": 0.0,
+            "heldout_cosine": 1.0,
+            "heldout_decrypt_equals_legacy_deanonymize": true
+          },
+          {
+            "pairs_used": 3,
+            "tied_magnitude_coords": 0,
+            "coords_in_ambiguous_groups": 0,
+            "key_exact_recovery": true,
+            "permutation_mismatch_fraction": 0.0,
+            "sign_mismatch_fraction": 0.0,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": true,
+            "heldout_mismatch_fraction": 0.0,
+            "heldout_cosine": 1.0,
+            "heldout_decrypt_equals_legacy_deanonymize": true
+          },
+          {
+            "pairs_used": 4,
+            "tied_magnitude_coords": 0,
+            "coords_in_ambiguous_groups": 0,
+            "key_exact_recovery": true,
+            "permutation_mismatch_fraction": 0.0,
+            "sign_mismatch_fraction": 0.0,
+            "known_pair_reproduced_bit_exact": true,
+            "heldout_decrypt_bit_exact": true,
+            "heldout_mismatch_fraction": 0.0,
+            "heldout_cosine": 1.0,
+            "heldout_decrypt_equals_legacy_deanonymize": true
+          }
+        ],
+        "minimal_pairs_for_exact_key": 2
+      }
+    ],
+    "S0_synthetic_d4096": {
+      "scheme": "S0",
+      "d": 4096,
+      "pairs_used": 1,
+      "distinct_magnitudes": 4096,
+      "tied_magnitude_coords": 0,
+      "coords_in_ambiguous_groups": 0,
+      "key_exact_recovery": true,
+      "heldout_decrypt_bit_exact": true,
+      "heldout_mismatch_fraction": 0.0,
+      "heldout_decrypt_equals_legacy_class_inverse": true
+    },
+    "S1_synthetic_d4096": {
+      "scheme": "S1",
+      "d": 4096,
+      "pairs_used": 1,
+      "distinct_magnitudes": 4096,
+      "tied_magnitude_coords": 0,
+      "coords_in_ambiguous_groups": 0,
+      "key_exact_recovery": true,
+      "heldout_decrypt_bit_exact": true,
+      "heldout_mismatch_fraction": 0.0,
+      "heldout_decrypt_equals_legacy_class_inverse": true
+    },
+    "negative_control_wrong_key_S0": {
+      "key_B_sign_agreement_with_recovered_key": 0.498687744140625,
+      "heldout_decrypt_bit_exact_under_key_B": false,
+      "heldout_cosine_under_key_B": -0.004143218455231429
+    }
+  },
+  "checks": {
+    "S0_real_key_exact_all": true,
+    "S0_real_heldout_decrypt_bit_exact_all": true,
+    "S0_real_equals_legacy_deanonymize_all": true,
+    "S0_synthetic_exact_and_heldout_bit_exact": true,
+    "S1_synthetic_distinct_magnitudes_precondition": true,
+    "S1_synthetic_exact_and_heldout_bit_exact": true,
+    "S1_synthetic_equals_class_inverse": true,
+    "S1_attack_model_matches_predecessor_apply": true,
+    "S1_real_single_pair_reproduces_known_pair": true,
+    "S1_real_ties_present_so_single_pair_is_ambiguous": true,
+    "S1_real_multi_pair_resolves_ties_exactly": true,
+    "S1_real_multi_pair_heldout_bit_exact": true,
+    "S1_real_equals_legacy_deanonymize_when_exact": true,
+    "negative_control_wrong_key_not_decrypted": true,
+    "no_zero_plaintext_coordinates": true
+  },
+  "conclusion": "[事實] S0：僅需 1 對已知 (z, z_ano)，k_hat = sign(z_ano)·sign(z) 在 3 張真實 latent（d=65536）與 d=4096 合成對照上皆與金鑰逐位元相同，並可逐位元精確解開另一張未見影像的密文（held-out 解密 bit-exact，且與前作 deanonymize 路徑一致）。[事實] S1 在 d=4096、量值互異的合成 latent 上，1 對即可由量值排序＋符號精確還原 (k, π)，held-out 解密 bit-exact。[事實] 真實 float32 latent（d=65536）的量值有重複：每張有 114–150 個座標落在重複量值群組內；單對時 π 在群組內無法唯一決定，3 張中 key_exact_recovery 皆為 False，held-out 解密不 bit-exact，錯位座標比例 7.32e-04–1.07e-03（已知的那一對本身仍被精確重現）。[事實] 於同一金鑰下再加已知對可拆開重複群組：此 3 個目標分別需 [2, 2, 2] 對即還原完整 (k, π)，之後 held-out 解密 bit-exact。[推定] 單對殘差只由浮點量值重複造成，非 S1 的安全性來源；A3.2 E4 已示範在縮小 seed 空間以種子搜尋可解決同樣歧義（還原 (k, π) 後逐一搜尋 sign/perm seed），且前作全部影像共用一把金鑰，攻擊者本就能取得多對。[假設] 此處『多對』假設攻擊者持有同一金鑰下的多組 (z, z_ano)；若僅有一對且不做 seed 搜尋，S1 在真實 latent 上只能得到近似而非精確的金鑰。"
+}
