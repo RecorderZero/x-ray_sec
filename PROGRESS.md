@@ -705,3 +705,40 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 請稽核方複驗 AF-028(4)、AF-031、AF-032。
 * 尚未處理（屬後續週次）：AF-024 剩 HMAC 涵蓋 lo/hi（D5）、AF-025 兩欄存檔與 norm/lo-hi 旁道（A4／D7）、AF-030 S2 金鑰材料不得經短 seed／非密碼學 PRNG（D5／D6）。
 * 進入 A4：T2-WB inversion、magnitude gallery（兩種存檔分欄、加 norm-only 與 lo/hi 旁道）、KPA、CPA、tamper baseline。
+
+
+## 2026-10-12 · W2 · Track A · A4.1 T2-WB inversion 啟動
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：A4.1；同時把 AF-025 對 A4.2 的 norm 校正與 lo/hi 旁道規格凍結，避免正式資料 schema 返工。
+* 工程硬閘門：目標 checkpoint 與 E2.3 cache hash 一致；S0/S1 × legacy/range-preserving 兩種存檔逐筆 finite；query cache shape/hash 可重讀；managed artifact validation 通過。
+* 證據硬閘門：security_v1 N=200、batch 1、guidance −1、逐筆 cosine/MSE/RMSE/MaxAbs/bit-exact/norm ratio、storage metadata、run/config/source/checkpoint/cache hash 齊全。科學數值不作通過門檻。
+
+### 2. 執行動作 (Actions Taken)
+* commit `ed60420`：新增 `scripts/a4_t2wb_inversion.py` 與 3 項單元測試；更新 WORKFLOW A4.1/A4.2、`reports/t2wb_protocol.md` AF-025 規則與 README 檔案地圖。
+* AF-025 protocol 凍結：dev_v1.1 只作 norm bias calibration、security_v1 只作 formal evaluation；legacy lo/hi=(0,1) 為常數控制；range metadata 公開；lo/hi linkage 必須有不同影像的 labeled anonymous enrollment，否則標 `not_evaluable`，不得把同一 record 當 enrollment。
+* GPU smoke：managed run `A4.1_SMOKE_20261012T083131186112Z_ba5005f8`，security_v1 第一張，4 rows，artifact validation valid。
+* 正式 run 已啟動：`A4.1_20261012T083425685874Z_3132fa49`，PID 1012036，`resumable=false`，由 managed runner 提供 heartbeat、task/GPU lock 與最終 artifact validation。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 相關測試 15 passed；完整既有套件共 61 tests，退出碼 0；staged-file safety guard 通過。
+* [事實] smoke 的 query cache shape=(4,1,256,256)，逐筆 hash 重讀一致，manifest `git_dirty=false`、commit=`ed60420`、checkpoint SHA-256=`3f61b80a…`。
+* [事實] 第一張影像：legacy/range-preserving 的 attacker latent cosine 為 S0 0.990227/0.999736、S1 0.989908/0.999754；RMSE 為 S0 0.13646/0.02247、S1 0.13884/0.02173。這只驗證 pipeline 與先前 dev 趨勢一致，不是正式科學結論。
+* [事實] smoke 約 47 秒/張；正式 N=200 預估約 2.6 小時，query cache 約 100 MiB；啟動前磁碟可用 712 GiB。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：A4.1 的 protocol/schema、runner、單元測試與 1-sample smoke 硬閘門通過。
+* [ ] **進行中 (In Progress)**：A4.1 formal N=200；完成並通過 artifact validation 前不得宣稱 A4.1 Achieved。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* range-preserving 讓合法端與攻擊端同時取得更準的 inversion；正式結果必須兩欄並列，安全結論以部署用 range-preserving 欄為準。
+* 本 runner 依規格明確標成不可續跑；若中斷，保留失敗 run，另建全新 run 以完全相同 config/split/seed 從頭重跑，並在 PROGRESS 記錄前一 run（不得誤稱 resume）。下一版長任務可把逐影像 checkpoint 與 managed progress API 納入共用 runner。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。A4.1/A4.2 的通過條件依 AF-025只增不減；lo/hi enrollment 前提另行明確化，避免把 T2-WB+enrollment 誤寫成純 T2-WB。
+
+### 7. 下一步
+* 監控正式 A4.1 run；成功後驗證 800 rows、query cache/hash、summary 與 `table_T2_WB_inversion.csv`，追加完成條目。
+* 再跑 dev_v1.1 N=20 calibration cache，之後實作 A4.2 gallery、方案專屬正控制、shuffle 負控制與 Inconclusive 判定。
+* 等待 GPU 時可進行 CPU 的 A4.3 KPA 與 A4.4 CPA，但各自維持原子 commit。
