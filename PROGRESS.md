@@ -742,3 +742,31 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 監控正式 A4.1 run；成功後驗證 800 rows、query cache/hash、summary 與 `table_T2_WB_inversion.csv`，追加完成條目。
 * 再跑 dev_v1.1 N=20 calibration cache，之後實作 A4.2 gallery、方案專屬正控制、shuffle 負控制與 Inconclusive 判定。
 * 等待 GPU 時可進行 CPU 的 A4.3 KPA 與 A4.4 CPA，但各自維持原子 commit。
+
+
+## 2026-10-12 · W2 · Track A · A4.1 formal 完成
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` A4.1：確認 security_v1 N=200 的 S0/S1 × legacy/range-preserving T2-WB inversion 正式結果完整且可供 A4.2 使用。
+
+### 2. 執行動作 (Actions Taken)
+* 驗證 managed run `A4.1_20261012T083425685874Z_3132fa49` 的 status、artifact schema、800 筆 per-sample、query index、query latent 逐筆 hash、summary 與正式表。
+* 獨立重算 `query_latents.npy` 800 筆 SHA-256，並核對 scheme/storage 各 200 筆、sample ID 唯一、所有指標 finite。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] status=succeeded、exit=0、artifact validation valid；query cache shape=(800,1,256,256)，檔案 SHA-256=`a8437677…`，逐筆 hash 800/800 一致。
+* [事實] 平均 attacker latent cosine（legacy/range）：S0 0.990040/0.999745；S1 0.989944/0.999767。平均 RMSE：S0 0.137581/0.022037；S1 0.138497/0.021071。
+* [事實] range-preserving 讓攻擊端 inversion 顯著更接近精確 ciphertext；是否足以提升 linkage 由 A4.2 實測，不在 A4.1 先下結論。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：A4.1 工程與證據硬閘門全部通過。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* AF-025 不在此時選保護方案；先以 dev-only calibration 與 formal A4.2 實測 norm/lo-hi 攻擊效果，再把效果量與處置選項交由使用者裁決。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。
+
+### 7. 下一步
+* 完成 dev_v1.1 calibration run，執行 A4.2；之後依序完成 A4.3 KPA、A4.4 CPA、A4.5 tamper baseline。
