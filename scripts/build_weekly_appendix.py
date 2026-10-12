@@ -280,6 +280,34 @@ def tab_inference_flow(out: Path, src: list[Path]) -> None:
                       "max": float(np.max([float(r[key]) for r in rows]))} for key in keys])
 
 
+# ---------------------------------------------------------------- week 2 tables
+def tab_invariants(out: Path, src: list[Path]) -> None:
+    """A3.3: the key-independent magnitude/norm invariants, one row per
+    scheme x input kind, with the worst-case difference over all inputs and a
+    negative control (magnitudes of a different latent)."""
+    data = json.loads(src[0].read_text(encoding="utf-8"))
+    summary = data["summary"]
+    neg = {(n["input_kind"], n["scheme"]): n for n in data["negative_controls"]}
+    rows = []
+    for kind in ("synthetic", "real"):
+        for scheme in ("S0", "S1"):
+            s = summary[f"{kind}_{scheme}"]
+            invariant = "|z| elementwise" if scheme == "S0" else "sorted |z|"
+            diff_key = "max_abs_elementwise_max_diff" if scheme == "S0" else "max_sorted_abs_max_diff"
+            control = neg[(kind, scheme)]
+            ctrl_diff = control["abs_elementwise_max_diff" if scheme == "S0" else "sorted_abs_max_diff"]
+            rows.append({
+                "input_kind": kind, "scheme": scheme, "n_inputs": s["n_inputs"],
+                "invariant": invariant,
+                "invariant_max_abs_diff": s[diff_key],
+                "norm_rel_diff_float64": s["max_norm_rel_diff_float64"],
+                "norm_rel_diff_float32_torch": s["max_norm_rel_diff_float32_torch"],
+                "roundtrip_max_abs_error": s["max_roundtrip_max_abs_error"],
+                "negctrl_invariant_max_abs_diff": ctrl_diff,
+            })
+    _write_csv(out, rows)
+
+
 # ---------------------------------------------------------------- registry
 WEEKS: dict[int, list[Item]] = {
     1: [
@@ -352,6 +380,67 @@ WEEKS: dict[int, list[Item]] = {
              "推論流程 smoke 的影像指標與 re-inversion cosine：共用雜訊 0.906 為樂觀上限，未知雜訊 0.371。",
              "0.906 不能當可逆性證據（AF-019）",
              ["results/E1.4_ddim_smoke.csv"], ["E1.4_20261009T153121667310Z_aa04e79c"], tab_inference_flow),
+    ],
+    2: [
+        # -------------------------------------------------------------- figures
+        Item("W2-F1", "figure", "W2-F1_T1_magnitude_cmc.png", "正文", "Results／T1 linkage",
+             "T1（精確 latent）magnitude gallery linkage 的 CMC 曲線（security_v1，200 查詢 × 200 gallery）。S0 以 |z|、S1 以 sorted|z| 的指定 scorer rank-1 即 1.00；random 基線 1/200。",
+             "前作的 |z|／sorted|z| 不變量讓無金鑰 T1 linkage 在精確 latent 下達 Top-1=1.00（A3.4）",
+             ["image/A3.4_T1_cmc.png"], []),
+        Item("W2-F2", "figure", "W2-F2_attack_overview.png", "正文", "Method／攻擊示意",
+             "攻擊面示意圖（固定 dev 病例）：原圖、S0／S1 匿名圖、以及同一人 vs 不同人的 sorted|z| 逐 rank 差（symlog）。說明幅值不變量如何提供無金鑰的鏈結線索。",
+             "視覺化 A3.3 不變量與 A3.4／A4.2 linkage 的攻擊構想（P3.1）",
+             ["image/P3.1_attack_overview.png"], []),
+        Item("W2-F3", "figure", "W2-F3_T2WB_magnitude_cmc.png", "正文", "Results／T2-WB linkage",
+             "T2-WB（重新反演匿名影像）magnitude gallery linkage 的 CMC（security_v1，200×200）。前作部署的 legacy PNG 下 S0 以 |z| rank-1=1.00、S1 以尺度不變 sorted|z| rank-1=0.465；range-preserving 參考欄 S1 達 0.995。",
+             "即便攻擊者只拿到匿名影像重新反演的近似 latent，magnitude linkage 仍遠高於隨機（A4.2、AF-033）",
+             ["image/A4.2_T2WB_cmc.png"],
+             ["A4.1_20261012T083425685874Z_3132fa49"]),
+        # -------------------------------------------------------------- tables
+        Item("W2-T1", "table", "W2-T1_keyspace.csv", "正文", "Results／金鑰空間",
+             "前作有效金鑰空間審計：S0 金鑰上界 32 bits、S1 64 bits（password 模式兩獨立 32-bit 種子）；已知一對明密文的完整配對搜尋為 0 bits；唯密文 seed 搜尋 S0≈2^32、S1≈2^33。每列附前作程式行號與證據標記。",
+             "前作加密的有效金鑰遠小於其名目 keyspace，且已知明文時可直接讀出金鑰（A3.1、AF-026、AF-027）",
+             ["paper_assets/tables/table_keyspace.csv", "reports/keyspace_method_note.md"], []),
+        Item("W2-T2", "table", "W2-T2_invariants.csv", "正文", "Results／不變量",
+             "S0／S1 的金鑰無關不變量（A3.3，合成與真實 latent 各 5 筆）：S0 的 |z| 逐座標、S1 的 sorted|z| 皆逐位元相等（最大差 0.0）；||z|| float64 相對誤差 ≤8.02e-16、float32 ≤3.68e-07；逆運算 round-trip 誤差 0.0；負控制（不同 latent 幅值）差值明顯非零。",
+             "幅值／範數是金鑰無關的不變量，構成無金鑰攻擊面（A3.3）",
+             ["results/A3.3.json"],
+             [], tab_invariants),
+        Item("W2-T3", "table", "W2-T3_T1_magnitude_gallery.csv", "正文主表", "Results／T1 linkage",
+             "T1 magnitude gallery linkage 主表（security_v1，200×200）：P／S0／S1 × abs／sorted_abs／norm 的 Top-1（含 Wilson 95% CI）、Top-5、mAP、中位 rank 與 shuffle 負控制。W2-F1 的數值表。",
+             "精確 latent 下，除 S1+abs 外所有指定 scorer 皆 Top-1=1.00，負控制 ≤0.01（A3.4）",
+             ["paper_assets/tables/table_T1_magnitude.csv"], []),
+        Item("W2-T4", "table", "W2-T4_T2WB_inversion.csv", "附錄", "Results／T2-WB 保真度",
+             "T2-WB 攻擊者重新反演所得 latent 的保真度（security_v1，n=200，95% CI）：cosine、RMSE、max-abs、norm ratio、lowfreq32 cosine、|z| Pearson，兩種存檔欄並列。legacy PNG 下 cosine 0.990、range-preserving 0.9997。",
+             "量化 T2-WB 攻擊者能取得的 latent 品質，作為 magnitude linkage 的前提（A4.1）",
+             ["paper_assets/tables/table_T2_WB_inversion.csv"],
+             ["A4.1_20261012T083425685874Z_3132fa49"]),
+        Item("W2-T5", "table", "W2-T5_T2WB_magnitude_gallery.csv", "正文主表", "Results／T2-WB linkage",
+             "T2-WB magnitude gallery linkage 主表（security_v1，200×200）：S0／S1 × 6 種 scorer（含 AF-033 尺度不變 abs_unit／sorted_abs_unit）× 兩種存檔的 Top-1、Top-5、mAP、負控制、校正後 norm-only 與正控制判定。前作部署＝legacy，range 作參考。",
+             "T2-WB 下 S0 |z| Top-1=1.00、S1 尺度不變 sorted|z| legacy 0.465／range 0.995；校正 norm-only 僅 range 顯著（S0 0.255／S1 0.285）（A4.2、AF-033、AF-025）",
+             ["paper_assets/tables/table_T2_WB_magnitude.csv"],
+             ["A4.1_20261012T083425685874Z_3132fa49", "A4.1_DEV_CAL_20261012T133002259066Z_0fa671c3"]),
+        Item("W2-T6", "table", "W2-T6_KPA.csv", "正文", "Results／KPA",
+             "已知明文攻擊（A4.3，d=65536 真實 latent 3 筆 + d=4096 合成）：S0 單一對即逐位元還原金鑰並對 held-out 密文精確解密；S1 單一對因 float32 幅值重複（114–150 個並列座標）無法定序，兩對即精確還原。",
+             "S0 一對、S1 兩對已知明密文即可完整還原金鑰（A4.3）",
+             ["paper_assets/tables/table_KPA.csv"], []),
+        Item("W2-T7", "table", "W2-T7_CPA.csv", "正文", "Results／CPA",
+             "選擇明文攻擊（A4.4）：固定金鑰下，d=4096 全基底查詢可重建整個解密線性映射，但前作的逐座標結構使實際只需 1 次查詢；對全新明文的重建 max-abs 誤差 0.0（d=4096 與 d=65536 真實金鑰皆然）。",
+             "固定金鑰下單次查詢即可重建解密映射，對新明文零誤差（A4.4）",
+             ["paper_assets/tables/table_CPA.csv"], []),
+        Item("W2-T8", "table", "W2-T8_tamper_baseline.csv", "正文", "Results／完整性",
+             "竄改測試（A4.5，container／latent 層，S0／S1 × 5 種竄改 × 3 筆，共 30 列）：翻一個符號、加高斯雜訊、改存檔 hi、改存檔像素、legacy 存檔像素竄改，全部被接受（accepted=True），無任何拒絕。",
+             "前作沒有任何完整性檢查，所有竄改都被接受（A4.5，T4）",
+             ["paper_assets/tables/table_tamper_baseline.csv"], []),
+        Item("W2-T9", "table", "W2-T9_tamper_deployment.csv", "附錄", "Results／完整性",
+             "竄改測試（部署路徑）：匿名影像→legacy 存檔→DDIM 反演→逆金鑰→生成，翻一個存檔像素 +128。2 筆皆被接受、輸出有限、與未竄改部署不同（PSNR 49.8／53.5 dB）。補足 container/latent 層的端到端對照。",
+             "端到端部署路徑同樣接受竄改、無拒絕（A4.5、AF-036）",
+             ["paper_assets/tables/table_tamper_deployment.csv"],
+             ["A4.5_DEPLOY_20261012T182847866867Z_acb4e5a1"]),
+        Item("W2-T10", "table", "W2-T10_attack_package_claims.csv", "正文", "Method／攻擊素材包",
+             "Track A 攻擊素材包（P4.1）：11 條攻擊 claim 與其威脅模型、一句話、headline 數字、來源檔 SHA-256 與 run ID。數字由 scripts/build_attack_package.py 從已追蹤結果檔讀取，不手抄。",
+             "每條攻擊宣稱都對應可追溯的表、圖、result JSON 與 run ID（P4.1、AF-034）",
+             ["paper_assets/attack_package/claims.csv", "paper_assets/attack_package/index.md"], []),
     ],
 }
 

@@ -1,0 +1,12 @@
+scheme,d,latent_type,pairs_used,tied_magnitude_coords,exact_recovery,heldout_decrypt_bit_exact,latent_index,heldout_mismatch_fraction
+S0,65536,real,1,114,True,True,0,0
+S0,65536,real,1,150,True,True,1,0
+S0,65536,real,1,144,True,True,2,0
+S0,4096,synthetic,1,0,True,True,synthetic,0
+S1,65536,real,1,114,False,False,0,0.000732422
+S1,65536,real,2,0,True,True,0,0
+S1,65536,real,1,150,False,False,1,0.00106812
+S1,65536,real,2,0,True,True,1,0
+S1,65536,real,1,144,False,False,2,0.000915527
+S1,65536,real,2,0,True,True,2,0
+S1,4096,synthetic,1,0,True,True,synthetic,0

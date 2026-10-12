@@ -1,0 +1,5 @@
+input_kind,scheme,n_inputs,invariant,invariant_max_abs_diff,norm_rel_diff_float64,norm_rel_diff_float32_torch,roundtrip_max_abs_error,negctrl_invariant_max_abs_diff
+synthetic,S0,5,|z| elementwise,0.0,0.0,0.0,0.0,4.4511218667030334
+synthetic,S1,5,sorted |z|,0.0,6.645505342274775e-16,3.5677783943427405e-07,0.0,0.5336365699768066
+real,S0,5,|z| elementwise,0.0,0.0,0.0,0.0,4.257701218128204
+real,S1,5,sorted |z|,0.0,8.015617489673646e-16,3.6810929312156496e-07,0.0,0.24871349334716797

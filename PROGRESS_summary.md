@@ -175,3 +175,140 @@
 * A3.1–A3.4：前作金鑰空間、小空間暴力搜尋、S0/S1 不變量、T1 gallery linkage。
 * A4.1–A4.5：T2-WB inversion 與 magnitude gallery（兩種存檔欄，加測 norm-only 與 lo/hi 旁道）、KPA、CPA、tamper baseline。
 * P3.1、P4.1：攻擊示意圖與 M1 攻擊素材包。
+
+---
+
+## Week 2（2026-10-12～10-18）｜Track A 攻擊：金鑰空間、幅值不變量與 T1／T2-WB／KPA／CPA／tamper（A3、A4、P3、P4）
+
+### 2.1 範圍與狀態
+
+| 子任務 | 內容 | 稽核判定 | 主要 commit |
+|---|---|---|---|
+| A3.1 | 前作有效金鑰空間審計（上界 vs 攻擊工作量） | Achieved（AUD-20261012-03） | `0a1042e`、`39b290c` |
+| A3.2 | 小空間暴力搜尋＋唯密文可區分性 | Achieved（AUD-20261012-03） | `da7d940`、`deb1c3b`、`1ee1994` |
+| A3.3 | S0／S1 幅值與範數不變量量化 | Achieved（AUD-20261011-01） | `ab2a221` |
+| A3.4 | T1 精確 latent magnitude gallery linkage | Achieved（AUD-20261011-01） | `188eaf9`、`401c4e9` |
+| A4.1 | T2-WB inversion（匿名影像重新反演） | Achieved（AUD-20261012-05） | `ed60420`、`cd6ba7e`、`4eb26b0` |
+| A4.2 | T2-WB magnitude gallery（兩種存檔、norm 旁道） | Achieved（AUD-20261012-05／-13-01） | `859dc8e`、`a5b8896` |
+| A4.3 | 已知明文攻擊（KPA）還原金鑰 | Achieved（AUD-20261012-05） | `6213025` |
+| A4.4 | 選擇明文攻擊（CPA）重建解密映射 | Achieved（AUD-20261013-01） | `7b7b9b8`、`b1423f2` |
+| A4.5 | 竄改測試（container／latent 與部署路徑） | Achieved（AUD-20261013-01） | `9323734`、`3208e8d`、`764b432` |
+| P3.1 | 攻擊示意圖（固定 dev 病例） | Achieved（MINOR 殘留，AUD-20261012-04） | `91bf0ff`、`257160e`、`e8e1ac3` |
+| P4.1 | Track A 攻擊素材包（claim→證據） | Achieved（AUD-20261013-01） | `04a9025`、`341e319` |
+
+* **G1：稽核方判定可進入**（A3／A4 findings 全關閉，AUD-20261013-01）；正式 Gate 複驗排在 Week 3 初。
+* 本週涵蓋 A3–P4 工作：`188eaf9`（A3.4，10-10）起至 `9750d8f`（HEAD，10-13），其中 `f3df7d6` 為 Week 1 摘要 commit（A3 的程式在 Week 1 摘要前已先行提交）。
+
+### 2.2 本週重點
+
+1. `[事實]` **前作的有效金鑰遠小於名目空間。** S0 金鑰上界 32 bits、S1 64 bits（password 模式為兩組獨立 32-bit 種子）；但已知一對明密文時完整配對搜尋為 0 bits——加密是逐座標 `c = P(k⊙z)`，在 mask=1 的座標上 `k=sign(c⊙z)` 直接讀出（W2-T1）。唯密文 seed 搜尋也只有 S0≈2^32、S1≈2^33（W2-T1）。
+2. `[事實]` **幅值與範數是金鑰無關的不變量。** S0 的逐座標 |z|、S1 的 sorted|z| 在合成與真實 latent 上皆逐位元相等（最大差 0.0），||z|| 的 float64 相對誤差 ≤8.02e-16；負控制（不同 latent）差值明顯非零（W2-T2）。這直接構成無金鑰的鏈結攻擊面。
+3. `[事實]` **精確 latent（T1）下 magnitude linkage 達上限。** security_v1 200×200 gallery，S0 以 |z|、S1 以 sorted|z| 的 Top-1 皆 1.00，random 基線 1/200、shuffle 負控制 ≤0.01（W2-F1、W2-T3）。
+4. `[事實]` **只拿到匿名影像重新反演（T2-WB）仍可鏈結。** 前作實際部署的 legacy PNG 下，S0 以 |z| Top-1=1.00、S1 以尺度不變 sorted|z| Top-1=0.465；range-preserving 參考欄 S1 升到 0.995（W2-F3、W2-T5）。攻擊者重新反演所得 latent 對原 latent cosine 為 legacy 0.990／range 0.9997（W2-T4）。
+5. `[事實]` **一對（S0）或兩對（S1）已知明文即可還原整把金鑰；固定金鑰下單次查詢即可重建解密映射。** KPA：S0 單一對逐位元還原並對 held-out 密文精確解密，S1 因 float32 幅值重複需兩對（W2-T6）；CPA：對全新明文的重建 max-abs 誤差 0.0（W2-T7）。
+6. `[事實]` **前作沒有任何完整性檢查。** container／latent 層 30 種竄改全部被接受（無拒絕），端到端部署路徑翻一個存檔像素同樣被接受且輸出有限（W2-T8、W2-T9）。
+7. `[結論]`（方法學）**尺度不變 scorer 是必要的（AF-033）。** 未正規化的 sorted_abs 受共用尺度偏差影響，會低估 S1 legacy 的可鏈結性（0.19）；改用除以自身 L2 範數的 sorted_abs_unit 後得到 0.465，且規則在 dev 上凍結、不看 formal（W2-T5）。
+
+### 2.3 實驗結果與分析
+
+#### (a) 金鑰空間與唯密文可區分性（A3.1、A3.2）
+
+* `[事實]` S0 金鑰由 `sha256(pw)[:4]` 產生的 32-bit 種子決定，S1 的符號與置換在 password 模式下來自兩組獨立 32-bit 種子（`+'_permutation'`），上界 64 bits；integer-seed 模式兩者共用一個 32-bit 種子（W2-T1，附前作行號）。
+* `[事實]` 唯密文下，單一密文 latent 對真實種子的分數遠高於錯誤種子：S0 的真實種子 37.0σ、S1 置換階段 14.6σ，相對錯誤候選 max ≤4.2σ（reduced space，W2-T1 basis）。全樣本檢查 E7：S0 200/200、S1 置換階段 199/200 security_v1 latent 超過 2^32 門檻（最弱 security_v1_0018）。
+* `[推定]` 外推到 2^32／2^33 個錯誤候選（Gaussian-tail）；此為外推，非逐一列舉（W2-T1）。
+* `[決定]` method note 與表格欄位區分「金鑰上界」與「攻擊工作量」，`kpa_full_pair_search_bits=0`（AF-026，AUD-20261012-03）。
+
+#### (b) 幅值不變量（A3.3）
+
+* `[事實]` S1 的逐座標幅值在 ≥0.99997 的座標被置換改變（幅值確實被打散），但 sorted|z| 仍逐位元相等；float32 範數相對誤差 ≤3.68e-07，以 `math.fsum` 計的平方和精確相等（W2-T2）。
+* `[推定]` 這些不變量不依賴金鑰，使無金鑰的幅值比對成為可行攻擊面；A3.4／A4.2 以 gallery 實測（W2-T2 conclusion）。
+
+#### (c) T1 精確 latent linkage（A3.4）
+
+![W2-F1](appendix/week2/figures/W2-F1_T1_magnitude_cmc.png)
+
+* `[事實]` P／S0／S1 在指定 scorer（S0=abs、S1=sorted_abs）下 Top-1=1.00、mAP=1.00、中位 rank 1；唯一例外是 S1+abs（未排序），Top-1=0.005 等同隨機，印證置換確實打散了逐座標幅值（W2-T3）。
+* `[事實]` norm-only 在 T1（精確 latent）下 P／S0／S1 皆 Top-1=1.00——精確 latent 的範數逐位元保存（W2-T3）。
+
+#### (d) T2-WB 重新反演 linkage（A4.1、A4.2）
+
+![W2-F3](appendix/week2/figures/W2-F3_T2WB_magnitude_cmc.png)
+
+| T2-WB Top-1（security_v1 200×200，指定 scorer） | legacy PNG（前作部署） | range-preserving PNG（參考） |
+|---|---|---|
+| S0（abs） | 1.000 [0.981, 1.000] | 1.000 [0.981, 1.000] |
+| S1（sorted_abs_unit，尺度不變） | 0.465 [0.397, 0.534] | 0.995 [0.972, 0.999] |
+| norm-only（校正後） | 不顯著 | S0 0.255／S1 0.285（attack_success） |
+
+（數值出自 W2-T5；校正 norm-only 以 dev 凍結的 norm bias 比例校正後比對。）
+
+* `[事實]` 攻擊者重新反演所得 latent 的保真度：legacy PNG cosine 0.990、|z| Pearson 0.975；range-preserving cosine 0.9997、Pearson 0.999（W2-T4）。存檔保存值域同時提高攻擊者的 latent 品質。
+* `[事實]` 校正後 norm-only 僅在 range-preserving 欄顯著（S0 0.255／S1 0.285），legacy 欄不顯著；S0／S1 在 legacy 欄的 norm-only 與正控制皆判 `linkage_not_significant_positive_control_passed`（W2-T5）。
+* `[決定]` 前作部署欄為 legacy PNG（不保存值域），range-preserving 僅作「存檔方式影響」參考；S0／S1 的保存 vs 不保存對比**不用來裁決 AF-025**，依據是 D7 的 S2a／S2 跨存檔攻擊（AUD-20261012-05）。
+
+#### (e) KPA／CPA（A4.3、A4.4）
+
+* `[事實]` KPA：d=65536 真實 latent，S0 單一對即逐位元還原金鑰、held-out 密文解密 bit-exact；S1 單一對因 114–150 個 float32 幅值並列座標無法定序（held-out 不匹配率 ~0.001），兩對即精確還原（W2-T6）。
+* `[事實]` CPA：固定金鑰前提下，d=4096 全基底查詢可重建整個解密線性映射；但前作逐座標結構使實際只需 1 次查詢，對全新明文 max-abs 誤差 0.0（d=4096 與 d=65536 真實金鑰皆然，W2-T7）。
+* `[決定]` CPA d=65536 改為實測、S2 的 WHT 推論標 `[推定]`；補負控制（金鑰 A 的映射解金鑰 B、per-query 換金鑰、S1 查全 1 無法得 π）（AF-035，AUD-20261013-01）。
+
+#### (f) 完整性（A4.5）
+
+* `[事實]` container／latent 層：S0／S1 × 5 種竄改（翻符號、高斯雜訊、改存檔 hi、改存檔像素、legacy 存檔像素）× 3 筆，共 30 列全部 accepted、無拒絕（W2-T8）。
+* `[事實]` 部署路徑：匿名影像→legacy 存檔→DDIM 反演→逆金鑰→生成，翻一個存檔像素 +128，2 筆皆 accepted、輸出有限、與未竄改部署不同（PSNR 49.8／53.5 dB，W2-T9）。
+* `[結論]` 前作沒有 nonce、沒有 MAC，無法偵測任何竄改（T4）。
+
+### 2.4 論文可用素材（`appendix/week2/`）
+
+| 編號 | 內容 | 建議用途 | 建議章節 |
+|---|---|---|---|
+| W2-F1 | T1 magnitude gallery CMC | 正文 | Results／T1 linkage |
+| W2-F2 | 攻擊示意圖（固定 dev 病例、幅值差 symlog） | 正文 | Method／攻擊示意 |
+| W2-F3 | T2-WB magnitude gallery CMC | 正文 | Results／T2-WB linkage |
+| W2-T1 | 前作有效金鑰空間審計 | 正文 | Results／金鑰空間 |
+| W2-T2 | S0／S1 幅值與範數不變量 | 正文 | Results／不變量 |
+| W2-T3 | T1 magnitude gallery 主表 | 正文主表 | Results |
+| W2-T4 | T2-WB 攻擊者 latent 保真度 | 附錄 | Results／T2-WB |
+| W2-T5 | T2-WB magnitude gallery 主表（含 norm 校正） | 正文主表 | Results |
+| W2-T6 | KPA 金鑰還原 | 正文 | Results／KPA |
+| W2-T7 | CPA 解密映射重建 | 正文 | Results／CPA |
+| W2-T8 | 竄改 baseline（container／latent） | 正文 | Results／完整性 |
+| W2-T9 | 竄改 deployment（端到端） | 附錄 | Results／完整性 |
+| W2-T10 | Track A 攻擊素材包 11 條 claim | 正文 | Method／攻擊素材包 |
+
+完整圖說草稿、來源 SHA-256 與 run ID 見 `appendix/week2/MANIFEST.csv`。
+
+### 2.5 決策紀錄
+
+| 日期 | 決定 | 出處 |
+|---|---|---|
+| 10-11 | `[決定]` AF-026 須在 A3.1 判 Achieved 前關閉；AF-027 須在 G1 前完成 | AUD-20261011-01 |
+| 10-11 | `[決定]` S1 唯密文可區分性以 reduced space 實驗佐證，外推標 `[推定]` | AUD-20261011-02 |
+| 10-12 | `[決定]`（實作方）開啟 subagent 可不逐次詢問；>30 分鐘 GPU 須先取得使用者 go／no-go | `CLAUDE.md`、[[working-rules]] |
+| 10-12 | `[決定]` T2-WB 指定 scorer 改用尺度不變版（abs_unit／sorted_abs_unit），規則在 dev 凍結 | AF-033 |
+| 10-12 | `[決定]` AF-025 處置改依 D7 的 S2a／S2 跨存檔攻擊結果與使用者裁決；S0／S1 對比不作依據 | AUD-20261012-05 |
+
+### 2.6 稽核狀態
+
+* 稽核輪次：AUD-20261011-01 至 AUD-20261013-01，共 10 輪。
+* 本週開立 finding：AF-026～AF-036 共 11 筆。
+* 已關閉：AF-026、AF-027、AF-028、AF-029、AF-031、AF-032、AF-033、AF-034、AF-035、AF-036（AUD-20261013-01 判 A3／A4 findings 全關閉）。
+* 仍開立（皆屬後續階段）：
+  * AF-024（MAJOR）：只剩 HMAC 涵蓋 lo/hi，排在 D5。
+  * AF-025（MAJOR）：處置依 D7 的 S2a／S2 跨存檔攻擊比較與使用者裁決。
+  * AF-030（MAJOR，SPEC）：S2 金鑰材料須直接由 CSPRNG 產生、password 模式用記憶體困難 KDF，排在 D5／D6。
+* `[結論]` 稽核方判定 A4.1–A4.5、P4.1 全部 Achieved，可進入 G1 與 Week 3 D5（AUD-20261013-01）。
+
+### 2.7 限制與未解問題
+
+* 唯密文 seed 搜尋的 2^32／2^33 工作量是 Gaussian-tail 外推，非逐一列舉（W2-T1）。
+* KPA／CPA 的 d=65536 結果各 3 筆真實 latent，屬診斷規模；主結論（S0 一對、S1 兩對、CPA 1 次查詢）在 d=4096 合成與 d=65536 真實上一致（W2-T6、W2-T7）。
+* T2-WB 的 range-preserving 欄是前作未採用的存檔方式，只作對照；AF-025 尚未裁決，須待 D7 的 S2a／S2 結果。
+* P3.1 圖仍有 MINOR 殘留（AF-028 第 4 點：第二列宜改畫同一人 z−S0／z−S1 恆為 0 的對照），不影響結論，於論文製圖時處理。
+* lo/hi 旁道在每病人單筆 record 下標 `not_evaluable`，需不同影像的具標籤 enrollment 才能評估。
+
+### 2.8 下週計畫（Week 3，10-19～10-25）
+
+* G1：Week 2 baseline 的正式 Gate 複驗。
+* D5：S2 金鑰管線（HKDF／CSPRNG、nonce、container、HMAC；對應 AF-024、AF-030）。
+* 準備 D6／D7：S2a／S2 的跨存檔（保存值域 vs 不保存）攻擊比較，作為 AF-025 的裁決依據。
