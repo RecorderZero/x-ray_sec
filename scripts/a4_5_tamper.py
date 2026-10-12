@@ -12,6 +12,14 @@ Tamper cases (z_ano = predecessor key applied to a real E2.3 latent, d = 65536):
   storage_range_hi     z_ano[0,0] stored as range_preserving_png/v1; the stored
                        `hi` bit pattern in the PNG text chunk is scaled by 1.05
   storage_pixel        same record, one quantized pixel changed (q -> q+128 mod 256)
+  legacy_storage_pixel the predecessor's own anonymous-image storage: per-image min-max uint8 PNG
+                       (as in scripts.e2_anonymization_runner.legacy_png_handoff), reloaded and
+                       min-max renormalised; one stored uint8 pixel changed (q -> q+128 mod 256).
+                       The legacy format carries no range metadata, so storage_range_hi has no analogue.
+
+Scope (AF-036): these are CONTAINER / LATENT-LEVEL tamper cases, because the predecessor has no MAC to
+reject anything.  The full deployment path (anonymous image -> store -> DDIM inversion -> inverse key ->
+generate) is not run here (no GPU); its rejection behaviour is covered separately by the main implementer.
 
 The storage cases are lossy (8 bit), so their clean reference is the recovery
 from the UNTAMPERED stored record; latent-level cases are compared with the
@@ -51,8 +59,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.env_guard import enforce_active_prefix  # noqa: E402
-from scripts.e1_ddim_runner import git_value, sha256_file  # noqa: E402
+from scripts.e1_ddim_runner import sha256_file  # noqa: E402
+from scripts.e2_anonymization_runner import legacy_png_handoff  # noqa: E402
 from scripts.e2_legacy_wrapper import apply_legacy_key  # noqa: E402
+from scripts.run_artifacts import git_value, imported_project_modules  # noqa: E402
 from scripts.m1_storage import (  # noqa: E402
     HI_KEY, LO_KEY, _f32_bits, _f32_from_bits,
     decode_range_preserving_png, encode_range_preserving_png,
@@ -77,7 +87,8 @@ LATENT_INDICES = (0, 1, 2)
 SCHEMES = ("S0", "S1")
 NOISE_SIGMA = 0.05
 HI_SCALE = 1.05
-CASES = ("flip_one_sign", "gaussian_noise", "storage_range_hi", "storage_pixel")
+CASES = ("flip_one_sign", "gaussian_noise", "storage_range_hi", "storage_pixel", "legacy_storage_pixel")
+LEGACY_CLEAN_REFERENCE = "untampered_legacy_store_then_decrypt"
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +138,31 @@ def rewrite_png(payload: bytes, hi_scale: float | None = None, pixel: tuple[int,
     return buffer.getvalue()
 
 
+def legacy_store_reload(plane: torch.Tensor, pixel: tuple[int, int] | None = None) -> tuple[torch.Tensor, dict]:
+    """Predecessor storage of one anonymous plane: per-image min-max -> uint8 PNG -> reload -> min-max again.
+
+    Mirrors ``legacy_png_handoff`` but goes through a real PNG container so that a stored pixel can be
+    tampered with.  ``plane`` has shape (1, 1, H, W).  Returns the reloaded tensor and bookkeeping.
+    """
+    low, high = plane.amin(), plane.amax()
+    q = ((plane - low) / (high - low) * 255).to(torch.uint8)[0, 0].numpy()
+    buffer = io.BytesIO()
+    Image.fromarray(q, mode="L").save(buffer, format="PNG")
+    payload = buffer.getvalue()
+    if pixel is not None:
+        with Image.open(io.BytesIO(payload)) as handle:
+            stored = np.array(handle, dtype=np.uint8)
+        stored[pixel] = np.uint8((int(stored[pixel]) + 128) % 256)
+        buffer = io.BytesIO()
+        Image.fromarray(stored, mode="L").save(buffer, format="PNG")
+        payload = buffer.getvalue()
+    with Image.open(io.BytesIO(payload)) as handle:
+        stored = np.array(handle, dtype=np.uint8)
+    reloaded = torch.from_numpy(stored).float()[None, None] / 255.0
+    r_low, r_high = reloaded.amin(), reloaded.amax()
+    return (reloaded - r_low) / (r_high - r_low), {"stored_min": int(stored.min()), "stored_max": int(stored.max())}
+
+
 def strip_range_text(payload: bytes) -> bytes:
     with Image.open(io.BytesIO(payload)) as handle:
         q = np.array(handle, dtype=np.uint8)
@@ -166,7 +202,8 @@ def predecessor_integrity_scan() -> dict:
     }
 
 
-def tamper_rows(cache, scheme: str, idx: int, rng: np.random.Generator) -> tuple[list[dict], dict]:
+def tamper_rows(cache, scheme: str, idx: int, rng: np.random.Generator,
+                legacy_rng: np.random.Generator) -> tuple[list[dict], dict]:
     z = torch.from_numpy(np.array(cache[idx], dtype=np.float32))[None]  # (1,1,256,256)
     z_ano = legacy(z, scheme, "anonymize")
     ok_clean, clean_rec, _ = run_inverse(z_ano, scheme)
@@ -217,11 +254,26 @@ def tamper_rows(cache, scheme: str, idx: int, rng: np.random.Generator) -> tuple
         add(case, decoded, stored_rec, "untampered_stored_record",
             {"record_png_sha256_matches_payload": hashlib.sha256(tampered_payload).hexdigest() == record["png_sha256"],
              "decoder_consults_record_sha256": False})
+
+    # (d) the predecessor's own min-max uint8 PNG storage of the same plane (separate rng stream so the
+    #     draws of the cases above are unchanged)
+    legacy_clean_in, clean_meta = legacy_store_reload(z_ano)
+    handoff_equal = bool(torch.equal(legacy_clean_in, legacy_png_handoff(z_ano)))
+    ok_lc, legacy_clean_rec, _ = run_inverse(legacy_clean_in, scheme)
+    assert ok_lc
+    lpx = (int(legacy_rng.integers(0, 256)), int(legacy_rng.integers(0, 256)))
+    legacy_tampered_in, tamper_meta = legacy_store_reload(z_ano, pixel=lpx)
+    renorm_unchanged = clean_meta == tamper_meta
+    add("legacy_storage_pixel", legacy_tampered_in, legacy_clean_rec, LEGACY_CLEAN_REFERENCE,
+        {"legacy_renormalisation_params_unchanged": renorm_unchanged,
+         "legacy_mirror_equals_legacy_png_handoff": handoff_equal})
     info = {
         "scheme": scheme, "latent_index": idx,
         "untampered_latent_round_trip_bit_exact": clean_round_trip_bit_exact,
         "untampered_storage_round_trip_vs_original_latent": lossy_vs_original,
+        "untampered_legacy_store_round_trip_vs_original_latent": metrics(legacy_clean_rec, z),
         "tampered_pixel_position": list(px),
+        "legacy_tampered_pixel_position": list(lpx),
     }
     return rows, info
 
@@ -240,13 +292,15 @@ def main() -> None:
 
     cache = np.load(LATENT_CACHE, mmap_mode="r")
     assert cache.shape == (200, 1, 256, 256) and cache.dtype == np.float32
-    rng = np.random.default_rng(np.random.SeedSequence(SEED).spawn(8)[0])
+    spawn = np.random.SeedSequence(SEED).spawn(8)
+    rng = np.random.default_rng(spawn[0])
+    legacy_rng = np.random.default_rng(spawn[1])
 
     rows: list[dict] = []
     controls: list[dict] = []
     for scheme in SCHEMES:
         for idx in LATENT_INDICES:
-            r, info = tamper_rows(cache, scheme, idx, rng)
+            r, info = tamper_rows(cache, scheme, idx, rng, legacy_rng)
             rows.extend(r)
             controls.append(info)
 
@@ -263,6 +317,7 @@ def main() -> None:
     scan = predecessor_integrity_scan()
     by_case = lambda c, s=None: [r for r in rows if r["tamper_case"] == c and (s is None or r["scheme"] == s)]  # noqa: E731
     flips = by_case("flip_one_sign")
+    legacy_rows = by_case("legacy_storage_pixel")
     checks = {
         "all_tamper_cases_accepted": all(r["accepted"] for r in rows),
         "tamper_row_count": len(rows) == len(SCHEMES) * len(LATENT_INDICES) * len(CASES),
@@ -275,6 +330,13 @@ def main() -> None:
         "predecessor_has_no_hmac_or_tag_verification": not scan["contains_hmac_text"] and not scan["contains_mac_or_tag_verification_text"],
         "decoder_ignores_record_sha256_on_modified_payload": all(
             r["record_png_sha256_matches_payload"] is False for r in rows if r["tamper_case"].startswith("storage_")),
+        "legacy_storage_rows_accepted": all(r["accepted"] for r in legacy_rows) and len(legacy_rows) == len(SCHEMES) * len(LATENT_INDICES),
+        "legacy_mirror_equals_legacy_png_handoff": all(r["legacy_mirror_equals_legacy_png_handoff"] for r in legacy_rows),
+        "legacy_pixel_changes_one_coordinate_when_renorm_unchanged": all(
+            r["n_changed_coordinates"] == 1 for r in legacy_rows if r["legacy_renormalisation_params_unchanged"]),
+        "legacy_pixel_max_abs_matches_128_over_255_when_renorm_unchanged": all(
+            abs(r["max_abs"] - 128 / 255) < 1e-6 for r in legacy_rows if r["legacy_renormalisation_params_unchanged"]),
+        "legacy_pixel_at_least_one_row_with_unchanged_renorm": any(r["legacy_renormalisation_params_unchanged"] for r in legacy_rows),
     }
     if not all(checks.values()):
         raise SystemExit(f"A4.5 checks failed: {[k for k, v in checks.items() if not v]}")
@@ -295,22 +357,37 @@ def main() -> None:
         f"加入 σ={NOISE_SIGMA} 高斯雜訊使 RMSE 約 {ranges['gaussian_noise']['rmse'][0]:.3g}–{ranges['gaussian_noise']['rmse'][1]:.3g}；"
         f"改動儲存紀錄中的 hi 值（x{HI_SCALE}）使 RMSE {ranges['storage_range_hi']['rmse'][0]:.3g}–{ranges['storage_range_hi']['rmse'][1]:.3g}；"
         f"改動單一儲存像素使 max_abs {ranges['storage_pixel']['max_abs'][0]:.3g}–{ranges['storage_pixel']['max_abs'][1]:.3g}。"
+        f"[事實] 前作自己的 legacy 存檔路徑（per-image min-max uint8 PNG，重載後再 min-max，與 legacy_png_handoff 逐位元一致）同樣沒有拒絕："
+        f"竄改單一已存 uint8 像素（q→q+128 mod 256）的 {len(legacy_rows)} 列全部 accepted=True（逆金鑰步驟照常執行、輸出有限），"
+        f"相對未竄改 legacy 存檔後解密（clean_reference）的 max_abs {ranges['legacy_storage_pixel']['max_abs'][0]:.3g}–{ranges['legacy_storage_pixel']['max_abs'][1]:.3g}"
+        f"（RMSE {ranges['legacy_storage_pixel']['rmse'][0]:.3g}–{ranges['legacy_storage_pixel']['rmse'][1]:.3g}；128/255={128/255:.4g}）；"
+        f"其中 {sum(r['legacy_renormalisation_params_unchanged'] for r in legacy_rows)}/{len(legacy_rows)} 列重載後的 min-max 參數不變，只改變 1 個座標。"
+        "legacy 格式不帶 lo/hi 元資料，故沒有 storage_range_hi 的對應案例。"
         "未竄改的 latent 層往返為 bit-exact（對照），且解碼器對格式錯誤的紀錄（缺少 lo/hi 文字）仍會拋例外，表示 accepted=False 在機制上可被觀察，"
         "而內容被竄改時卻沒有任何拒絕。靜態檢查：前作金鑰模組的資料路徑函式沒有 raise/assert，沒有 HMAC／認證字樣；其 verify_* 是持有原始 latent 的開發者自我測試，不是對儲存紀錄的驗證。"
         "[推定] S2 的 transform-then-MAC 會在驗證階段拒絕這些竄改（D5 實作、AF-024/AF-030），本表是無完整性保護的 baseline，S2 的拒絕行為需另以 D5 的測試驗證，本腳本不實作 HMAC。"
-        "[假設] 這裡的 accepted 指金鑰步驟與儲存解碼器層級（無 GPU）；完整管線（含擴散生成）的下游表現不在本表範圍。"
+        "[假設] 這裡的 accepted 指金鑰步驟與儲存解碼器層級（無 GPU）；完整管線（匿名影像→存檔→DDIM inversion→逆金鑰→生成）的拒絕行為不在本表範圍，"
+        "由主實作者另行涵蓋（scope=container_and_latent_level_tamper）。"
     )
 
+    status = git_value("status", "--porcelain", "--untracked-files=no")
     created_at = datetime.now(timezone.utc).isoformat()
     payload_json = {
-        "schema_version": 1,
+        "schema_version": 2,
         "task_id": TASK_ID,
         "created_at": created_at,
         "command": COMMAND,
         "script_sha256": sha256_file(SCRIPT_PATH),
         "git_commit": git_value("rev-parse", "HEAD"),
+        "git_dirty_tracked_files": status.splitlines(),
+        "git_dirty": bool(status),
+        "imported_project_modules": imported_project_modules(),
         "seed": SEED,
-        "seed_streams": "np.random.default_rng(np.random.SeedSequence(1911).spawn(8)[0]); draw order: scheme S0 then S1, latent 0,1,2; per latent: flipped coordinate, noise, pixel row/col",
+        "seed_streams": "np.random.default_rng(np.random.SeedSequence(1911).spawn(8)[0]); draw order: scheme S0 then S1, latent 0,1,2; per latent: flipped coordinate, noise, pixel row/col. spawn(8)[1] is a separate stream for the legacy-storage pixel row/col (same loop order)",
+        "scope": ("container_and_latent_level_tamper: the predecessor has no MAC, so tamper is applied to the stored latent / stored image "
+                  "container (range-preserving PNG and the legacy min-max uint8 PNG) and the legacy inverse-key step is run on the result. "
+                  "The full deployment path (anonymous image -> store -> DDIM inversion -> inverse key -> generate) is NOT run here "
+                  "(CPU only, no checkpoint); its rejection behaviour is covered separately by the main implementer."),
         "numpy_version": np.__version__,
         "torch_version": torch.__version__,
         "python_version": platform.python_version(),
@@ -323,6 +400,7 @@ def main() -> None:
             "latent_indices": list(LATENT_INDICES),
             "key": "legacy S0/S1 full-mask key via scripts.e2_legacy_wrapper.apply_legacy_key (d=65536); key material not written",
             "storage_protocol": "scripts.m1_storage range_preserving_png/v1",
+            "legacy_storage_protocol": "per-image min-max -> uint8 PNG -> reload /255 -> min-max (scripts.e2_anonymization_runner.legacy_png_handoff), clean_reference = untampered legacy store then legacy inverse key",
             "noise_sigma": NOISE_SIGMA, "hi_scale": HI_SCALE,
         },
         "raw_key_material_recorded": False,

@@ -43,7 +43,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.env_guard import enforce_active_prefix  # noqa: E402
-from scripts.e1_ddim_runner import git_value, sha256_file  # noqa: E402
+from scripts.e1_ddim_runner import sha256_file  # noqa: E402
+from scripts.run_artifacts import git_value, imported_project_modules  # noqa: E402
 from scripts.e2_legacy_wrapper import apply_legacy_key, build_legacy_components  # noqa: E402
 from scripts.output_guard import add_force_flag, refuse_overwrite  # noqa: E402
 
@@ -361,14 +362,18 @@ def main() -> None:
         "[假設] 此處『多對』假設攻擊者持有同一金鑰下的多組 (z, z_ano)；若僅有一對且不做 seed 搜尋，S1 在真實 latent 上只能得到近似而非精確的金鑰。"
     )
 
+    status = git_value("status", "--porcelain", "--untracked-files=no")
     created_at = datetime.now(timezone.utc).isoformat()
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "task_id": TASK_ID,
         "created_at": created_at,
         "command": COMMAND,
         "script_sha256": sha256_file(SCRIPT_PATH),
         "git_commit": git_value("rev-parse", "HEAD"),
+        "git_dirty_tracked_files": status.splitlines(),
+        "git_dirty": bool(status),
+        "imported_project_modules": imported_project_modules(),
         "seed": SEED,
         "seed_streams": "np.random.default_rng for each of np.random.SeedSequence(1911).spawn(8): stream 0 = S0 synthetic latents, 1 = S1 synthetic latents, 7 = wrong-key control",
         "numpy_version": np.__version__,

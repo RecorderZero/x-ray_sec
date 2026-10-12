@@ -1,12 +1,40 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "task_id": "A4.5",
-  "created_at": "2026-10-12T13:52:44.707223+00:00",
+  "created_at": "2026-10-12T18:27:29.008542+00:00",
   "command": "scripts/run_cfg_ddim.sh python -m scripts.a4_5_tamper",
-  "script_sha256": "05aec8e258574dcef699f4ca15e5455c81aabab7d26177e1999da4c7ac2635ec",
-  "git_commit": "859dc8ea1438ca3c34c7a3012c620a82abf671e3",
+  "script_sha256": "c92fa62e76af0c0a48e443552c429979c2138835cca32be6e602c494302d6282",
+  "git_commit": "a5b8896ac4a15e3678cfe0e5313aae0162d376d2",
+  "git_dirty_tracked_files": [
+    "M paper_assets/attack_package/claims.csv",
+    " M paper_assets/attack_package/index.md",
+    " M paper_assets/tables/table_CPA.csv",
+    " M paper_assets/tables/table_tamper_baseline.csv",
+    " M results/A4.3.json",
+    " M results/A4.4.json",
+    " M results/A4.5.json",
+    " M scripts/a4_3_kpa.py",
+    " M scripts/a4_4_cpa.py",
+    " M scripts/a4_5_tamper.py",
+    " M scripts/build_attack_package.py"
+  ],
+  "git_dirty": true,
+  "imported_project_modules": {
+    "past/SourceCode/guided_diffusion/anonymization.py": "5e71401a648a734979432ccf07d92deae02387352ad9ac00a33a89d9d8f38bb1",
+    "scripts/a4_5_tamper.py": "c92fa62e76af0c0a48e443552c429979c2138835cca32be6e602c494302d6282",
+    "scripts/artifact_schema.py": "fc5b86cd0914f641fe7950672d36a7d8ecb458b2d9d1cee07d4a0c350af49424",
+    "scripts/e1_ddim_runner.py": "6f994025a373b70c18e915bd03bf0183e77bc2146670158dfd004324cb8f1606",
+    "scripts/e2_anonymization_runner.py": "1d0006b375c2d1a8437af765176f9bdb792bc4e30a510da807ee9c4a4fb26613",
+    "scripts/e2_legacy_wrapper.py": "309c293933ec92c91263249325df958911f4658c242f8bcc57d958d1659e54dc",
+    "scripts/env_guard.py": "03e0c9fe9f3af36754bd0023d0167b20fe1012fd4c2294badb4f25eeab951d30",
+    "scripts/m1_storage.py": "515f48e4120bdef67d456541998f8c96427701f2b5b1f1ef717dde1a0699d0fd",
+    "scripts/managed_run.py": "a2c41efd1292487ef31d650c70c21d785058dcc8285e38c3bb04a956d18a1d63",
+    "scripts/output_guard.py": "329e7f887394b175715e1288bd505ef8f1d30337a21130cc53654f6aa84fc007",
+    "scripts/run_artifacts.py": "35616546c0fb63a43dc2dd8dad87235e3755c7e0494c5fbe1c39bf4f84b3a28c"
+  },
   "seed": 1911,
-  "seed_streams": "np.random.default_rng(np.random.SeedSequence(1911).spawn(8)[0]); draw order: scheme S0 then S1, latent 0,1,2; per latent: flipped coordinate, noise, pixel row/col",
+  "seed_streams": "np.random.default_rng(np.random.SeedSequence(1911).spawn(8)[0]); draw order: scheme S0 then S1, latent 0,1,2; per latent: flipped coordinate, noise, pixel row/col. spawn(8)[1] is a separate stream for the legacy-storage pixel row/col (same loop order)",
+  "scope": "container_and_latent_level_tamper: the predecessor has no MAC, so tamper is applied to the stored latent / stored image container (range-preserving PNG and the legacy min-max uint8 PNG) and the legacy inverse-key step is run on the result. The full deployment path (anonymous image -> store -> DDIM inversion -> inverse key -> generate) is NOT run here (CPU only, no checkpoint); its rejection behaviour is covered separately by the main implementer.",
   "numpy_version": "1.23.0",
   "torch_version": "2.14.0+cu130",
   "python_version": "3.10.19",
@@ -23,6 +51,7 @@
     ],
     "key": "legacy S0/S1 full-mask key via scripts.e2_legacy_wrapper.apply_legacy_key (d=65536); key material not written",
     "storage_protocol": "scripts.m1_storage range_preserving_png/v1",
+    "legacy_storage_protocol": "per-image min-max -> uint8 PNG -> reload /255 -> min-max (scripts.e2_anonymization_runner.legacy_png_handoff), clean_reference = untampered legacy store then legacy inverse key",
     "noise_sigma": 0.05,
     "hi_scale": 1.05
   },
@@ -120,6 +149,20 @@
         4.487006664276123,
         4.982725620269775
       ]
+    },
+    "legacy_storage_pixel": {
+      "cosine": [
+        0.9999928401603221,
+        0.9999931012703814
+      ],
+      "rmse": [
+        0.0019607843132689595,
+        0.001960784415132366
+      ],
+      "max_abs": [
+        0.5019607841968536,
+        0.5019608102738857
+      ]
     }
   },
   "untampered_controls": [
@@ -133,9 +176,19 @@
         "max_abs": 0.01863868534564972,
         "n_changed_coordinates": 65534
       },
+      "untampered_legacy_store_round_trip_vs_original_latent": {
+        "cosine": 0.19859477615602236,
+        "rmse": 1.0044799945395613,
+        "max_abs": 4.846062660217285,
+        "n_changed_coordinates": 65536
+      },
       "tampered_pixel_position": [
         141,
         215
+      ],
+      "legacy_tampered_pixel_position": [
+        137,
+        195
       ]
     },
     {
@@ -148,9 +201,19 @@
         "max_abs": 0.019463717937469482,
         "n_changed_coordinates": 65535
       },
+      "untampered_legacy_store_round_trip_vs_original_latent": {
+        "cosine": 0.18222929944978028,
+        "rmse": 1.014799073675779,
+        "max_abs": 5.124922752380371,
+        "n_changed_coordinates": 65536
+      },
       "tampered_pixel_position": [
         43,
         17
+      ],
+      "legacy_tampered_pixel_position": [
+        72,
+        35
       ]
     },
     {
@@ -163,9 +226,19 @@
         "max_abs": 0.017526626586914062,
         "n_changed_coordinates": 65534
       },
+      "untampered_legacy_store_round_trip_vs_original_latent": {
+        "cosine": 0.20566417268344922,
+        "rmse": 1.0039026759916432,
+        "max_abs": 4.63515567779541,
+        "n_changed_coordinates": 65536
+      },
       "tampered_pixel_position": [
         23,
         78
+      ],
+      "legacy_tampered_pixel_position": [
+        12,
+        176
       ]
     },
     {
@@ -178,9 +251,19 @@
         "max_abs": 0.01863868534564972,
         "n_changed_coordinates": 65534
       },
+      "untampered_legacy_store_round_trip_vs_original_latent": {
+        "cosine": 0.19859477615602236,
+        "rmse": 1.0044799945395613,
+        "max_abs": 4.846062660217285,
+        "n_changed_coordinates": 65536
+      },
       "tampered_pixel_position": [
         99,
         203
+      ],
+      "legacy_tampered_pixel_position": [
+        151,
+        253
       ]
     },
     {
@@ -193,9 +276,19 @@
         "max_abs": 0.019463717937469482,
         "n_changed_coordinates": 65535
       },
+      "untampered_legacy_store_round_trip_vs_original_latent": {
+        "cosine": 0.18222929944978028,
+        "rmse": 1.014799073675779,
+        "max_abs": 5.124922752380371,
+        "n_changed_coordinates": 65536
+      },
       "tampered_pixel_position": [
         193,
         133
+      ],
+      "legacy_tampered_pixel_position": [
+        111,
+        17
       ]
     },
     {
@@ -208,9 +301,19 @@
         "max_abs": 0.017526626586914062,
         "n_changed_coordinates": 65534
       },
+      "untampered_legacy_store_round_trip_vs_original_latent": {
+        "cosine": 0.20566417268344922,
+        "rmse": 1.0039026759916432,
+        "max_abs": 4.63515567779541,
+        "n_changed_coordinates": 65536
+      },
       "tampered_pixel_position": [
         246,
         149
+      ],
+      "legacy_tampered_pixel_position": [
+        73,
+        115
       ]
     }
   ],
@@ -271,6 +374,20 @@
     },
     {
       "scheme": "S0",
+      "latent_index": 0,
+      "tamper_case": "legacy_storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_legacy_store_then_decrypt",
+      "cosine": 0.9999928405041583,
+      "rmse": 0.0019607843132689595,
+      "max_abs": 0.5019607841968536,
+      "n_changed_coordinates": 1,
+      "legacy_renormalisation_params_unchanged": true,
+      "legacy_mirror_equals_legacy_png_handoff": true
+    },
+    {
+      "scheme": "S0",
       "latent_index": 1,
       "tamper_case": "flip_one_sign",
       "accepted": true,
@@ -325,6 +442,20 @@
     },
     {
       "scheme": "S0",
+      "latent_index": 1,
+      "tamper_case": "legacy_storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_legacy_store_then_decrypt",
+      "cosine": 0.9999929744810341,
+      "rmse": 0.0019607843132689595,
+      "max_abs": 0.5019607841968536,
+      "n_changed_coordinates": 1,
+      "legacy_renormalisation_params_unchanged": true,
+      "legacy_mirror_equals_legacy_png_handoff": true
+    },
+    {
+      "scheme": "S0",
       "latent_index": 2,
       "tamper_case": "flip_one_sign",
       "accepted": true,
@@ -376,6 +507,20 @@
       "n_changed_coordinates": 1,
       "record_png_sha256_matches_payload": false,
       "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S0",
+      "latent_index": 2,
+      "tamper_case": "legacy_storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_legacy_store_then_decrypt",
+      "cosine": 0.9999931012703814,
+      "rmse": 0.0019607843132689595,
+      "max_abs": 0.5019607841968536,
+      "n_changed_coordinates": 1,
+      "legacy_renormalisation_params_unchanged": true,
+      "legacy_mirror_equals_legacy_png_handoff": true
     },
     {
       "scheme": "S1",
@@ -433,6 +578,20 @@
     },
     {
       "scheme": "S1",
+      "latent_index": 0,
+      "tamper_case": "legacy_storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_legacy_store_then_decrypt",
+      "cosine": 0.9999928401603221,
+      "rmse": 0.0019607843714766204,
+      "max_abs": 0.5019607990980148,
+      "n_changed_coordinates": 1,
+      "legacy_renormalisation_params_unchanged": true,
+      "legacy_mirror_equals_legacy_png_handoff": true
+    },
+    {
+      "scheme": "S1",
       "latent_index": 1,
       "tamper_case": "flip_one_sign",
       "accepted": true,
@@ -487,6 +646,20 @@
     },
     {
       "scheme": "S1",
+      "latent_index": 1,
+      "tamper_case": "legacy_storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_legacy_store_then_decrypt",
+      "cosine": 0.9999929742274732,
+      "rmse": 0.001960784415132366,
+      "max_abs": 0.5019608102738857,
+      "n_changed_coordinates": 1,
+      "legacy_renormalisation_params_unchanged": true,
+      "legacy_mirror_equals_legacy_png_handoff": true
+    },
+    {
+      "scheme": "S1",
       "latent_index": 2,
       "tamper_case": "flip_one_sign",
       "accepted": true,
@@ -538,6 +711,20 @@
       "n_changed_coordinates": 1,
       "record_png_sha256_matches_payload": false,
       "decoder_consults_record_sha256": false
+    },
+    {
+      "scheme": "S1",
+      "latent_index": 2,
+      "tamper_case": "legacy_storage_pixel",
+      "accepted": true,
+      "error": null,
+      "reference": "untampered_legacy_store_then_decrypt",
+      "cosine": 0.999993101212184,
+      "rmse": 0.0019607843132689595,
+      "max_abs": 0.5019607841968536,
+      "n_changed_coordinates": 1,
+      "legacy_renormalisation_params_unchanged": true,
+      "legacy_mirror_equals_legacy_png_handoff": true
     }
   ],
   "checks": {
@@ -550,7 +737,12 @@
     "harness_detects_rejection_when_decoder_raises": true,
     "predecessor_data_path_has_no_raise_or_assert": true,
     "predecessor_has_no_hmac_or_tag_verification": true,
-    "decoder_ignores_record_sha256_on_modified_payload": true
+    "decoder_ignores_record_sha256_on_modified_payload": true,
+    "legacy_storage_rows_accepted": true,
+    "legacy_mirror_equals_legacy_png_handoff": true,
+    "legacy_pixel_changes_one_coordinate_when_renorm_unchanged": true,
+    "legacy_pixel_max_abs_matches_128_over_255_when_renorm_unchanged": true,
+    "legacy_pixel_at_least_one_row_with_unchanged_renorm": true
   },
-  "conclusion": "[事實] 前作 S0/S1 沒有任何完整性檢查：24 個竄改案例（2 種方案 x 3 張真實 latent x 4 種竄改）全部被接受（accepted=True）——逆金鑰步驟照常執行、輸出皆為有限值、沒有任何例外或拒絕，而恢復結果與未竄改版本不同。影響範圍：翻轉單一座標符號只改變恢復 latent 的 1 個座標（max_abs 0.0977–4.12，cosine 0.999862430–0.999999923）；加入 σ=0.05 高斯雜訊使 RMSE 約 0.0499–0.0502；改動儲存紀錄中的 hi 值（x1.05）使 RMSE 0.114–0.126；改動單一儲存像素使 max_abs 4.49–4.98。未竄改的 latent 層往返為 bit-exact（對照），且解碼器對格式錯誤的紀錄（缺少 lo/hi 文字）仍會拋例外，表示 accepted=False 在機制上可被觀察，而內容被竄改時卻沒有任何拒絕。靜態檢查：前作金鑰模組的資料路徑函式沒有 raise/assert，沒有 HMAC／認證字樣；其 verify_* 是持有原始 latent 的開發者自我測試，不是對儲存紀錄的驗證。[推定] S2 的 transform-then-MAC 會在驗證階段拒絕這些竄改（D5 實作、AF-024/AF-030），本表是無完整性保護的 baseline，S2 的拒絕行為需另以 D5 的測試驗證，本腳本不實作 HMAC。[假設] 這裡的 accepted 指金鑰步驟與儲存解碼器層級（無 GPU）；完整管線（含擴散生成）的下游表現不在本表範圍。"
+  "conclusion": "[事實] 前作 S0/S1 沒有任何完整性檢查：30 個竄改案例（2 種方案 x 3 張真實 latent x 5 種竄改）全部被接受（accepted=True）——逆金鑰步驟照常執行、輸出皆為有限值、沒有任何例外或拒絕，而恢復結果與未竄改版本不同。影響範圍：翻轉單一座標符號只改變恢復 latent 的 1 個座標（max_abs 0.0977–4.12，cosine 0.999862430–0.999999923）；加入 σ=0.05 高斯雜訊使 RMSE 約 0.0499–0.0502；改動儲存紀錄中的 hi 值（x1.05）使 RMSE 0.114–0.126；改動單一儲存像素使 max_abs 4.49–4.98。[事實] 前作自己的 legacy 存檔路徑（per-image min-max uint8 PNG，重載後再 min-max，與 legacy_png_handoff 逐位元一致）同樣沒有拒絕：竄改單一已存 uint8 像素（q→q+128 mod 256）的 6 列全部 accepted=True（逆金鑰步驟照常執行、輸出有限），相對未竄改 legacy 存檔後解密（clean_reference）的 max_abs 0.502–0.502（RMSE 0.00196–0.00196；128/255=0.502）；其中 6/6 列重載後的 min-max 參數不變，只改變 1 個座標。legacy 格式不帶 lo/hi 元資料，故沒有 storage_range_hi 的對應案例。未竄改的 latent 層往返為 bit-exact（對照），且解碼器對格式錯誤的紀錄（缺少 lo/hi 文字）仍會拋例外，表示 accepted=False 在機制上可被觀察，而內容被竄改時卻沒有任何拒絕。靜態檢查：前作金鑰模組的資料路徑函式沒有 raise/assert，沒有 HMAC／認證字樣；其 verify_* 是持有原始 latent 的開發者自我測試，不是對儲存紀錄的驗證。[推定] S2 的 transform-then-MAC 會在驗證階段拒絕這些竄改（D5 實作、AF-024/AF-030），本表是無完整性保護的 baseline，S2 的拒絕行為需另以 D5 的測試驗證，本腳本不實作 HMAC。[假設] 這裡的 accepted 指金鑰步驟與儲存解碼器層級（無 GPU）；完整管線（匿名影像→存檔→DDIM inversion→逆金鑰→生成）的拒絕行為不在本表範圍，由主實作者另行涵蓋（scope=container_and_latent_level_tamper）。"
 }
