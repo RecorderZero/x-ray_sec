@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "task_id": "A4.4",
+  "created_at": "2026-10-12T13:52:42.399186+00:00",
+  "command": "scripts/run_cfg_ddim.sh python -m scripts.a4_4_cpa",
+  "script_sha256": "0fc4425254194f3c4763791f07dfca4947644b6afafb11f9234cd4709beccf48",
+  "git_commit": "859dc8ea1438ca3c34c7a3012c620a82abf671e3",
+  "seed": 1911,
+  "seed_streams": "np.random.default_rng for np.random.SeedSequence(1911).spawn(8): streams 0-1 S0 / 2-3 S1; fresh plaintext = stream 0 of the scheme's pair",
+  "numpy_version": "1.23.0",
+  "torch_version": "2.14.0+cu130",
+  "python_version": "3.10.19",
+  "device": "cpu (CUDA_VISIBLE_DEVICES='' set before importing torch)",
+  "inputs": {
+    "predecessor_source": "past/SourceCode/guided_diffusion/anonymization.py",
+    "predecessor_source_sha256": "5e71401a648a734979432ccf07d92deae02387352ad9ac00a33a89d9d8f38bb1",
+    "real_latent_cache": "artifacts/runs/E2.3/E2.3_20261009T183736363217Z_84cf642a/latents.npy",
+    "real_latent_cache_sha256": "195c20b3124af54c5dd40c644bae78af3144ae176204982c4c2f7b5effd69190",
+    "real_latent_index_for_fresh_slice": 7,
+    "oracle": "predecessor DiffusionAnonymizer.anonymize_latent, mask full, margin 0, shape (1, 64, 64), key seeds 1911 (attack) / 2026 (wrong-key control); seeds never written to disk as key material"
+  },
+  "premise": "FIXED key across all chosen-plaintext queries (state of the predecessor: one shared key for all images)",
+  "raw_key_material_recorded": false,
+  "dimension_note": "d=4096 run; d=65536 extends by linearity at 16x the query count (not executed)",
+  "results": {
+    "S0": {
+      "scheme": "S0",
+      "d": 4096,
+      "shape": [
+        1,
+        64,
+        64
+      ],
+      "query_count": 4096,
+      "validation_queries_not_counted_as_attack": 2,
+      "reconstructed_map_is_signed_permutation": true,
+      "map_is_diagonal": true,
+      "reconstructs_decryption_map": true,
+      "fresh_plaintext_max_abs_error": 0.0,
+      "validation": {
+        "fresh_gaussian": {
+          "max_abs_error_structured": 0.0,
+          "max_abs_error_dense_matrix": 0.0,
+          "bit_exact": true
+        },
+        "fresh_real_latent_slice": {
+          "max_abs_error_structured": 0.0,
+          "max_abs_error_dense_matrix": 0.0,
+          "bit_exact": true
+        }
+      },
+      "fixed_key_premise": true,
+      "negative_control_missing_one_query": {
+        "skipped_basis_index": 17,
+        "max_abs_error": 0.010438447818160057
+      },
+      "negative_control_wrong_key": {
+        "max_abs_error": 6.086071014404297,
+        "coordinate_mismatch_fraction": 0.497314453125
+      },
+      "negative_control_per_query_rekey": {
+        "queries": 4096,
+        "max_abs_error": 6.477867603302002,
+        "coordinate_mismatch_fraction": 0.505615234375
+      }
+    },
+    "S1": {
+      "scheme": "S1",
+      "d": 4096,
+      "shape": [
+        1,
+        64,
+        64
+      ],
+      "query_count": 4096,
+      "validation_queries_not_counted_as_attack": 2,
+      "reconstructed_map_is_signed_permutation": true,
+      "map_is_diagonal": false,
+      "reconstructs_decryption_map": true,
+      "fresh_plaintext_max_abs_error": 0.0,
+      "validation": {
+        "fresh_gaussian": {
+          "max_abs_error_structured": 0.0,
+          "max_abs_error_dense_matrix": 0.0,
+          "bit_exact": true
+        },
+        "fresh_real_latent_slice": {
+          "max_abs_error_structured": 0.0,
+          "max_abs_error_dense_matrix": 0.0,
+          "bit_exact": true
+        }
+      },
+      "fixed_key_premise": true,
+      "negative_control_missing_one_query": {
+        "skipped_basis_index": 17,
+        "max_abs_error": 1.1066325902938843
+      },
+      "negative_control_wrong_key": {
+        "max_abs_error": 4.920047283172607,
+        "coordinate_mismatch_fraction": 0.999755859375
+      },
+      "negative_control_per_query_rekey": {
+        "queries": 4096,
+        "max_abs_error": 5.3803569078445435,
+        "coordinate_mismatch_fraction": 1.0
+      }
+    }
+  },
+  "checks": {
+    "S0_query_count_equals_d": true,
+    "S0_map_is_signed_permutation": true,
+    "S0_reconstructs_decryption_map": true,
+    "S0_fresh_plaintext_max_abs_error_zero": true,
+    "S0_missing_query_breaks_reconstruction": true,
+    "S0_wrong_key_not_decrypted": true,
+    "S0_per_query_rekey_defeats_cpa": true,
+    "S1_query_count_equals_d": true,
+    "S1_map_is_signed_permutation": true,
+    "S1_reconstructs_decryption_map": true,
+    "S1_fresh_plaintext_max_abs_error_zero": true,
+    "S1_missing_query_breaks_reconstruction": true,
+    "S1_wrong_key_not_decrypted": true,
+    "S1_per_query_rekey_defeats_cpa": true,
+    "S0_map_is_diagonal": true
+  },
+  "conclusion": "[事實] 固定金鑰下 d 次選擇明文即可重建等價解密映射，不需金鑰：d=4096（latent 形狀 (1, 64, 64)），S0 與 S1 各以 4096 次基底向量查詢 e_i 讀出整個映射（S0 為對角 diag(k)；S1 每個 e_i 回傳單一 ±1 於位置 π⁻¹(i)，同時得到 π 與 k），重建的映射解密全新的隨機明文與全新的真實 latent 片段，最大絕對誤差為 0.0 與 0.0（bit-exact）。[事實] 這是線性映射的通性（S0 對角、S1 簽名置換、S2 的 WHT 皆然）：任何固定的 d×d 線性映射都可由 d 個基底查詢讀出，並以 M⁻¹ 解密；此攻擊的維度擴展到 d=65536 只需 16 倍查詢（本腳本未執行，屬由線性性推得）。[事實] 前提是明列的：同一把固定金鑰跨所有查詢（fixed_key_premise=True）。對照實驗中，少一次基底查詢會使該座標無法解密（誤差 {results['S0']['negative_control_missing_one_query']['max_abs_error']:.3f}／{results['S1']['negative_control_missing_one_query']['max_abs_error']:.3f}）；用金鑰 A 學到的映射解金鑰 B 的密文（S0 座標錯誤率 0.497、S1 1.000）、以及每次查詢皆換金鑰的 oracle（S0 錯誤率 0.506、S1 1.000）皆無法解密。[推定] 阻止 CPA 跨影像的是 per-image nonce（S2），固定 Q 的前提在此明列；若 S2 對每張影像使用新的 nonce 衍生變換，d 次查詢所學到的映射不可跨影像重用，但這需由 S2 的實作與 nonce 唯一性檢查另行驗證，本表僅驗證前作（固定金鑰）基線。"
+}
