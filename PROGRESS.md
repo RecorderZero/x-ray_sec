@@ -770,3 +770,50 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 完成 dev_v1.1 calibration run，執行 A4.2；之後依序完成 A4.3 KPA、A4.4 CPA、A4.5 tamper baseline。
+
+## 2026-10-12 · W2 · Track A · A4.2–A4.5 完成（T2-WB gallery、KPA、CPA、tamper）
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：A4.2、A4.3、A4.4、A4.5。
+* 以 A4.1 的 re-inversion query cache 完成 T2-WB magnitude gallery 攻擊，並補齊 KPA、CPA、tamper baseline。
+
+### 2. 執行動作 (Actions Taken)
+* dev 校正 run（AF-025）：managed run `A4.1_DEV_CAL_20261012T133002259066Z_0fa671c3`（dev_v1.1 20 張、80 rows、valid），提供 norm 偏差 median(||zhat_ano||/||z_ano||)：S0 legacy 1.00755／range 0.99678；S1 legacy 1.01116／range 0.99676。
+* [A4.2] commit `859dc8e`｜新增 `scripts/a4_t2wb_gallery.py`＋5 單元測試；gallery=E2.3 security cache、query=A4.1 formal cache；scorer abs／sorted_abs／norm／lowfreq_abs；方案專屬解密正控制、seed 1911 shuffle 負控制、Wilson CI、AF-025 norm 校正與 lo/hi 旁道、Inconclusive 判定。
+* [A4.3] commit `6213025`｜[A4.4] commit `7b7b9b8`｜[A4.5] commit `9323734`：由實作方指派的 subagent（CPU、唯讀前作程式、不寫金鑰陣列）完成，實作方審閱並獨立驗證確定性與 script_sha256 provenance。
+* 驗證指令：`scripts/run_cfg_ddim.sh python -m scripts.a4_t2wb_gallery --gallery-cache <E2.3 security> --query-run <A4.1 formal> --dev-calibration-run <A4.1_DEV_CAL>`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 測試 `66 passed`；`past/SourceCode` 未改動。
+* [事實] **A4.2 T2-WB magnitude gallery（security_v1 N=200，Top-1，legacy／range-preserving）**：
+
+  | scorer | S0 | S1 |
+  |---|---|---|
+  | abs（S0 指定） | **1.00／1.00** | 0.005／0.005 |
+  | sorted_abs（S1 指定） | 0.065／0.930 | **0.19／0.975** |
+  | norm raw | 0.005／0.005 | 0.005／0.005 |
+  | norm 校正後（AF-025） | 0.005／**0.255** | 0.005／**0.285** |
+  | lowfreq_abs | 1.00／1.00 | 0.005／0.005 |
+
+  * 負控制 Top-1≈0.005；方案專屬解密正控制 Top-1=1.00（故無 Inconclusive 格）。
+  * [結論] T2-WB 下 magnitude 攻擊成立；**保存值域的部署協定（range-preserving）同時放大攻擊**：S1 sorted 0.19→0.975，校正後 norm-only 由隨機升到 0.26–0.29 且僅在 range-preserving 達顯著（AF-025 得到 security_v1 正式驗證）。
+  * [注意] lo/hi 旁道：每病人單筆 anonymous record，依 AF-025 標 `not_evaluable`（需不同影像的具標籤 enrollment）。
+* [事實] **A4.3 KPA**：S0 一對即逐位元還原金鑰、held-out 解密 bit-exact。S1 合成 d=4096（量值互異）一對精確；真實 d=65536 因 float32 量值重複（114–150 座標）單對不精確（held-out 錯位 7e-4–1e-3），第 2 對即精確。
+* [事實] **A4.4 CPA**：固定金鑰下 d=4096 次基底查詢重建 S0（對角）/S1（簽名置換）解密映射，全新明文 max-abs error 0.0；每查詢換金鑰（模擬 per-image nonce）則 S0 錯誤率 0.506／S1 1.000。
+* [事實] **A4.5 tamper baseline**：24 案例全部 accepted=True（無完整性檢查、不拒絕），竄改 PNG 與記錄 `png_sha256` 不符仍被接受；影響 cosine 0.992–0.99999、max_abs 0.098–4.98。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：A4.2–A4.5 的工程閘門（確定性、控制、hash、tie-break、CI）與證據閘門（versioned 表/JSON、run/cache/script hash、seed）完成。A4.1 已於先前條目 Achieved。科學 Top-k 只報告。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* AF-025 在 security_v1 得到正式數據：range-preserving 讓合法還原與攻擊端同時更準，norm-only 旁道因此可用。效果量已量化，處置方向（lo/hi 入 AEAD payload、金鑰導出 norm 擾動、或接受為限制）仍待使用者裁決（AF-025 OPEN）。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。
+
+### 7. 下一步
+* 請稽核方複驗 A4.1–A4.5。
+* AF-025 的處置方向待使用者裁決。
+* G1（10/18）：Week 2 baseline evidence 檢視。之後進入 Week 3 D5（key pipeline、HKDF、CSPRNG、nonce、container、HMAC；AF-024/AF-030）。
+* 尚未處理（屬 D5/D6/D7）：AF-024 HMAC 涵蓋 lo/hi、AF-030 CSPRNG 金鑰材料、AF-025 處置與 D7 結構探測。
