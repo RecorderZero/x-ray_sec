@@ -671,3 +671,37 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 請稽核方複驗 AF-026～AF-029。
 * 尚未處理（屬後續週次，非本輪範圍）：AF-024 剩 HMAC 涵蓋 lo/hi（D5）、AF-025 兩欄存檔與 norm/lo-hi 旁道（A4／D7）、AF-030 S2 金鑰材料不得經短 seed／非密碼學 PRNG（D5／D6）。
 * 進入 A4：T2-WB inversion、magnitude gallery（兩種存檔分欄、加 norm-only 與 lo/hi 旁道）、KPA、CPA、tamper baseline。
+
+## 2026-10-12 · W2 · Track A · AF-028(4)、AF-031、AF-032 修復
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` 子任務代號：A3.1、A3.2、P3.1；可重現性 AF-031。
+* 回應稽核：AUD-20261012-03 的 AF-032 與 AF-028 第 4 點殘留；AUD-20261012-01 的 AF-031；AUD-20261012-03 §9 使用者裁決（PROPOSAL §2.1）。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-032] 已修正（待複驗）｜commit `1ee1994`｜`scripts/a3_bruteforce.py` 新增 E7（全 200 張 security_v1 latent 的唯密文正確金鑰分數分布，無搜尋）；conclusion 改報全樣本範圍；`a3_keyspace_audit.py` 的 method note／table basis 由「稽核方結果、補測未完成」改為引用 A3.2 E5/E6/E7；PROPOSAL §2.1 依使用者裁決改為「S0 與 S1 僅憑密文即可」。
+* [AF-028-4] 已修正（待複驗）｜commit `e8e1ac3`｜`scripts/p3_attack_overview.py` 的 diff 面板改為 between-patient（非零）對 within-patient z−S1（恆 0）兩條，y 軸 symlog，修正被覆蓋的小標題。
+* [AF-031] 已修正（待複驗）｜commit `25eece6`｜`scripts/run_artifacts.py` 與 `e1_environment_inventory.py` 記錄 `gpu_driver_version`。
+* 驗證指令：`scripts/run_cfg_ddim.sh python -m scripts.a3_bruteforce --force`；`... python -m pytest -q tests/unit tests/integration tests/test_legacy_repro.py`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 測試 `57 passed`。
+* [事實] 全樣本唯密文（E7，實作方獨立重現）：S0 與 S1 符號階段對 **200/200** 張皆高於 2^32 門檻 6.66σ（中位 37.0σ、最小 29.0σ）；S1 置換階段 **199/200**（最弱 security_v1_0018 為 4.52σ，低於門檻）。與稽核方 `a3_coa_all_images_check` 一致（S0 37.0σ、S1 置換最弱同為 index 18）。
+* [事實] 範圍修正落地：唯密文結論寫為「S0 200/200、S1 置換 199/200；前作共用一把金鑰故部署層級單一密文即可」，不寫成每張影像皆可（AF-032 第 1 點）。
+* [事實] AF-031：`nvidia-smi` 回報驅動 580.178.04；manifest 與 inventory 已加 `gpu_driver_version`；凍結的 E1 環境基準未重新產生，新欄自下次起生效。
+* [更正] AF-032 第 3 點：2026-10-11 條目（§3）所引 A3.2 外推「約 1.2 GPU-h」為**單位錯誤**，正確為 **CPU 單執行緒**約 1.23 小時（平均）／2.46 小時（最壞）；`results/A3.2.json` 的 `timing_nondeterministic` 一向標為 CPU，PROGRESS 舊條目用語有誤，於此更正，舊條目不改（只增不改）。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：AF-028 第 4 點、AF-031、AF-032 的實作方驗收條件完成，狀態 `FIXED?`，待稽核複驗。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 未失敗。教訓：「單一密文即可」要標明適用於 200/200 還是 199/200；外推數字要標 CPU／GPU。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。PROPOSAL §2.1 的兩次修訂（AUD-20261011-02、AUD-20261012-03 §9）皆經使用者裁決。
+
+### 7. 下一步
+* 請稽核方複驗 AF-028(4)、AF-031、AF-032。
+* 尚未處理（屬後續週次）：AF-024 剩 HMAC 涵蓋 lo/hi（D5）、AF-025 兩欄存檔與 norm/lo-hi 旁道（A4／D7）、AF-030 S2 金鑰材料不得經短 seed／非密碼學 PRNG（D5／D6）。
+* 進入 A4：T2-WB inversion、magnitude gallery（兩種存檔分欄、加 norm-only 與 lo/hi 旁道）、KPA、CPA、tamper baseline。
