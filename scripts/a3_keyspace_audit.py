@@ -378,13 +378,14 @@ def build_rows() -> list[dict]:
               "leave a small residual ambiguity, resolved by a second pair or seed enumeration (A4.3)")
     coa_s0 = ("[ciphertext-only ~32] [事實, auditor AF-027] one ciphertext latent scores the true key at 37.1/36.8/37.0 sigma vs wrong-seed max "
               "3.3-3.8 sigma over 2000 wrong seeds (audit/out/a3_s0_coa_oracle_check.json); [推定] Gaussian-tail extrapolation to 2^32 wrong seeds "
-              "(expected max about 6.7 sigma); not measured by this script")
+              "(expected max about 6.7 sigma). Reproduced by the implementer in results/A3.2.json E5; all-sample check E7: 200/200 security_v1 latents exceed the 2^32 threshold (6.66 sigma) from a single ciphertext")
     coa_s1_int = ("[ciphertext-only ~32] [推定] the key is one coupled 32-bit seed, so the AUD-20261011-02 permutation-stage oracle over perm_seed = seed+1000000 "
                   "(mod 2^32) also fixes the sign seed; the auditor did not test this mode")
     coa_s1_pw = ("[ciphertext-only ~33] [事實, auditor AUD-20261011-02] in a 2^14 reduced space ONE S1 ciphertext ranks the planted permutation seed first "
                  "(14.6 sigma) and, with the permutation known, the sign seed first (36.9 sigma), vs wrong-candidate max <= 4.2 sigma "
-                 "(audit/out/a3_s1_coa_experiment.json); [推定] extrapolation to 2^32 gives about 2*2^32 = 2^33 checks; the subagent estimate recorded "
-                 "in AUD-20261011-01 assumed key reuse and 10-50 ciphertexts; not measured by this script")
+                 "(audit/out/a3_s1_coa_experiment.json); [推定] extrapolation to 2^32 gives about 2*2^32 = 2^33 checks. Reproduced by the implementer in "
+                 "results/A3.2.json E6 (single ciphertext, no key reuse); all-sample check E7: the permutation stage exceeds the 2^32 threshold for 199/200 "
+                 "security_v1 latents (weakest security_v1_0018), the sign stage for 200/200")
     rows = [
         {
             "scheme": "S0 Rademacher", "mode": "password (legacy configuration)",
@@ -477,7 +478,7 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
         "- [事實] 金鑰上界（`key_upper_bound_bits`）：S0 = 32 bits，S1 = 64 bits（password 模式；整數 seed 模式為 32）。"
         "這是「金鑰由多少個獨立 bits 決定」的上界，**不是攻擊者的工作量**（AF-026）。",
         "- [事實] 實際攻擊工作量：已知一對完整明密文 = 0（金鑰直接讀出，不需搜尋；見第 5 節第 3 點）；唯密文 S0 ≈ 2^32（稽核方 AF-027：單一密文 latent 即可辨識正確 seed）。"
-        "S1 唯密文 ≈ 2^33（稽核方 AUD-20261011-02：縮小空間下單張密文即可，外推到 2^32 為 [推定]）。後兩者為稽核方結果，本腳本不量測，實作方重現屬 A3.2 補測（AF-027）。",
+        "S1 唯密文 ≈ 2^33（縮小空間下單張密文即可，外推到 2^32 為 [推定]）。本腳本不量測唯密文，量測在 `results/A3.2.json` 的 E5／E6／E7（實作方獨立重現；稽核方結果見 AUD-20261011-02、AUD-20261012-03）。",
         "- [事實] 密碼 `Ki@13579` 寫死在多支啟動腳本內（第 5 節第 8 點），取得程式碼即取得密碼，給定程式碼時秘密為 0 bits。"
         "另有第二組設定 `paper_experiment_key_2024`（`run_paper_comparison.sh:27`），目前無法確定論文數字出自哪一組（第 5 節第 9 點）。",
         "- [事實] 前作的 Rademacher 金鑰 k（d = 65536 維、值域 ±1）完全由一個 32-bit 整數 seed 經 `torch.Generator.manual_seed` 與 "
@@ -594,7 +595,7 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
         "[推定] 外推到 2^32 個錯誤候選，期望最大值約 6.7σ（高斯尾部假設），仍遠低於 37σ，故 S0 唯密文約 2^32。"
         "S1（AUD-20261011-02，`audit/a3_s1_coa_experiment.py`）：在 2^14 縮小空間中，**單一 S1 密文**即讓植入的置換 seed（14.6σ）與符號 seed（置換已知時 36.9σ）都排第 1，"
         "錯誤候選與負控制最高 ≤ 4.2σ；[推定] 外推到完整空間總工作量約 2·2^32 = 2^33。AUD-20261011-01 記錄的 subagent 估計是金鑰重用下需 10–50 張密文，AUD-20261011-02 實測更正為單張即可；"
-        "前作部署本來就讓所有影像共用同一把金鑰（第 7 點）。實作方以自己的實作重現唯密文實驗屬 A3.2 補測（AF-027，尚未完成），在此之前 `ciphertext_only_seed_search_bits` 欄只引用稽核方結果。",
+        "前作部署本來就讓所有影像共用同一把金鑰（第 7 點）。實作方已在 `results/A3.2.json` 的 E5／E6／E7 以自己的實作重現唯密文攻擊（AF-027）；全樣本（E7，200 張）顯示 S0 對 200/200、S1 置換對 199/200 張單一密文即可（最弱為 security_v1_0018），部署層級『單一密文即可找回金鑰』成立（AF-032）。",
         "5. [事實] 密碼 `Ki@13579` 寫死在啟動腳本內（第 8 點列出位置）；[推定] 取得程式碼的攻擊者不需要猜測，秘密為 0 bits，與 SHA-256 前綴的 32-bit 上界無關。"
         "[假設] 若攻擊者沒有程式碼，且密碼是人類可記憶字串，實際熵可能遠低於 32 bits（字典或規則式猜測）；本檔只量測由 SHA-256 前綴施加的 32-bit 上界，不量測密碼熵。",
         "6. [推定] 32 是上界而非精確值：seed → 金鑰的映射在 2^32 個 seed 上是否全為單射本腳本未窮舉驗證（V6 只顯示不同密碼可共用同一 seed）。",
@@ -621,7 +622,7 @@ def write_note(rows: list[dict], checks: dict, anchors: list[dict], script_sha: 
         "",
         "- [事實] A3.2（`results/A3.2.json`）用同一批前作金鑰類別在縮小空間（2^20）上做窮舉 positive control，並量測吞吐後外推到 2^32；本檔不含任何計時。",
         "- [事實] A3.3 驗證 S0 逐元素 |z_enc| = |z| 與 S1 排序幅值不變，這是不需要金鑰就能比對 gallery 的依據；本檔只處理金鑰空間。",
-        "- [事實] 唯密文 oracle（AF-027）：稽核方結果與證據檔見第 5 節第 4 點；實作方的 A3.2 補測完成前，本檔不含唯密文量測。",
+        "- [事實] 唯密文 oracle（AF-027）：已由實作方在 `results/A3.2.json` 的 E5／E6／E7 重現（S0 200/200、S1 置換 199/200 單張）；本檔本身不含唯密文量測，證據檔見 A3.2 與第 5 節第 4 點。",
         "- [推定] 修補方向（D5.1）應使用 256-bit 隨機主金鑰，並由 CSPRNG／KDF 展開到 d 維，使每一位元都來自完整熵；該設計的檢驗不在本任務內。",
         "",
         "## 7. 重現",

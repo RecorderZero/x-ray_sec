@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "task_id": "A3.2",
-  "created_at": "2026-10-10T17:57:35.621780+00:00",
+  "created_at": "2026-10-12T05:57:15.769502+00:00",
   "command": "scripts/run_cfg_ddim.sh python -m scripts.a3_bruteforce",
-  "script_sha256": "df727e32803d881bf8c747e05998eca8797c16f9b403de82994bb1d83db04285",
-  "git_commit": "401c4e97e394b9ea91c69e44a248313eaff9d7dd",
+  "script_sha256": "63891a0ae97dccd7f68a4bb3e6239e3e2ba3435c9be2fe67748e5f7be232ada1",
+  "git_commit": "331ab13d718441e8879214e66ee113b4c00488e6",
   "git_dirty_tracked_files": true,
   "seed": 1911,
   "seed_streams": "np.random.default_rng for each of np.random.SeedSequence(1911).spawn(8); torch seeds are the candidate seeds themselves",
@@ -184,6 +184,29 @@
       },
       "note": "[fact] a single S1 ciphertext suffices; no key reuse required (stronger than the >=10 ciphertexts earlier estimated)"
     },
+    "e7_ciphertext_only_all_images": {
+      "description": "AF-032: correct-key ciphertext-only score over all 200 security_v1 latents, no search. Scope check for the 'single ciphertext suffices' claim.",
+      "n_images": 200,
+      "d": 65536,
+      "null_permutation_seeds": 64,
+      "full_scale_threshold_sigma": 6.6604368892615815,
+      "s0_and_s1_sign_correct_sigma": {
+        "min": 28.99041216569984,
+        "p05": 36.65222858452965,
+        "median": 37.005776957824146,
+        "max": 37.25135489771589,
+        "n_below_full_scale_threshold": 0
+      },
+      "s1_permutation_correct_sigma": {
+        "min": 4.52463581533379,
+        "p05": 13.250515747531407,
+        "median": 21.16986768981134,
+        "max": 79.34666288973696,
+        "n_below_full_scale_threshold": 1
+      },
+      "s1_permutation_weakest_image_index": 18,
+      "note": "[fact] S0 and the S1 sign stage exceed the threshold for every image; the S1 permutation stage exceeds it for all but the weakest image. The predecessor reuses one key across all images, so a single ciphertext (the strongest one) suffices at deployment level."
+    },
     "checks": {
       "E1_recovered": true,
       "E2_recovered": true,
@@ -194,7 +217,9 @@
       "E2_no_false_survivors": true,
       "E5_coa_ranked_first": true,
       "E6_coa_permutation_first": true,
-      "E6_coa_sign_first": true
+      "E6_coa_sign_first": true,
+      "E7_s0_all_images_above_threshold": true,
+      "E7_s1_permutation_at_most_one_below": true
     },
     "legacy_seed_positions": {
       "note": "[inference] positions of the legacy password-derived seeds (A3.1 V1) in an ascending enumeration of all 2^32 seeds; an attacker without the password would not know the position and expects to test 2^31 candidates on average",
@@ -210,72 +235,72 @@
     "platform": "Linux-6.14.0-28-generic-x86_64-with-glibc2.39",
     "processor": "x86_64",
     "wall_time_s": {
-      "e1_s0_naive_d4096": 34.984366777935065,
-      "e2_s0_screened_d65536": 1.3798266790108755,
-      "e3_negative_screened_d65536": 2.4911169479601085,
-      "e4_sign_search_d4096": 4.176510845078155,
-      "e4_permutation_search_d4096": 0.6861282519530505
+      "e1_s0_naive_d4096": 35.42764022000483,
+      "e2_s0_screened_d65536": 1.404775882998365,
+      "e3_negative_screened_d65536": 2.503447655006312,
+      "e4_sign_search_d4096": 4.219553720999102,
+      "e4_permutation_search_d4096": 0.6841155720030656
     },
     "candidates_per_s_in_controls": {
-      "e1_s0_naive_d4096": 23140.650369312872,
-      "e2_s0_screened_d65536": 420592.6793762377,
-      "e3_negative_screened_d65536": 420926.04317860043
+      "e1_s0_naive_d4096": 22851.11271799772,
+      "e2_s0_screened_d65536": 413122.8383287069,
+      "e3_negative_screened_d65536": 418852.7760518948
     },
     "benchmarks": {
-      "s0_full_key_d65536_candidates_per_s": 1931.3529197618716,
-      "s0_prefix_screen_m64_candidates_per_s": 484119.376381346,
-      "s0_full_key_d4096_candidates_per_s": 25797.639972570727,
-      "s1_permutation_d65536_candidates_per_s": 5699.021749165168,
-      "s1_permutation_d4096_candidates_per_s": 79037.7045528334
+      "s0_full_key_d65536_candidates_per_s": 1902.8923040535842,
+      "s0_prefix_screen_m64_candidates_per_s": 470574.61631696677,
+      "s0_full_key_d4096_candidates_per_s": 25384.064642180743,
+      "s1_permutation_d65536_candidates_per_s": 5630.426465070039,
+      "s1_permutation_d4096_candidates_per_s": 76695.96924303773
     },
     "extrapolation_to_2_32": {
       "assumptions": "[assumption] linear in the number of candidates, single thread, no per-candidate oracle cost beyond key regeneration/screening; scales ~linearly with cores only if candidates are split across workers",
       "s0_naive_full_key_d65536": {
-        "candidates_per_s_cpu_single_thread": 1931.3529197618716,
+        "candidates_per_s_cpu_single_thread": 1902.8923040535842,
         "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
         "worst_case_2_32": {
-          "seconds": 2223812.775,
-          "hours": 617.7257708333333,
-          "days": 25.73857378472222
+          "seconds": 2257073.23890625,
+          "hours": 626.9647885850694,
+          "days": 26.123532857711226
         },
         "expected_half_2_31": {
-          "seconds": 1111906.3875,
-          "hours": 308.86288541666664,
-          "days": 12.86928689236111
+          "seconds": 1128536.619453125,
+          "hours": 313.4823942925347,
+          "days": 13.061766428855613
         }
       },
       "s0_prefix_screen_m64_d65536": {
-        "candidates_per_s_cpu_single_thread": 484119.376381346,
+        "candidates_per_s_cpu_single_thread": 470574.61631696677,
         "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
         "worst_case_2_32": {
-          "seconds": 8871.711205,
-          "hours": 2.464364223611111,
-          "days": 0.10268184265046296
+          "seconds": 9127.069644375,
+          "hours": 2.5352971234375,
+          "days": 0.10563738014322917
         },
         "expected_half_2_31": {
-          "seconds": 4435.8556025,
-          "hours": 1.2321821118055556,
-          "days": 0.05134092132523148
+          "seconds": 4563.5348221875,
+          "hours": 1.26764856171875,
+          "days": 0.052818690071614584
         }
       },
       "s1_permutation_naive_randperm_d65536": {
-        "candidates_per_s_cpu_single_thread": 5699.021749165168,
+        "candidates_per_s_cpu_single_thread": 5630.426465070039,
         "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
         "worst_case_2_32": {
-          "seconds": 753632.375,
-          "hours": 209.3423263888889,
-          "days": 8.72259693287037
+          "seconds": 762813.8512500001,
+          "hours": 211.89273645833336,
+          "days": 8.828864019097223
         },
         "expected_half_2_31": {
-          "seconds": 376816.1875,
-          "hours": 104.67116319444445,
-          "days": 4.361298466435185
+          "seconds": 381406.92562500003,
+          "hours": 105.94636822916668,
+          "days": 4.414432009548611
         }
       },
       "legacy_sign_seed_ascending_with_screen": {
-        "seconds": 2945.757531251232,
-        "hours": 0.8182659809031201,
-        "days": 0.03409441587096333
+        "seconds": 3030.5465903826343,
+        "hours": 0.8418184973285096,
+        "days": 0.035075770722021234
       }
     },
     "ciphertext_only_extrapolation": {
@@ -283,34 +308,34 @@
       "expected_max_wrong_sigma_2_14": 4.4054649080066985,
       "expected_max_wrong_sigma_2_32": 6.6604368892615815,
       "s0_coa_score_per_s": {
-        "candidates_per_s_cpu_single_thread": 1931.3529197618716,
+        "candidates_per_s_cpu_single_thread": 1902.8923040535842,
         "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
         "worst_case_2_32": {
-          "seconds": 2223812.775,
-          "hours": 617.7257708333333,
-          "days": 25.73857378472222
+          "seconds": 2257073.23890625,
+          "hours": 626.9647885850694,
+          "days": 26.123532857711226
         },
         "expected_half_2_31": {
-          "seconds": 1111906.3875,
-          "hours": 308.86288541666664,
-          "days": 12.86928689236111
+          "seconds": 1128536.619453125,
+          "hours": 313.4823942925347,
+          "days": 13.061766428855613
         }
       },
       "s1_coa_permutation_score_per_s": {
-        "candidates_per_s_cpu_single_thread": 5699.021749165168,
+        "candidates_per_s_cpu_single_thread": 5630.426465070039,
         "unit": "CPU single thread (torch.set_num_threads(1)); not GPU",
         "worst_case_2_32": {
-          "seconds": 753632.375,
-          "hours": 209.3423263888889,
-          "days": 8.72259693287037
+          "seconds": 762813.8512500001,
+          "hours": 211.89273645833336,
+          "days": 8.828864019097223
         },
         "expected_half_2_31": {
-          "seconds": 376816.1875,
-          "hours": 104.67116319444445,
-          "days": 4.361298466435185
+          "seconds": 381406.92562500003,
+          "hours": 105.94636822916668,
+          "days": 4.414432009548611
         }
       }
     }
   },
-  "conclusion": "[事實] 在縮小至 2^20 的 seed 空間中，以一對已知明文/密文 latent，窮舉重新產生前作金鑰即可找回祕密 seed：d=4096 簡單窮舉測試 809,561 個候選後找回 seed 809560；d=65536（真實 latent）以 64 座標預篩加全維驗證，測試 580,345 個候選後找回 seed 580344；祕密 seed 在範圍外的 negative control 掃完 2^20 個候選皆無結果；S1 把符號 seed 與置換 seed 分開搜尋，共 156,997 個候選（聯合搜尋為 2^36）即找回兩者。[事實] 唯密文（COA，無任何明文）：S0 單一密文 latent 的正確金鑰分數 37.1σ，2^14 個錯誤候選最高僅 3.7σ，正確金鑰排第 1；S1 單一密文分兩階段，置換 seed 12.0σ、符號 seed 37.0σ，皆排第 1，不需金鑰重用。分數本身即以 σ 為單位（錯誤金鑰 ~ N(0,1)）。[推定] 2^32 個 N(0,1) 錯誤候選的期望最大值約 6.7σ，仍遠低於正確金鑰，故全尺度下正確金鑰仍排第 1；外推時間見 timing_nondeterministic（CPU 單執行緒，非 GPU）。[結論] 前作在 T1 下不需要已知明文：單一密文即可在 32-bit seed 空間中辨識金鑰，密碼強度幾乎無關。"
+  "conclusion": "[事實] 在縮小至 2^20 的 seed 空間中，以一對已知明文/密文 latent，窮舉重新產生前作金鑰即可找回祕密 seed：d=4096 簡單窮舉測試 809,561 個候選後找回 seed 809560；d=65536（真實 latent）以 64 座標預篩加全維驗證，測試 580,345 個候選後找回 seed 580344；祕密 seed 在範圍外的 negative control 掃完 2^20 個候選皆無結果；S1 把符號 seed 與置換 seed 分開搜尋，共 156,997 個候選（聯合搜尋為 2^36）即找回兩者。[事實] 唯密文（COA，無任何明文）：S0 單一密文 latent 的正確金鑰分數 37.1σ，2^14 個錯誤候選最高僅 3.7σ，正確金鑰排第 1；S1 單一密文分兩階段，置換 seed 12.0σ、符號 seed 37.0σ，皆排第 1，不需金鑰重用。分數本身即以 σ 為單位（錯誤金鑰 ~ N(0,1)）。[推定] 2^32 個 N(0,1) 錯誤候選的期望最大值約 6.7σ，仍遠低於正確金鑰，故全尺度下正確金鑰仍排第 1；外推時間見 timing_nondeterministic（CPU 單執行緒，非 GPU）。[事實] 全樣本（security_v1 200 張，e7）：S0 與 S1 符號階段對 200/200 張皆高於 2^32 門檻（6.66σ）；S1 置換階段有 1/200 張低於門檻（最弱為 index 18），其餘單張即可。[推定] 前作所有影像共用一把金鑰，攻擊者可挑訊號最強的一張密文找回金鑰再解開全部，故部署層級『單一密文即可』成立；不寫成『每一張影像單張都可以』。[結論] 前作在 T1 下不需要已知明文：單一密文即可在 32-bit seed 空間中辨識金鑰，密碼強度幾乎無關。"
 }

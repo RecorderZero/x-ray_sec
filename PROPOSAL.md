@@ -75,7 +75,7 @@ x_0
 | 空間 | pixel-space diffusion，1×256×256 | latent 維度 d = 65,536 |
 | 反演深度 | noise_level = 500 | x_t 仍含約 28% 原圖訊號 |
 | Rademacher key | password SHA-256 後只取前 4 bytes | 實際有效空間只有 2^32 |
-| Signed Permutation | 前作實際設定（password 模式）：sign 與 permutation 各取 SHA-256(pw)、SHA-256(pw+"_permutation") 前 4 bytes，為兩個獨立 32-bit seed（整數 seed 模式則為 seed 與 seed+10^6 的單一 32-bit 耦合）；password 寫死於啟動腳本 | 宣稱 2^d·d! 不成立：金鑰至多 64 bits，兩半可分開窮舉（≈2^33）；已知一對明密文可直接讀出 (k, π)，S0 僅憑密文即可對 seed 窮舉 |
+| Signed Permutation | 前作實際設定（password 模式）：sign 與 permutation 各取 SHA-256(pw)、SHA-256(pw+"_permutation") 前 4 bytes，為兩個獨立 32-bit seed（整數 seed 模式則為 seed 與 seed+10^6 的單一 32-bit 耦合）；password 寫死於啟動腳本 | 宣稱 2^d·d! 不成立：金鑰至多 64 bits，兩半可分開窮舉（≈2^33）；已知一對明密文可直接讀出 (k, π)；S0 與 S1 僅憑密文即可對 seed 窮舉（前作所有影像共用一把金鑰，單一密文即可找回） |
 | nonce | 無 | 所有影像重用相同 transform |
 | 匿名影像 | per-image min-max 後存 uint8 PNG | 遺失尺度與量化資訊：原值域 lo/hi 被丟棄，是前作 M1 還原損失的主要來源（AUD-20261010-04）；本專案 M1 改為保存值域，見 §4.5 |
 | 解密 | 從匿名 PNG 重新 DDIM inversion | 會引入反演與量化誤差 |

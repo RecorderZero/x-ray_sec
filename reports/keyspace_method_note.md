@@ -3,13 +3,13 @@
 - 任務：WORKFLOW A3.1 effective key-space audit；seed = 1911；CPU only，未載入擴散模型 checkpoint。
 - 產生方式：`scripts/run_cfg_ddim.sh python -m scripts.a3_keyspace_audit`（由腳本寫出本檔與 `paper_assets/tables/table_keyspace.csv`，內容對固定原始碼、torch、numpy 版本為確定性）。
 - 被審計原始碼：`past/SourceCode/guided_diffusion/anonymization.py`（sha256 = `5e71401a648a734979432ccf07d92deae02387352ad9ac00a33a89d9d8f38bb1`）；torch 2.14.0+cu130；numpy 1.23.0。
-- 產生腳本 sha256：`05e20021af6e8aa02111d3b4de7019c7a05f262c7bfb1ada914a0cb95fa9bc38`。
+- 產生腳本 sha256：`fbf411c5f5ae84f65977fddc18147d50220d48b10585f81357246289f262912f`。
 - 標記說明：[事實] = 逐行讀碼或本腳本實測（附來源）；[推定] = 由 [事實] 推導，未獨立量測；[假設] = 尚未驗證的前提。
 
 ## 1. 結論：金鑰上界 S0 = 32／S1 = 64 bits；實際攻擊工作量：已知一對明密文 = 0（直接讀出）；唯密文 S0 ≈ 2^32（AF-027）
 
 - [事實] 金鑰上界（`key_upper_bound_bits`）：S0 = 32 bits，S1 = 64 bits（password 模式；整數 seed 模式為 32）。這是「金鑰由多少個獨立 bits 決定」的上界，**不是攻擊者的工作量**（AF-026）。
-- [事實] 實際攻擊工作量：已知一對完整明密文 = 0（金鑰直接讀出，不需搜尋；見第 5 節第 3 點）；唯密文 S0 ≈ 2^32（稽核方 AF-027：單一密文 latent 即可辨識正確 seed）。S1 唯密文 ≈ 2^33（稽核方 AUD-20261011-02：縮小空間下單張密文即可，外推到 2^32 為 [推定]）。後兩者為稽核方結果，本腳本不量測，實作方重現屬 A3.2 補測（AF-027）。
+- [事實] 實際攻擊工作量：已知一對完整明密文 = 0（金鑰直接讀出，不需搜尋；見第 5 節第 3 點）；唯密文 S0 ≈ 2^32（稽核方 AF-027：單一密文 latent 即可辨識正確 seed）。S1 唯密文 ≈ 2^33（縮小空間下單張密文即可，外推到 2^32 為 [推定]）。本腳本不量測唯密文，量測在 `results/A3.2.json` 的 E5／E6／E7（實作方獨立重現；稽核方結果見 AUD-20261011-02、AUD-20261012-03）。
 - [事實] 密碼 `Ki@13579` 寫死在多支啟動腳本內（第 5 節第 8 點），取得程式碼即取得密碼，給定程式碼時秘密為 0 bits。另有第二組設定 `paper_experiment_key_2024`（`run_paper_comparison.sh:27`），目前無法確定論文數字出自哪一組（第 5 節第 9 點）。
 - [事實] 前作的 Rademacher 金鑰 k（d = 65536 維、值域 ±1）完全由一個 32-bit 整數 seed 經 `torch.Generator.manual_seed` 與 `torch.bernoulli` 決定（anonymization.py:100、anonymization.py:85、anonymization.py:87）。`key_upper_bound_bits` 為 32，宣稱為 65,536，差 65,504 bits（`gap_bits` 是宣稱與金鑰上界的差，不是攻擊工作量）。
 - [事實] Signed Permutation 在整數 seed 模式下，置換的 seed 為 `seed + 1000000`（anonymization.py:358），符號與置換由同一個 32-bit 值決定，`key_upper_bound_bits` 為 32，宣稱 2^d·d!（約 1,019,572.9 bits）。
@@ -81,7 +81,7 @@
 3. [事實] 已知一對完整的明文/密文 latent 時不需要任何搜尋。S0 的密文為 `z_ano = mask ⊙ (k ⊙ z) + (1 − mask) ⊙ z`（anonymization.py:681、anonymization.py:682），故對 mask = 1 的座標 `k = sign(c ⊙ z)` 直接讀出；S1 的密文為 `c = P(k ⊙ z)`（anonymization.py:394、anonymization.py:397；置換只是索引取值 anonymization.py:225，不改變幅值），把 |c| 與 |z| 各自排序即可配對出 π，再由符號比對得 k，成本 O(d log d)。`results/A3.2.json` 的 E4 在 d = 4096、幅值互異的 latent 上以此法精確找回 (k, π)（`kpa_recovers_sign_and_permutation_exactly` = true）。所以 `kpa_full_pair_search_bits` = 0。
    [事實] seed 窮舉只在三種情況才有意義：部分明文（稽核方 AF-026：S0 約需 64 個已知座標，[推定]）、magnitude tie，以及唯密文（第 4 點）。float32 latent 並非幅值互異：A3.3 的 10 個 d=65536 latent 的相異幅值數皆小於 65536（`results/A3.3.json` 的 `inputs.*.stats.n_distinct_magnitudes`，即有座標共用相同幅值），僅憑幅值排序時這些座標的配對有歧義，需第二對明密文或對 seed 窮舉（上限為 `seed_search_bits_separable`）才能消除；其處理屬 A4.3，不影響本檔的 bits 上界。
    [推定] 需要 seed 窮舉時，S1 的符號 seed 與置換 seed 可各自獨立窮舉（置換只比對 magnitude 排序，可容忍 tie；符號只比對符號），候選數約 2·2^32 = 2^33，而非 2^64；這是 `seed_search_bits_separable` 欄的意義，不是已知明文的成本。S0 部分與縮小空間 S1 positive control 見 A3.2，完整 S1 KPA 屬 A4.3，不在本任務內。
-4. [事實，稽核方結果；本腳本不量測] 唯密文也能對 seed 窮舉，而且 oracle 可分開評估符號與置換，所以 2^64 不是攻擊工作量。S0（AF-027，`audit/a3_s0_coa_oracle_check.py`）：單一密文 latent 對正確金鑰的分數約 37σ（三張真實 latent 為 37.1／36.8／37.0σ），2,000 個錯誤 seed 最高只有 3.3–3.8σ；[推定] 外推到 2^32 個錯誤候選，期望最大值約 6.7σ（高斯尾部假設），仍遠低於 37σ，故 S0 唯密文約 2^32。S1（AUD-20261011-02，`audit/a3_s1_coa_experiment.py`）：在 2^14 縮小空間中，**單一 S1 密文**即讓植入的置換 seed（14.6σ）與符號 seed（置換已知時 36.9σ）都排第 1，錯誤候選與負控制最高 ≤ 4.2σ；[推定] 外推到完整空間總工作量約 2·2^32 = 2^33。AUD-20261011-01 記錄的 subagent 估計是金鑰重用下需 10–50 張密文，AUD-20261011-02 實測更正為單張即可；前作部署本來就讓所有影像共用同一把金鑰（第 7 點）。實作方以自己的實作重現唯密文實驗屬 A3.2 補測（AF-027，尚未完成），在此之前 `ciphertext_only_seed_search_bits` 欄只引用稽核方結果。
+4. [事實，稽核方結果；本腳本不量測] 唯密文也能對 seed 窮舉，而且 oracle 可分開評估符號與置換，所以 2^64 不是攻擊工作量。S0（AF-027，`audit/a3_s0_coa_oracle_check.py`）：單一密文 latent 對正確金鑰的分數約 37σ（三張真實 latent 為 37.1／36.8／37.0σ），2,000 個錯誤 seed 最高只有 3.3–3.8σ；[推定] 外推到 2^32 個錯誤候選，期望最大值約 6.7σ（高斯尾部假設），仍遠低於 37σ，故 S0 唯密文約 2^32。S1（AUD-20261011-02，`audit/a3_s1_coa_experiment.py`）：在 2^14 縮小空間中，**單一 S1 密文**即讓植入的置換 seed（14.6σ）與符號 seed（置換已知時 36.9σ）都排第 1，錯誤候選與負控制最高 ≤ 4.2σ；[推定] 外推到完整空間總工作量約 2·2^32 = 2^33。AUD-20261011-01 記錄的 subagent 估計是金鑰重用下需 10–50 張密文，AUD-20261011-02 實測更正為單張即可；前作部署本來就讓所有影像共用同一把金鑰（第 7 點）。實作方已在 `results/A3.2.json` 的 E5／E6／E7 以自己的實作重現唯密文攻擊（AF-027）；全樣本（E7，200 張）顯示 S0 對 200/200、S1 置換對 199/200 張單一密文即可（最弱為 security_v1_0018），部署層級『單一密文即可找回金鑰』成立（AF-032）。
 5. [事實] 密碼 `Ki@13579` 寫死在啟動腳本內（第 8 點列出位置）；[推定] 取得程式碼的攻擊者不需要猜測，秘密為 0 bits，與 SHA-256 前綴的 32-bit 上界無關。[假設] 若攻擊者沒有程式碼，且密碼是人類可記憶字串，實際熵可能遠低於 32 bits（字典或規則式猜測）；本檔只量測由 SHA-256 前綴施加的 32-bit 上界，不量測密碼熵。
 6. [推定] 32 是上界而非精確值：seed → 金鑰的映射在 2^32 個 seed 上是否全為單射本腳本未窮舉驗證（V6 只顯示不同密碼可共用同一 seed）。
 7. [事實] 金鑰由 password 確定性導出（V2），且啟動命令寫死單一 password（`run_cfg_inference_Crypto.sh:7`）；[推定] 因此同一 password 下的所有影像共用同一把金鑰，恢復一把即可還原全部——這屬於金鑰重用問題，與位元數是兩個獨立議題。
@@ -116,7 +116,7 @@
 
 - [事實] A3.2（`results/A3.2.json`）用同一批前作金鑰類別在縮小空間（2^20）上做窮舉 positive control，並量測吞吐後外推到 2^32；本檔不含任何計時。
 - [事實] A3.3 驗證 S0 逐元素 |z_enc| = |z| 與 S1 排序幅值不變，這是不需要金鑰就能比對 gallery 的依據；本檔只處理金鑰空間。
-- [事實] 唯密文 oracle（AF-027）：稽核方結果與證據檔見第 5 節第 4 點；實作方的 A3.2 補測完成前，本檔不含唯密文量測。
+- [事實] 唯密文 oracle（AF-027）：已由實作方在 `results/A3.2.json` 的 E5／E6／E7 重現（S0 200/200、S1 置換 199/200 單張）；本檔本身不含唯密文量測，證據檔見 A3.2 與第 5 節第 4 點。
 - [推定] 修補方向（D5.1）應使用 256-bit 隨機主金鑰，並由 CSPRNG／KDF 展開到 d 維，使每一位元都來自完整熵；該設計的檢驗不在本任務內。
 
 ## 7. 重現

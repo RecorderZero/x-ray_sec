@@ -407,6 +407,48 @@ def s1_coa_negative_control(shape, z: torch.Tensor, secret_perm_seed_out: int, s
             "max_sigma_over_candidates": float((corrs.max() - corrs.mean()) / corrs.std())}
 
 
+def coa_all_images(latents_all: np.ndarray, null_perm_seeds: int = 64) -> dict:
+    """Correct-key ciphertext-only score for every security_v1 latent (AF-032).
+
+    No seed search: the correct score depends only on the latent. S0 / S1-sign
+    score = sqrt(d) * mean(z) / rms(z). S1 permutation score = adjacent-pixel
+    correlation of |z| standardized against a fixed null set of wrong inverse
+    permutations.  Reports the per-image distribution and how many fall below
+    the full-scale threshold (expected max of 2^32 wrong candidates, ~6.66 sigma).
+    """
+    n, _, side, _ = latents_all.shape
+    d = side * side
+    threshold = float((2 * np.log(2**FULL_BITS)) ** 0.5)
+    null_inverses = [PermutationKey(size=d, seed=10**6 + seed).inverse_permutation.numpy()
+                     for seed in range(null_perm_seeds)]
+
+    sign_sigma = np.empty(n)
+    perm_sigma = np.empty(n)
+    for i in range(n):
+        flat = latents_all[i].reshape(-1).astype(np.float64)
+        rms = float(np.sqrt(np.mean(flat * flat)))
+        sign_sigma[i] = np.sqrt(d) * float(flat.mean()) / rms  # correct key: sum z / (rms sqrt d)
+        correct_corr = _adjacent_corr_abs(flat, side)
+        null = np.array([_adjacent_corr_abs(flat[inv], side) for inv in null_inverses])
+        perm_sigma[i] = (correct_corr - null.mean()) / null.std()
+
+    def dist(values: np.ndarray) -> dict:
+        return {"min": float(values.min()), "p05": float(np.percentile(values, 5)),
+                "median": float(np.median(values)), "max": float(values.max()),
+                "n_below_full_scale_threshold": int(np.sum(values < threshold))}
+
+    return {
+        "n_images": n, "d": d, "null_permutation_seeds": null_perm_seeds,
+        "full_scale_threshold_sigma": threshold,
+        "s0_and_s1_sign_correct_sigma": dist(sign_sigma),
+        "s1_permutation_correct_sigma": dist(perm_sigma),
+        "s1_permutation_weakest_image_index": int(np.argmin(perm_sigma)),
+        "note": ("[fact] S0 and the S1 sign stage exceed the threshold for every image; the S1 permutation stage "
+                 "exceeds it for all but the weakest image. The predecessor reuses one key across all images, so a "
+                 "single ciphertext (the strongest one) suffices at deployment level."),
+    }
+
+
 # ---------------------------------------------------------------------------
 # throughput benchmarks (for the extrapolation)
 # ---------------------------------------------------------------------------
@@ -491,6 +533,7 @@ def main() -> None:
     e5 = s0_coa_search(FULL_SHAPE, z_real, secret_e5, COA_RANGE)
     e6 = s1_coa_search(FULL_SHAPE, z_real_s1, secret_e6_sign, secret_e6_perm, COA_RANGE)
     e6_neg = s1_coa_negative_control(FULL_SHAPE, z_real_s1, secret_e6_neg, COA_RANGE)
+    e7 = coa_all_images(np.array(latents))
 
     benchmarks = run_benchmarks()
 
@@ -509,6 +552,8 @@ def main() -> None:
         "E5_coa_ranked_first": e5["ranked_first"] and e5["correct_score_sigma"] > e5["wrong_max_sigma"],
         "E6_coa_permutation_first": e6["permutation_ranked_first"],
         "E6_coa_sign_first": e6["sign_ranked_first"],
+        "E7_s0_all_images_above_threshold": e7["s0_and_s1_sign_correct_sigma"]["n_below_full_scale_threshold"] == 0,
+        "E7_s1_permutation_at_most_one_below": e7["s1_permutation_correct_sigma"]["n_below_full_scale_threshold"] <= 1,
     }
     if not all(checks.values()):
         raise SystemExit(f"positive/negative control failed: {checks}")
@@ -587,6 +632,11 @@ def main() -> None:
             "candidates_tested": e6["candidates_tested"],
             "negative_control": e6_neg,
             "note": "[fact] a single S1 ciphertext suffices; no key reuse required (stronger than the >=10 ciphertexts earlier estimated)",
+        },
+        "e7_ciphertext_only_all_images": {
+            "description": ("AF-032: correct-key ciphertext-only score over all 200 security_v1 latents, no search. "
+                            "Scope check for the 'single ciphertext suffices' claim."),
+            **e7,
         },
         "checks": checks,
         "legacy_seed_positions": {
@@ -678,6 +728,12 @@ def main() -> None:
             "不需金鑰重用。分數本身即以 σ 為單位（錯誤金鑰 ~ N(0,1)）。"
             "[推定] 2^32 個 N(0,1) 錯誤候選的期望最大值約 6.7σ，仍遠低於正確金鑰，故全尺度下正確金鑰仍排第 1；"
             "外推時間見 timing_nondeterministic（CPU 單執行緒，非 GPU）。"
+            f"[事實] 全樣本（security_v1 200 張，e7）：S0 與 S1 符號階段對 "
+            f"{e7['s0_and_s1_sign_correct_sigma']['n_below_full_scale_threshold'] == 0 and '200/200' or 'most'} 張皆高於 2^32 門檻（{e7['full_scale_threshold_sigma']:.2f}σ）；"
+            f"S1 置換階段有 {e7['s1_permutation_correct_sigma']['n_below_full_scale_threshold']}/200 張低於門檻"
+            f"（最弱為 index {e7['s1_permutation_weakest_image_index']}），其餘單張即可。"
+            "[推定] 前作所有影像共用一把金鑰，攻擊者可挑訊號最強的一張密文找回金鑰再解開全部，故部署層級『單一密文即可』成立；"
+            "不寫成『每一張影像單張都可以』。"
             "[結論] 前作在 T1 下不需要已知明文：單一密文即可在 32-bit seed 空間中辨識金鑰，密碼強度幾乎無關。"
         ),
     }
