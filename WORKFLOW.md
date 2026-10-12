@@ -329,8 +329,8 @@ G0：E0.1、E1.1–E1.5、E2.1–E2.5 全過；所有後續攻擊都能從固定
 
 | ID | 子任務 | 通過條件 | 交付 |
 |---|---|---|---|
-| A4.1 | T2-WB anonymous-image inversion | 使用目標 checkpoint；逐筆保存 S0/S1 的 z_ano vs zhat_ano cosine 與 error；legacy PNG 與 range-preserving PNG 兩種存檔分欄（AF-024） | table_T2_WB_inversion.csv |
-| A4.2 | T2-WB magnitude gallery | 相同 scorer、split、controls；與 T1 並排；兩種存檔協定分欄（AF-024） | table_T2_WB_magnitude.csv |
+| A4.1 | T2-WB anonymous-image inversion | 使用目標 checkpoint；逐筆保存 S0/S1 的 z_ano vs zhat_ano cosine、error、norm ratio 與 range metadata；legacy PNG 與 range-preserving PNG 兩種存檔分欄（AF-024／AF-025） | table_T2_WB_inversion.csv、受控 query cache |
+| A4.2 | T2-WB magnitude gallery | 相同 scorer、split、controls；與 T1 並排；兩種存檔協定分欄；含 norm-only（dev calibration 與 formal evaluation 隔離）、lo/hi-only、lo/hi＋原特徵（AF-024／AF-025） | table_T2_WB_magnitude.csv |
 | A4.3 | KPA | S0 positive control 一對恢復；S1 按排序／符號驗證 | table_KPA.csv |
 | A4.4 | CPA | verify_cpa.py 的 d-query Q recovery 成功；明列 fixed Q 前提 | table_CPA.csv |
 | A4.5 | tamper baseline | 修改 image／latent 後 S0/S1 不會拒絕；保存影響指標 | table_tamper_baseline.csv |

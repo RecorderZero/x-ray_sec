@@ -46,6 +46,15 @@
 - **負控制**：gallery ID 以 seed 1911 隨機重排後的 Top-1（預期約 1/N）。
 - 統計：Top-1、Top-5、mAP／CMC；以 query 為單位 bootstrap（B=10,000、seed 1911）95% CI。
 
+### 3.1 AF-025：norm 校正與公開 lo/hi 旁道
+
+- **資料隔離**：norm 的系統性偏差只可用 `dev_v1.1` 的 20 張已知明文／匿名影像校正；`security_v1` 200 張只作正式評估，不能反向選擇校正係數。每個（scheme、storage）以 dev 的 `median(||zhat_ano||₂ / ||z||₂)` 凍結一個乘法偏差，formal query 使用 `||zhat_ano||₂ / bias`。未校正與校正後的 norm-only 都要報告。這是具有少量已知樣本的 T2-WB 強攻擊者；不得把它寫成純唯密文結果。
+- **legacy PNG metadata**：前作丟棄原始值域，因此攻擊者可見的存檔值域固定為 `(0,1)`；lo/hi-only 在此欄是常數負控制，不能回填生成前的真實 lo/hi。
+- **range-preserving PNG metadata**：公開的 float32 `(lo,hi)` 原樣作為二維特徵。lo/hi-only 與 lo/hi＋原特徵皆須分開報告；若有顯著連結力，依 AF-025 回報使用者裁決，不自行改為加密 metadata、固定全域值域或 norm 擾動。
+- **metadata enrollment 前提**：lo/hi 無法直接和原圖 latent 比距離。其 linkage gallery 明定為攻擊者已持有、以同一固定 legacy key／pipeline 產生的具身分標籤 anonymous enrollment metadata；這比純 T2-WB 多一個 auxiliary enrollment oracle，結果必須標成 `T2-WB+enrollment`，不得冒充 key recovery。若每位病人只有同一筆 deterministic record，禁止拿 query 本身當 enrollment；正式實驗必須使用不同影像／不同 acquisition，否則該格標 `not_evaluable`。
+- **特徵合併**：lo/hi＋原特徵不得用 formal 標籤調權重。各距離先以 dev negative-pair distance 的 median/MAD 做 robust 標準化，再以預先固定的等權平均合併；MAD=0 的 metadata（legacy 常數欄）只保留原特徵並標記 metadata 無變異。
+- **controls**：各 scorer 沿用 §3 的方案專屬正控制與 seed 1911 shuffle 負控制；另記 calibration split hash、樣本數、bias、median/MAD 與 enrollment 前提。科學 Top-k 不作工程通過門檻。
+
 ## 4. `Inconclusive` 判定（使用者裁決 2026-10-10，AUD-20261010-02 §1）
 
 原提案（以 P 的 re-inversion 當所有方案的正控制）已被取代：稽核方實測 P 的 re-inversion 保真度（\|z\| Pearson 約 0.43）遠低於 S0/S1 自身（約 0.976，AUD-20261010-01 §4），以 P 判定會低估對 S0/S1 的攻擊可行性。
