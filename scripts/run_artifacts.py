@@ -54,6 +54,15 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def gpu_driver_version() -> str:
+    """NVIDIA driver version via nvidia-smi (AF-031); the driver can be auto-updated mid-study."""
+    result = subprocess.run(
+        ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+        text=True, capture_output=True, check=False,
+    )
+    return result.stdout.strip().splitlines()[0].strip() if result.returncode == 0 and result.stdout.strip() else "unavailable"
+
+
 def git_value(*arguments: str) -> str:
     result = subprocess.run(["git", *arguments], text=True, capture_output=True, check=False)
     return result.stdout.strip() if result.returncode == 0 else "unavailable"
@@ -188,6 +197,7 @@ def finalize_run(
         "pytorch": torch.__version__,
         "cuda": torch.version.cuda or "none",
         "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none",
+        "gpu_driver_version": gpu_driver_version(),
         "dtype": "float32",
         "packages": package_versions(),
         "numeric_fields": numeric_fields,

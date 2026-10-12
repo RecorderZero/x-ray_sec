@@ -125,6 +125,12 @@ def main() -> None:
 
     cuda_available = torch.cuda.is_available()
     gpu_name = torch.cuda.get_device_name(0) if cuda_available else "none"
+    driver_result = subprocess.run(
+        ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+        text=True, capture_output=True, check=False,
+    )
+    gpu_driver_version = (driver_result.stdout.strip().splitlines()[0].strip()
+                          if driver_result.returncode == 0 and driver_result.stdout.strip() else "unavailable")
     gpu_memory = (
         torch.cuda.get_device_properties(0).total_memory if cuda_available else 0
     )
@@ -151,6 +157,7 @@ def main() -> None:
         "cuda_available": cuda_available,
         "cudnn": torch.backends.cudnn.version(),
         "gpu_name": gpu_name,
+        "gpu_driver_version": gpu_driver_version,
         "gpu_total_memory_bytes": gpu_memory,
         "git_head": git_value("rev-parse", "HEAD"),
         "git_status_porcelain": git_value("status", "--porcelain=v1"),

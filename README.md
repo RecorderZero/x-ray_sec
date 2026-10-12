@@ -39,7 +39,7 @@
 | `scripts/run_cfg_ddim.sh` | 固定 `PYTHONNOUSERSITE=1` 後在 CFG_DDIM 執行命令，阻止 `~/.local` 套件混入。 | 所有文件化的 CFG_DDIM 指令。 |
 | `scripts/env_guard.py` | 共用 fail-closed 檢查；套件載自 active `sys.prefix` 外或 user-site 啟用時立即中止。 | E1/E2 runner 與 split builder 啟動時。 |
 | `scripts/managed_run.py` | 受控執行命令，保存真實 stdout/stderr/exit code、atomic status、PID、heartbeat 與 task/GPU locks；自身設定寫入 `runner_config.json`，以 `EXPERIMENT_RUN_DIR` 把 run 目錄交給子程序；`--validate-artifacts` 時子程序成功後先以 `validate_run` 驗證 manifest/per-sample/summary，未通過即標為 failed（exit 3）。 | E2.3 起所有長任務的外層 runner。 |
-| `scripts/e1_environment_inventory.py` | strict load checkpoint，記錄 Python、PyTorch、CUDA、GPU、Pillow、pytest、OpenCV、模型參數及 hash。 | 環境、套件或 checkpoint 改變後。 |
+| `scripts/e1_environment_inventory.py` | strict load checkpoint，記錄 Python、PyTorch、CUDA、GPU、GPU 驅動版本（AF-031）、Pillow、pytest、OpenCV、模型參數及 hash。 | 環境、套件、驅動或 checkpoint 改變後。 |
 | `scripts/create_dev_split.py` | 從 CheXpert validation CSV 建立 20 位病人互斥 split；stable hash 不含 local path。 | split 版本升級時；不要為改善結果任意重抽。 |
 | `scripts/create_security_split.py` | 重現學長每類 16,000 張抽樣、排除其病人，再建立固定隨機 formal split。 | E2.1 重建或擴大 formal N 時。 |
 | `scripts/e1_ddim_runner.py` | headless CFG-DDIM benchmark/smoke，走學長**推論流程**（`ddim_sample_loop_known_progressive`，manifest `pipeline` 註明）；smoke 的 re-inversion 分報共用雜訊（樂觀上限）與未知雜訊（seed+1,000,000）兩版（AF-019）；可在 `managed_run.py` 下寫入受控 run 目錄。 | E1 重驗；`preprocess`／`create_runtime` 供 E2 共用。P/S0/S1 比較改用 `e2_anonymization_runner.py`。 |

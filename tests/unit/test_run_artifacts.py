@@ -62,3 +62,17 @@ def test_source_edited_during_run_fails_finalize(tmp_path: Path, monkeypatch) ->
     rows = [{"sample_id": "x", "metric": 1.0}]
     with pytest.raises(RuntimeError, match="changed during the run"):
         run_artifacts.finalize_run(context, Path(__file__), rows, ["metric"], {}, "", "")
+
+
+def test_gpu_driver_version_is_a_string(monkeypatch) -> None:
+    import subprocess as sp
+    monkeypatch.setattr(
+        run_artifacts.subprocess, "run",
+        lambda *a, **k: sp.CompletedProcess(a, 0, stdout="580.178.04\n", stderr=""),
+    )
+    assert run_artifacts.gpu_driver_version() == "580.178.04"
+    monkeypatch.setattr(
+        run_artifacts.subprocess, "run",
+        lambda *a, **k: sp.CompletedProcess(a, 1, stdout="", stderr="no smi"),
+    )
+    assert run_artifacts.gpu_driver_version() == "unavailable"
