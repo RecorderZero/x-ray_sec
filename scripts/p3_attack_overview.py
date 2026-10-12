@@ -57,18 +57,26 @@ def build_figure(panels: list[dict], output: Path) -> None:
         axes[row][0].imshow(_u8(panel["x0"]), cmap="gray")
         axes[row][1].imshow(panel["z"], cmap="gray")
         ax = axes[row][2]
-        # Within one patient z, S0 z_ano and S1 z_ano share the same sorted |.|
-        # (exact invariant, A3.3), so the gallery scorer matches a query to its
-        # own image at distance 0. The linkage signal is the per-rank difference
-        # BETWEEN patients: small but non-zero, so every other gallery entry is
-        # farther away (AF-028).
-        diff = panel["sorted_z"] - other["sorted_z"]
-        ax.axhline(0.0, color="#898781", linewidth=0.8)
-        ax.plot(diff, color="#2a78d6", linewidth=1.0)
-        rmse = float(np.sqrt(np.mean(diff**2)))
+        # Each diff panel contrasts the two things the A3.4 scorer sees:
+        #  - BETWEEN patients (blue): sorted |z| of this patient minus the other
+        #    patient -> non-zero, so every other gallery entry is farther away.
+        #  - WITHIN patient, across ciphers (orange): sorted |z| minus sorted
+        #    |S1 z_ano| of the SAME patient -> exactly 0 (A3.3 invariant), which is
+        #    why the query matches its own image at distance 0.
+        between = panel["sorted_z"] - other["sorted_z"]
+        within = panel["sorted_z"] - panel["sorted_s1"]  # exact invariant -> 0
+        between_rmse = float(np.sqrt(np.mean(between**2)))
+        ax.axhline(0.0, color="#898781", linewidth=0.8, zorder=1)
+        ax.plot(between, color="#2a78d6", linewidth=1.0, zorder=3,
+                label=f"between patients (vs {other['sample_id']}), RMSE {between_rmse:.3f}")
+        ax.plot(within, color="#eb6834", linewidth=1.6, zorder=2,
+                label="within patient: z - (S1 z_ano) = 0")
+        # Symlog keeps both the ~0.01 bulk and the tail spike readable (AF-028).
+        ax.set_yscale("symlog", linthresh=0.01)
+        ax.set_ylim(-1.2, 1.2)
         ax.set_xlabel("coordinate rank")
-        ax.set_ylabel(f"sorted |z|: {panel['sample_id']} - {other['sample_id']}", fontsize=8)
-        ax.set_title(f"per-patient difference (RMSE {rmse:.3f}; within patient z=S0=S1)", fontsize=8)
+        ax.set_ylabel("sorted |z| difference", fontsize=9)
+        ax.legend(fontsize=7, loc="lower center")
         ax.grid(True, alpha=0.3)
         axes[row][3].imshow(_u8(panel["s0_img"]), cmap="gray")
         axes[row][4].imshow(_u8(panel["s1_img"]), cmap="gray")
@@ -77,7 +85,9 @@ def build_figure(panels: list[dict], output: Path) -> None:
         axes[row][0].set_ylabel(panel["sample_id"], fontsize=10)
         if row == 0:
             for column, title in enumerate(titles):
-                axes[row][column].set_title(title, fontsize=11)
+                if column != 2:  # column 2 has no overwriting header; its legend labels it
+                    axes[row][column].set_title(title, fontsize=11)
+            axes[row][2].set_title("sorted |z| difference (symlog)", fontsize=11)
     fig.suptitle("P3.1 attack overview: the sorted-|z| fingerprint is a per-patient invariant the cipher preserves (A3.4)", fontsize=12)
     fig.tight_layout()
     output.parent.mkdir(parents=True, exist_ok=True)
