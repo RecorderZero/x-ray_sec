@@ -42,6 +42,8 @@
 - Gallery：E2.3 cache 的原圖 latent `z_i = ddim_anonymization_forward(x0_i)`，`security_v1`，N=200。
 - Query（方案 s）：攻擊者對保存的匿名 PNG 自行 inversion 得 `ẑ_j^s`；T1 則直接取精確 `z_ano,j^s`。T2-WB 的 query 對**兩種存檔協定各產生一組**（legacy PNG 讀回、range-preserving PNG 讀回，後者含 `lo`／`hi`，見 §2 第 4 點），兩組分欄報告，不混用。
 - 特徵與 scorer 在 T1、T2-WB、所有方案間完全相同：S0 用 `|z|`，S1 用 `sort(|z|)`，另報 norm-only `‖z‖`；可加報低頻 `|z|` 區塊平均作為 re-inversion 穩健特徵（`[假設]` 身分資訊主要在低頻，見 AUD-20261008-03 §3.3）。
+- **尺度不變 scorer（AF-033，首選）**：T2-WB 下攻擊者反推的 latent 帶有一個所有影像共用的尺度偏差（`‖ẑ_ano‖/‖z‖` 中位數約 1.01，legacy 存檔尤甚）。直接以 L2 距離比較 `sort(|ẑ|)` 會被此偏差壓過人際差異。因此每個特徵向量先除以自身 L2 norm（`abs_unit`、`sorted_abs_unit`），消除共用尺度。`[決定]` 以 **dev_v1.1（20 張）** 凍結選擇規則：尺度不變版在 dev 上一律 ≥ 原始版（S1 legacy sorted 0.75→0.80、S0 legacy 0.40→0.50，其餘相等），故採**尺度不變版為指定 scorer**，原始版並列備查。不得看正式資料才挑 scorer。formal（security_v1）佐證：S1 legacy 0.19→**0.465**、range 0.975→0.995；S0 legacy 0.065→0.145、range 0.93→0.975。
+- D7.2 對 S2a／S2 一律沿用上述完整 scorer 集合（含尺度不變版）與同一 tie-break。
 - **正控制**（依 §4 裁決）：每個方案各自的正控制，即以正確金鑰把 re-inversion 得到的 `ẑ_ano` 解密成 `ẑ` 後，以 latent 相關對 gallery 做 linkage。P（恆等金鑰）的 re-inversion linkage 只作參考，不用來判定其他方案。
 - **負控制**：gallery ID 以 seed 1911 隨機重排後的 Top-1（預期約 1/N）。
 - 統計：Top-1、Top-5、mAP／CMC；以 query 為單位 bootstrap（B=10,000、seed 1911）95% CI。

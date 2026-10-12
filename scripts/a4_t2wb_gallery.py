@@ -51,6 +51,10 @@ BOOTSTRAP = 10_000
 LOWFREQ_POOL = 8
 # scorer -> the scheme whose invariant it is the designated attack for
 DESIGNATED = {"S0": "abs", "S1": "sorted_abs"}
+# AF-033: scale-invariant scorer is primary for the predecessor-deployment
+# (legacy) column; the raw variant is kept alongside. Choice frozen on dev.
+DESIGNATED_UNIT = {"S0": "abs_unit", "S1": "sorted_abs_unit"}
+SCORERS = ("abs", "abs_unit", "sorted_abs", "sorted_abs_unit", "norm", "lowfreq_abs")
 
 
 def sha256_file(path: Path) -> str:
@@ -91,6 +95,16 @@ def feature(matrix: np.ndarray, scorer: str) -> np.ndarray:
         pooled = images.reshape(-1, side // LOWFREQ_POOL, LOWFREQ_POOL,
                                 side // LOWFREQ_POOL, LOWFREQ_POOL).mean(axis=(2, 4))
         return pooled.reshape(m64.shape[0], -1)
+    # AF-033: scale-invariant variants. The attacker's re-inverted latent carries
+    # a shared multiplicative scale bias (||zhat_ano||/||z|| ~ 1.01 under legacy
+    # storage); dividing each feature vector by its own L2 norm cancels it, so the
+    # per-patient magnitude differences are not swamped by the common bias.
+    if scorer == "abs_unit":
+        base = feature(matrix, "abs")
+        return base / np.linalg.norm(base, axis=1, keepdims=True)
+    if scorer == "sorted_abs_unit":
+        base = feature(matrix, "sorted_abs")
+        return base / np.linalg.norm(base, axis=1, keepdims=True)
     raise ValueError(scorer)
 
 
@@ -212,7 +226,7 @@ def main() -> None:
         truth_by_cell[cell] = np.array([image_pos[query_index[p]["sample_id"].split("|")[0]]
                                         for p in positions])
 
-    gallery_feat = {s: feature(gallery, s) for s in ("abs", "sorted_abs", "norm", "lowfreq_abs")}
+    gallery_feat = {s: feature(gallery, s) for s in SCORERS}
     cells: dict[str, Any] = {}
     table_rows: list[dict[str, Any]] = []
     cmc_curves: dict[str, list[float]] = {}
@@ -227,7 +241,7 @@ def main() -> None:
             neg_truth = shuffle
 
             cell_result: dict[str, Any] = {}
-            scorers = ["abs", "sorted_abs", "norm", "lowfreq_abs"]
+            scorers = list(SCORERS)
             for scorer in scorers:
                 qf = feature(q, scorer)
                 gf = gallery_feat[scorer]
@@ -281,6 +295,7 @@ def main() -> None:
                 row = {
                     "scheme": scheme, "storage": storage, "scorer": scorer,
                     "designated": scorer == DESIGNATED[scheme],
+                    "designated_unit": scorer == DESIGNATED_UNIT[scheme],
                     "queries": e["attack"]["queries"], "gallery_size": gallery_size,
                     "attack_top1": e["attack"]["top1"],
                     "attack_top1_ci_low": e["attack"]["top1_ci95_wilson"][0],
@@ -339,10 +354,11 @@ def plot_cmc(curves: dict[str, list[float]], output: Path) -> None:
 
     fig, axes = plt.subplots(1, len(STORAGES), figsize=(11, 4), sharey=True)
     colour = {"S0": "#2a78d6", "S1": "#eb6834"}
-    style = {"abs": "-", "sorted_abs": "--", "norm": ":", "lowfreq_abs": "-."}
+    style = {"abs": "-", "abs_unit": (0, (1, 1)), "sorted_abs": "--",
+             "sorted_abs_unit": (0, (5, 1)), "norm": ":", "lowfreq_abs": "-."}
     for ax, storage in zip(axes, STORAGES):
         for scheme in SCHEMES:
-            for scorer in ("abs", "sorted_abs", "norm"):
+            for scorer in ("abs", "abs_unit", "sorted_abs", "sorted_abs_unit", "norm"):
                 curve = curves[f"{scheme}/{storage}/{scorer}"]
                 ax.plot(range(1, len(curve) + 1), curve, colour[scheme], linestyle=style[scorer],
                         linewidth=1.3, label=f"{scheme} {scorer}")
