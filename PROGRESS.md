@@ -1015,3 +1015,37 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 目前沒有需要等待或監看的程序；下一個實驗可從 D6 前置估時與小型 smoke test 開始，若預估 GPU 超過 30 分鐘則先請使用者裁決。
+
+## 2026-10-13 · 環境維護 · sandbox helper 根因確認（待主機管理權限）
+
+### 1. 當前目標 (Objective)
+* 修復內建寫檔／`apply_patch` 反覆出現的 `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`，避免後續再以 sandbox 外的精確替換繞道。
+
+### 2. 執行動作 (Actions Taken)
+* 依 OpenAI Docs 的 Linux sandbox 指引檢查 OS、Codex、bubblewrap、user namespace、AppArmor、套件與核心 audit log。
+* 以直接 `bwrap --unshare-user ... --unshare-net ... /bin/true` 做最小重現。
+* 嘗試安裝官方建議的 `apparmor-profiles` 與 `apparmor-utils`；`sudo` 因需要互動式密碼而立即退出，沒有安裝或修改系統。
+* 檢查背景程序：沒有 `apt-get`、`apparmor_parser`、pytest、managed run 或 D5 evidence 仍在執行。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 主機為 Ubuntu 24.04.4；Codex CLI 0.153.0；發行版 `bubblewrap 0.9.0` 已安裝。
+* [事實] `kernel.apparmor_restrict_unprivileged_userns=1`，但 `apparmor-profiles`／`apparmor-utils` 與 `bwrap-userns-restrict` profile 均不存在。
+* [事實] 核心 audit 明確拒絕 `bwrap` 的 `setpcap` 與 `net_admin`；最小重現得到完全相同的 `Failed RTM_NEWADDR`。當日紀錄共有 75 個 bwrap deny events、涉及 39 個 PID；一個 sandbox 呼叫可能衍生多個 PID／deny，不能解讀成 39 次寫檔，但證明問題廣泛且反覆發生。
+* [根因] Ubuntu 24.04 AppArmor 的 unprivileged-userns 限制正在套用 generic `unprivileged_userns` profile，而主機缺少允許 bubblewrap 必要能力的專用 profile。
+
+### 4. 達標判定 (Assessment)
+* [ ] **尚未修復**：根因與官方修復路徑已確認，但系統套件／profile 需要使用者在主機終端輸入 sudo 密碼。
+* [x] **沒有殘留程序或半套系統變更**：安裝在取得權限前即退出。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 採最小權限修復：保留 `kernel.apparmor_restrict_unprivileged_userns=1`，安裝並載入專用 bwrap AppArmor profile；不採官方列為 fallback 的全域關閉限制。
+* 使用者需在自己的終端執行：
+  1. `sudo apt-get install -y apparmor-profiles apparmor-utils`
+  2. `sudo install -m 0644 /usr/share/apparmor/extra-profiles/bwrap-userns-restrict /etc/apparmor.d/bwrap-userns-restrict`
+  3. `sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict`
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。此為實驗基礎環境維護，不改變研究方法或結果。
+
+### 7. 下一步
+* 使用者完成三條 sudo 指令後，重新執行 direct bwrap smoke、內建 `apply_patch` no-op／temporary-file smoke，並確認 kernel audit 沒有新增 bwrap DENIED；通過後再將本項標為修復完成。
