@@ -987,3 +987,31 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 提交 D5 results／table／README／本完成條目，請稽核方複驗。
 * 進入 D6 前先估算各 GPU 工作；任何預估超過 30 分鐘者先請使用者裁決。
+
+## 2026-10-13 · 專案協作 · 安全提示與背景程序回報規則
+
+### 1. 當前目標 (Objective)
+* 釐清先前 `This content can't be shown` 提示的性質，並避免介面顯示 `worked` 後，使用者無法判斷本機程序是否仍在執行或工作停在哪裡。
+
+### 2. 執行動作 (Actions Taken)
+* 查閱 OpenAI 官方文件對 cybersecurity safeguard 與 false positive 的說明。
+* 以本機 process table 檢查 `pytest`、`managed_run`、D5 evidence 與專案實驗 Python 程序。
+* 在 `AGENTS.md` 加入持久化規則：未完成、受阻或仍執行中的工作，結束回合前必須寫入 `PROGRESS.md`；仍在跑的程序必須回報 run ID/PID、狀態、log/status 路徑、預估時間及是否需監看。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 引用的提示代表該則回覆被平台 cybersecurity safeguard 隱藏、阻擋、改道或限制；先前稱「沒有資安政策拒絕」不夠精確。
+* [事實] 平台回覆是否顯示，與已啟動的本機 shell/GPU 程序是否仍執行是兩個獨立狀態，不能由 `worked` 或提示文字推斷。
+* [事實] 本次檢查沒有發現仍在執行的專案 `pytest`、`managed_run`、D5 evidence 或攻擊實驗程序；D5 已於上一條完成紀錄為 Achieved。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：事件性質已更正、目前背景程序已核對、後續回報義務已寫入版本化專案規則。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 問題不是研究授權說明不足，而是先前把「平台內容層 safeguard」與「本機 sandbox／程序執行層」混為一談，且沒有在回覆不可見後立即留下狀態交接。
+* 後續一律分開報告三層狀態：平台內容提示、工具權限／sandbox、實際本機 run；只要 run 未結束就同時寫進 `PROGRESS.md`。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。此項為協作與可追溯性規則補強，不改變研究方法、D5 結論或八週工作內容。
+
+### 7. 下一步
+* 目前沒有需要等待或監看的程序；下一個實驗可從 D6 前置估時與小型 smoke test 開始，若預估 GPU 超過 30 分鐘則先請使用者裁決。
