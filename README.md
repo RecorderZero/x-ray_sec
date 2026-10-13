@@ -36,6 +36,7 @@
 | `appendix/week1/` | Week 1 論文素材：6 張圖、10 張表與 `MANIFEST.csv`（含圖說草稿、建議用途、來源 SHA-256 與 run ID）；由 builder 產生，不手動編輯。 |
 | `appendix/week2/` | Week 2 Track A 攻擊素材：3 張圖、10 張表與 `MANIFEST.csv`，涵蓋金鑰空間、不變量、T1／T2-WB、KPA／CPA 與 tamper baseline。 |
 | `appendix/week3/` | Week 3 D5 防禦素材：key pipeline、nonce registry 與 authenticated-container tamper matrix 共 3 張表及 `MANIFEST.csv`。 |
+| `appendix/week4/` | Week 4 D6 防禦素材：SOT 正確性／分布／R-P 消融／結構診斷、S2 dev integration 與五方法比較，共 3 張圖、8 張表及 `MANIFEST.csv`。 |
 | `audit/README.md` | 稽核程式與輸出索引；由稽核方維護。 |
 
 ## E0/E1 可重現程式

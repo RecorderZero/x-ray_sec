@@ -1,0 +1,9 @@
+rounds,permutation,dimension,trace,trace_over_d,same_vector_cosine_expectation,basis_probe_nonzero_fraction,matrix_zero_fraction_tol_1e15,matrix_abs_mean,matrix_abs_max,orthogonality_max_abs,interpretation
+1,False,1024,0.0,0.0,0.0,1.0,0.0,0.03125,0.03125,0.0,"Structural diagnostics and p-values are diagnostics, not a security proof."
+2,False,1024,0.0,0.0,0.0,1.0,0.0,0.02503204345703125,0.115234375,0.0,"Structural diagnostics and p-values are diagnostics, not a security proof."
+3,False,1024,-1.79296875,-0.001750946044921875,-0.001750946044921875,0.9912109375,0.0063686370849609375,0.024929958395659924,0.154296875,0.0,"Structural diagnostics and p-values are diagnostics, not a security proof."
+4,False,1024,-0.385650634765625,-0.00037661194801330566,-0.00037661194801330566,1.0,0.000194549560546875,0.024943935772171244,0.1566162109375,0.0,"Structural diagnostics and p-values are diagnostics, not a security proof."
+1,True,1024,-2.125,-0.0020751953125,-0.0020751953125,1.0,0.0,0.03125,0.03125,0.0,"Structural diagnostics and p-values are diagnostics, not a security proof."
+2,True,1024,1.3671875,0.00133514404296875,0.00133514404296875,0.9423828125,0.049945831298828125,0.024897828698158264,0.15234375,0.0,"Structural diagnostics and p-values are diagnostics, not a security proof."
+3,True,1024,0.85693359375,0.0008368492126464844,0.0008368492126464844,0.99609375,0.0032196044921875,0.024930635932832956,0.15234375,0.0,"Structural diagnostics and p-values are diagnostics, not a security proof."
+4,True,1024,-0.0062103271484375,-6.064772605895996e-06,-6.064772605895996e-06,1.0,0.0,0.024947795347543433,0.14289093017578125,0.0,"Structural diagnostics and p-values are diagnostics, not a security proof."

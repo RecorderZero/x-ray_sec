@@ -417,3 +417,123 @@
 * D6.1–D6.4：把 D5 的 HKDF／CSPRNG material、per-image nonce 與 SOT transform 接成 S2a／S2，並確保正式入口不能繞過 nonce registry 或 authenticated container。
 * 完成 AF-030 剩餘驗收：wrong-key／wrong-nonce sanity control 與 crypto path 靜態 guard。
 * GPU 工作先跑小型 smoke 並估時；任何預估超過 30 分鐘的任務先交由使用者裁決。
+
+---
+
+## Week 4（2026-10-26～11-01；於 10-14 提前完成 D6）｜SOT structured transform 與 authenticated S2 整合（D6）
+
+### 4.1 範圍與狀態
+
+| 子任務 | 內容 | 稽核判定 | 主要 commit |
+|---|---|---|---|
+| D6.1 | normalized FWHT／SOT 與逆運算 | Achieved（AUD-20261014-01） | `9577ed5`、`b442b5a` |
+| D6.2 | d=1,024 顯式矩陣正交性與多輪公式 | Achieved（AUD-20261014-01） | `b442b5a` |
+| D6.3 | 合成 Gaussian 分布診斷 | Achieved（AUD-20261014-01） | `b442b5a` |
+| D6.4 | 真實 latent 動差與匿名影像 quality | Achieved（AUD-20261014-01） | `b442b5a`、`abba1bc` |
+| D6.5 | R=1–4／permutation on-off 消融與 dev 選型 | Achieved（AUD-20261014-01） | `173226e` |
+| D6.6 | trace／basis／sparsity 結構診斷 | Achieved（AUD-20261014-01） | `b442b5a` |
+| D6.7 | M1/M2 authenticated S2 dev integration | Achieved（AUD-20261014-01） | `9577ed5`、`4c99e2f`、`33df546` |
+| 延伸比較 | P／S0／S1／S2a／S2 固定病例比較 | Achieved（實作方） | `ee4749c`、`4e979fb` |
+
+* **G3：PASS**；D6.1–D6.7 全部 Achieved，AF-030 CLOSED（AUD-20261014-01）。
+* 本週 D6 稽核範圍：`644bcfc..33df546`；五方法展示為 D6 完成後的延伸素材。
+
+#### 更正 Week 3 狀態
+
+* Week 3 發布時尚未複驗的 AF-037、AF-038，已在 AUD-20261013-05 全部 **CLOSED**，D5 最終判定為 **PASS**。依週報規範不回寫 Week 3 舊文，改於此處保留狀態演進。
+
+### 4.2 本週重點
+
+1. `[事實]` **SOT 數值實作正確，但 float32 不逐位元可逆。** d=65,536、R=1–4、有無置換的 float64 往返 MaxAbs 最差為 2.66e-15；float32 bit-exact rate 僅 8.60%–17.22%。d=1,024 顯式矩陣的正交誤差為 0、spectral norm error 為 8.88e-16（W4-T1）。
+2. `[事實]` **Gaussian 理論不能直接外推到真實 latent。** 合成 N(0,1) 變換後 KS p=0.121（W4-F1、W4-T2）；真實 latent 的 mean shift 絕對值約 0.139–0.141、variance shift 約 0.0197，但 norm ratio 仍接近 1（W4-T3）。
+3. `[決定]` **D7 暫選 R=1、permutation off。** 在 20 張 dev 中 original-|z| 與 sorted-|z| Top-1 均為 0.05，即 1/20 random baseline；置換使 CPU transform median 從 1.83 ms 增至 62.63 ms，未改善這兩種 scorer（W4-T4）。
+4. `[事實]` **正交變換仍完整洩漏 norm。** 八組 R/P 的 norm-only Top-1 全為 1.0；增加輪數或 permutation 都無法消除此不變量（W4-T4）。此限制留待 D7 與 AF-025 裁決。
+5. `[事實]` **authenticated S2 dev integration 通過。** 四病例 M2 decrypted latent MaxAbs 平均 7.75e-7；M1 decrypted latent cosine 平均 0.999811，重構影像 PSNR 39.37 dB、SSIM 0.9720，且四例均先驗證再 inversion（W4-F2、W4-T7）。
+6. `[事實]` **固定積水病例中，S2a 與 S2 像素結果相同。** 兩者皆為 PSNR 38.345 dB、SSIM 0.9684；S2 的額外價值是 authentication／tamper rejection，而不是改變影像（W4-F3、W4-T8）。
+
+### 4.3 實驗結果與分析
+
+#### (a) 變換正確性與分布（D6.1–D6.4）
+
+![W4-F1](appendix/week4/figures/W4-F1_gaussian_distribution.png)
+
+* `[事實]` D6.1 所有設定通過 float64 MaxAbs ≤1e-12 的預設門檻；float32 往返 MaxAbs 為 7.15e-7–1.43e-6，證明應以容差而非 bit-exact 作正確性判準（W4-T1）。
+* `[事實]` 合成 Gaussian 變換後 mean=-0.00202、variance=0.99799、skew=-0.00201、excess kurtosis=-0.00115（W4-T2）。這只支持「與 Gaussian 相容」的診斷，不是機密性或匿名性的證明。
+* `[事實]` 真實 latent 的同向量 cosine 均接近 0，而 norm ratio 的最大偏差為 3.58e-7；SOT 改變方向與座標統計，但正交性必然保留範數（W4-T3）。
+* `[事實]` 20 張 × 8 組匿名影像的平均 PSNR 對 x0 約 5.21–5.35 dB、SSIM 約 0.0076–0.0128（W4-T6）。這表示匿名影像與原圖差異大，不表示仍具醫療可讀性。
+
+#### (b) R／P 選型與結構限制（D6.5–D6.6）
+
+* `[事實]` R=1/P off 已使 original-|z| 與 sorted-|z| Top-1 降至 dev random baseline 0.05；增加 R 沒有穩定改善，卻增加運算與 float32 誤差（W4-T4）。
+* `[事實]` permutation on 在 R=1 的 median runtime 為 62.63 ms，off 為 1.83 ms；因此 dev 規則選擇成本較低的 R=1/P off（W4-T4）。
+* `[限制]` dev 僅 n=20，0.05 的解析度不足以排除小幅殘留洩漏。trace、basis probe、sparsity 等結果只作結構診斷（W4-T5）；正式鑑別由 D7 的 N=200 與 adaptive probes 完成。
+
+#### (c) S2 端到端整合（D6.7）
+
+![W4-F2](appendix/week4/figures/W4-F2_s2_dev_integration.png)
+
+* `[事實]` S2 seal 強制使用 persistent nonce registry；open 固定先驗證 tag 才 decode／inversion／inverse。稽核方另以 wrong key、payload tamper 與跨 M1/M2 nonce reuse 獨立複驗，全部 fail closed（AUD-20261014-01；W4-T7）。
+* `[事實]` 四病例 M1 PSNR 範圍 39.05–39.63 dB、SSIM 0.9630–0.9801；M2 decrypted latent cosine 平均約 1.0（W4-T7）。這是 dev integration 證據，不是 formal security 結果。
+
+#### (d) 五方法固定病例展示
+
+![W4-F3](appendix/week4/figures/W4-F3_method_comparison.png)
+
+| 方法 | storage | PSNR (dB) | SSIM | L∞ | 最大 uint8 pixel 誤差 |
+|---|---|---:|---:|---:|---:|
+| P | legacy／丟值域 | 38.291 | 0.9713 | 0.1026 | 26 |
+| S0 | legacy／丟值域 | 32.558 | 0.9428 | 0.6144 | 157 |
+| S1 | legacy／丟值域 | 31.946 | 0.8865 | 0.4793 | 122 |
+| S2a | range-preserving | 38.345 | 0.9684 | 0.4269 | 109 |
+| S2 | range-preserving＋認證 | 38.345 | 0.9684 | 0.4269 | 109 |
+
+（固定 `dev_v1.1_010` 單病例；完整精度與 runtime 見 W4-T8。）
+
+* `[限制]` 此圖依使用者指定讓 P/S0/S1 使用 legacy、S2a/S2 使用 range-preserving，因此差異同時包含 transform 與 storage protocol，不能當成只隔離演算法的因果消融（W4-T8）。
+* `[事實]` 五法 x0 raw-pixel cosine 均在 0.9990–0.9998，但 PSNR 橫跨 31.95–38.35 dB、L∞ 橫跨 0.103–0.614，重申 cosine 在高相似區會飽和（W4-T8）。
+
+### 4.4 論文可用素材（`appendix/week4/`）
+
+| 編號 | 內容 | 建議用途 | 建議章節 |
+|---|---|---|---|
+| W4-F1 | 合成 Gaussian 變換前後分布 | 附錄 | Results／distribution diagnostic |
+| W4-F2 | S2 四病例 dev integration 圖 | 正文 | Results／S2 integration |
+| W4-F3 | 五方法原圖／匿名圖／重構圖 | 正文 | Results／five-method comparison |
+| W4-T1 | SOT 往返與正交性 | 附錄 | Method／SOT correctness |
+| W4-T2 | Gaussian 統計與 KS 診斷 | 附錄 | Results／distribution diagnostic |
+| W4-T3 | 真實 latent 動差與 norm | 正文 | Results／real-latent diagnostics |
+| W4-T4 | R／P 消融、攻擊與 runtime | 正文主表 | Results／R/P ablation |
+| W4-T5 | 結構診斷 | 附錄 | Results／structure diagnostic |
+| W4-T6 | 160 次匿名生成 quality | 正文 | Results／anonymous-image quality |
+| W4-T7 | authenticated S2 dev integration | 正文主表 | Results／S2 integration |
+| W4-T8 | 五方法固定病例定量表 | 正文 | Results／five-method comparison |
+
+完整 caption、來源 SHA-256、run ID 與輸出 SHA-256 見 `appendix/week4/MANIFEST.csv`；連續重建兩次逐位元相同。
+
+### 4.5 決策紀錄
+
+| 日期 | 決定 | 出處 |
+|---|---|---|
+| 10-14 | `[決定]` D7 候選固定為 R=1、permutation off；若 adaptive／structured probe 顯示弱點則重開 | D6.5、AUD-20261014-01 |
+| 10-14 | `[決定]` AF-025 不以 D6 dev norm 結果直接關閉；依 D7 的 S2a／S2 跨存檔 formal 結果再裁決 | 使用者裁決、AUD-20261014-01 |
+| 10-14 | `[決定]` 五方法展示中 P/S0/S1 用 legacy；S2a/S2 用 range-preserving，並明列此非單因子消融 | 使用者指定、W4-T8 |
+
+### 4.6 稽核狀態
+
+* AUD-20261013-05：D5 最終 **PASS**；AF-037、AF-038 CLOSED。
+* AUD-20261014-01：D6.1–D6.7 **PASS**、G3 **PASS**，新 finding 0；AF-030 CLOSED。
+* 目前只剩 AF-025 OPEN：正交變換的 norm leakage 與 storage trade-off 須由 D7 formal 攻擊結果和使用者裁決處理。
+
+### 4.7 限制與未解問題
+
+* D6.5 是 dev n=20 選型，不足以量測低於 5% 的殘留 linkage；R=1/P off 仍是候選，不是最終安全結論（W4-T4）。
+* 所有正交方案都保留 L2 norm，D6 的八組 norm-only Top-1 均為 1.0；D7 必須在 N=200、兩種存檔與 adaptive calibration 下重測（W4-T4）。
+* 匿名圖對原圖的低 PSNR／SSIM只代表差異大，不代表臨床價值或隱私充分；本週未做病灶分類／定位效用實驗（W4-T6）。
+* 五方法表只有一張預先固定病例，適合定性展示，不可取代正式 N=200 統計（W4-F3、W4-T8）。
+* 本方法不宣稱 IND-CPA、perfect security、lossless 或 AES 等級；D7 仍須測 T1/T2-WB、KPA/CPA、geometry、structured probe、repeat 與 tamper。
+
+### 4.8 下週計畫（Week 5）
+
+* D7.1–D7.3：以 security_v1 N=200 對 S2a／S2 重跑 T1、T2-WB 與保存／不保存值域比較，包含 norm-only adaptive calibration。
+* D7.4–D7.7：cross-nonce KPA/CPA、geometry、structured probes、repeatability 與 authenticated tamper。
+* 依 D7 formal 結果提交 AF-025 的保護強度選項給使用者裁決；必要時重開 R／P 選型。

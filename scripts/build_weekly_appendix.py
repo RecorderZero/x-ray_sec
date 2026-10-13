@@ -382,6 +382,74 @@ def tab_d5_nonce(out: Path, src: list[Path]) -> None:
     }])
 
 
+# ---------------------------------------------------------------- week 4 tables
+def tab_d6_numerical_correctness(out: Path, src: list[Path]) -> None:
+    inverse = json.loads(src[0].read_text(encoding="utf-8"))
+    orthogonal = json.loads(src[1].read_text(encoding="utf-8"))
+    rows = []
+    for row in inverse["rows"]:
+        rows.append({
+            "task": "D6.1", "rounds": row["rounds"], "permutation": row["permutation"],
+            "dimension": row["dimension"], "float64_max_abs": row["float64_max_abs"],
+            "float64_norm_relative_error": row["float64_norm_relative_error"],
+            "float32_max_abs": row["float32_max_abs"],
+            "float32_bit_exact_rate": row["float32_bit_exact_rate"],
+            "orthogonality_max_abs": "", "norm_error_spectral": "", "round_formula_max_abs": "",
+        })
+    rows.append({
+        "task": "D6.2", "rounds": orthogonal["rounds"],
+        "permutation": orthogonal["permutation"], "dimension": orthogonal["dimension"],
+        "float64_max_abs": "", "float64_norm_relative_error": "", "float32_max_abs": "",
+        "float32_bit_exact_rate": "", "orthogonality_max_abs": orthogonal["orthogonality_max_abs"],
+        "norm_error_spectral": orthogonal["norm_error_spectral"],
+        "round_formula_max_abs": orthogonal["round_formula_max_abs"],
+    })
+    _write_csv(out, rows)
+
+
+def tab_d6_gaussian(out: Path, src: list[Path]) -> None:
+    data = json.loads(src[0].read_text(encoding="utf-8"))
+    rows = []
+    for stage in ("before", "after"):
+        values = data[stage]
+        rows.append({"stage": stage, "vectors": data["vectors"], "dimension": data["dimension"], **values})
+    _write_csv(out, rows)
+
+
+def tab_d6_real_latent_shift(out: Path, src: list[Path]) -> None:
+    rows = _read_csv(src[0])
+    metrics = ("mean_shift", "variance_shift", "skew_shift", "excess_kurtosis_shift", "norm_ratio",
+               "same_vector_cosine")
+    summary = []
+    for rounds in range(1, 5):
+        for permutation in ("False", "True"):
+            group = [r for r in rows if int(r["rounds"]) == rounds and r["permutation"] == permutation]
+            item = {"rounds": rounds, "permutation": permutation, "n": len(group)}
+            for metric in metrics:
+                values = np.asarray([float(r[metric]) for r in group], dtype=np.float64)
+                item[f"{metric}_mean"] = float(values.mean())
+                item[f"{metric}_max_abs"] = float(np.abs(values).max())
+            summary.append(item)
+    _write_csv(out, summary)
+
+
+def tab_d6_integration(out: Path, src: list[Path]) -> None:
+    rows = _read_csv(src[0])
+    metrics = ("m2_decrypted_latent_cosine", "m2_decrypted_latent_max_abs",
+               "m1_decrypted_latent_cosine", "m1_vs_x0_psnr_db", "m1_vs_x0_ssim",
+               "runtime_seconds_anonymous_generation", "runtime_seconds_m1_inversion",
+               "runtime_seconds_m1_recovery_generation")
+    summary = []
+    for metric in metrics:
+        values = np.asarray([float(r[metric]) for r in rows], dtype=np.float64)
+        summary.append({"metric": metric, "n": len(values), "mean": float(values.mean()),
+                        "min": float(values.min()), "max": float(values.max())})
+    summary.append({"metric": "m1_authenticated_before_inversion", "n": len(rows),
+                    "mean": float(np.mean([float(r["m1_authenticated_before_inversion"]) for r in rows])),
+                    "min": "", "max": ""})
+    _write_csv(out, summary)
+
+
 # ---------------------------------------------------------------- registry
 WEEKS: dict[int, list[Item]] = {
     1: [
@@ -530,6 +598,52 @@ WEEKS: dict[int, list[Item]] = {
              "D5.6 clean-HEAD tamper matrix：未竄改容器接受且 opener 呼叫一次；wrong key 與 12 種內容／metadata 竄改全部拒絕，opener 不被呼叫，外部錯誤統一。",
              "authenticated container 對 key、tag、nonce、header、AAD、storage、lo/hi 與 ciphertext 竄改皆 fail closed（D5.6、AF-024）",
              ["paper_assets/tables/table_D5_tamper_matrix.csv", "results/D5.6_tamper_matrix.json"], []),
+    ],
+    4: [
+        Item("W4-F1", "figure", "W4-F1_gaussian_distribution.png", "附錄", "Results／distribution diagnostic",
+             "D6.3 合成 N(0,1) 向量經 SOT 前後的分布診斷（128×4,096 維）；此圖只檢查實作與理論相容，不是安全證明。",
+             "SOT 對合成高斯輸入未造成可檢出的邊際分布偏離；不得外推到真實 latent 或安全性",
+             ["image/D6.3_gaussian_distribution.png"], []),
+        Item("W4-F2", "figure", "W4-F2_s2_dev_integration.png", "正文", "Results／S2 integration",
+             "S2 固定 dev 四病例之原圖、匿名圖、M2/T1 與 M1 還原圖；R=1、permutation off、range-preserving M1。",
+             "S2 匿名輸出已明顯改變，且 authenticated M1 路徑可回復高保真影像（D6.7）",
+             ["image/D6.7_s2_dev.png"], ["D6.7_INTEGRATION_20261013T164724711647Z_ecec4bf5"]),
+        Item("W4-F3", "figure", "W4-F3_method_comparison.png", "正文", "Results／five-method comparison",
+             "固定積水病例 dev_v1.1_010 的 P、S0、S1、S2a、S2：原圖、匿名圖與重構圖。P/S0/S1 採前作 legacy 存檔；S2a/S2 採保存值域存檔。",
+             "在指定存檔條件下比較五種方法的定性匿名化與重構；S2a/S2 的像素相同，差別是 S2 加入認證",
+             ["image/method_comparison.png"], []),
+        Item("W4-T1", "table", "W4-T1_numerical_correctness.csv", "附錄", "Method／SOT correctness",
+             "D6.1 之 d=65,536、R=1–4、有無置換的 float64／float32 往返誤差，以及 D6.2 d=1,024 顯式矩陣正交性。",
+             "FWHT/SOT 公式與逆運算通過數值正確性檢查；float32 不是 bit-exact",
+             ["results/D6.1.json", "results/D6.2.json"], [], tab_d6_numerical_correctness),
+        Item("W4-T2", "table", "W4-T2_gaussian_diagnostic.csv", "附錄", "Results／distribution diagnostic",
+             "D6.3 合成高斯輸入變換前後的 mean、variance、skew、excess kurtosis 與 KS 檢定（128×4,096 維）。",
+             "合成 Gaussian 診斷與理論相容，但不是安全證明",
+             ["results/D6.3.json"], [], tab_d6_gaussian),
+        Item("W4-T3", "table", "W4-T3_real_latent_shift.csv", "正文", "Results／real-latent diagnostics",
+             "D6.4 dev_v1.1 20 張真實 latent 在 R=1–4、有無置換下的動差位移、norm ratio 與同向量 cosine 摘要。",
+             "真實 latent 不可沿用 Gaussian 不變分布宣稱；正交變換仍保留 norm",
+             ["results/D6.4.csv"], [], tab_d6_real_latent_shift),
+        Item("W4-T4", "table", "W4-T4_rounds_permutation.csv", "正文主表", "Results／R/P ablation",
+             "D6.5 dev_v1.1（n=20）之 R=1–4 × permutation on/off：original-/sorted-|z|、norm-only Top-k、CPU transform runtime 與往返誤差。",
+             "R=1、permutation off 已使兩個 magnitude scorer 降至 dev random baseline；所有設定仍完整洩漏 norm",
+             ["paper_assets/tables/table_rounds_permutation.csv"], []),
+        Item("W4-T5", "table", "W4-T5_structure_diagnostic.csv", "附錄", "Results／structure diagnostic",
+             "D6.6 trace、同向量 cosine、basis probe、sparsity與正交誤差等結構診斷；全部僅為診斷，不作安全證明。",
+             "記錄 SOT 的結構性質與已知限制",
+             ["paper_assets/tables/table_structure.csv"], []),
+        Item("W4-T6", "table", "W4-T6_generation_quality.csv", "正文", "Results／anonymous-image quality",
+             "D6.4 quality managed run：dev_v1.1 20 張 × 8 組 R/P，共 160 次匿名影像生成的 PSNR、SSIM、cosine 與 95% CI。",
+             "所有 R/P 組合皆成功生成有限值影像；匿名圖與原圖差異大，但不宣稱臨床效用",
+             ["paper_assets/tables/table_D6_generation_quality.csv"], ["D6.4_QUALITY_20261013T162058881536Z_c2c4465a"]),
+        Item("W4-T7", "table", "W4-T7_s2_dev_integration.csv", "正文主表", "Results／S2 integration",
+             "D6.7 固定四病例之 authenticated S2 整合摘要：M2 latent 往返、M1 re-inversion、影像重構與 runtime。",
+             "S2 dev integration 的正確性、認證順序與重構保真度",
+             ["results/D6.7_dev_integration.csv"], ["D6.7_INTEGRATION_20261013T164724711647Z_ecec4bf5"], tab_d6_integration),
+        Item("W4-T8", "table", "W4-T8_method_comparison.csv", "正文", "Results／five-method comparison",
+             "固定積水病例 dev_v1.1_010 的五方法影像 PSNR、SSIM、L∞、最大 uint8 pixel error、pixel equality、bit-exact 與三階段 runtime。",
+             "五方法在指定存檔條件下的單病例定量比較；S2a/S2 相同說明 authentication 不改變像素結果",
+             ["paper_assets/tables/table_method_comparison.csv", "results/method_comparison.json"], []),
     ],
 }
 

@@ -1218,3 +1218,33 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 將此圖表交付使用者並送稽核方檢查圖說與 cosine estimand；之後依原計畫進入 D7。現在沒有背景程序需要等待。
+
+## 2026-10-14 · W4 · Track D · D6 每週摘要與可追溯附錄
+
+### 1. 當前目標 (Objective)
+* 依 `PROGRESS_summary.md` 的八節格式完成 Week 4（D6）摘要；所有量化宣稱須引用由既有結果檔衍生的 Week 4 appendix，並納入最新 D6 稽核結論。
+
+### 2. 執行動作 (Actions Taken)
+* 擴充 `scripts/build_weekly_appendix.py` 的 `WEEKS[4]`，加入 D6 correctness、Gaussian／真實 latent、R/P 消融、structure、generation quality、S2 integration 與五方法比較素材。
+* 建立 `appendix/week4/`：3 張圖、8 張表及含來源 SHA-256／run ID 的 `MANIFEST.csv`。
+* 連續重建 Week 4 appendix 兩次並比較所有檔案 SHA-256，結果逐位元相同。
+* 在 `PROGRESS_summary.md` 新增 Week 4 固定八節摘要；不改寫 Week 3，改以「更正」記錄 AF-037／AF-038 已關閉及 D5 最終 PASS。
+* 更新 `README.md` 的 appendix inventory。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] Week 4 摘要的數字均引用 W4-F1–F3 或 W4-T1–T8；生成素材可回溯到 D6 原始 JSON／CSV、正式 managed run 與五方法比較結果。
+* [事實] 最新 AUD-20261014-01 判定 D6.1–D6.7 PASS、G3 PASS、AF-030 CLOSED；摘要未沿用 D6 完成當下「待稽核」的舊狀態。
+* [事實] 附錄兩次生成的 SHA-256 清單無差異；本工作只做 CPU 文件／表格整理，未使用 GPU，沒有背景程序。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：Week 4 摘要、可追溯 appendix、重建驗證與檔案索引均完成。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* D6 dev 結果與正式 D7 結論明確分層：R=1/P off 只標為候選，norm leakage 與 AF-025 不在 Week 4 提前裁決。
+* 五方法單病例展示明列 storage protocol 不同，避免把 transform 與 storage 的共同差異誤寫成單一演算法效果。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。Week 4 摘要忠實整理已完成並通過稽核的 D6；正式 N=200 仍保留給 D7。
+
+### 7. 下一步
+* 依 Week 5 計畫進入 D7 formal security evaluation；AF-025 待跨存檔結果完成後由使用者裁決。

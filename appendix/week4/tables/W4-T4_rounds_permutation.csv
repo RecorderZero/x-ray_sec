@@ -1,0 +1,9 @@
+rounds,permutation,n,transform_device,transform_dtype,original_abs_top1,original_abs_top5,sorted_abs_top1,sorted_abs_top5,norm_top1,runtime_ms_mean,runtime_ms_median,float32_roundtrip_max_abs,float32_bit_exact_rate,note
+1,False,20,cpu,float32,0.05,0.25,0.05,0.25,1.0,36.18696445191745,1.8287989951204509,9.5367431640625e-07,0.17856369018554688,Attack outcomes select R; norm leakage cannot be removed by R.
+2,False,20,cpu,float32,0.0,0.3,0.05,0.25,1.0,26.940891350386664,2.377416007220745,1.0728836059570312e-06,0.12868194580078124,Attack outcomes select R; norm leakage cannot be removed by R.
+3,False,20,cpu,float32,0.05,0.25,0.05,0.25,1.0,19.286717800423503,3.302594501292333,1.2516975402832031e-06,0.1057769775390625,Attack outcomes select R; norm leakage cannot be removed by R.
+4,False,20,cpu,float32,0.0,0.2,0.05,0.25,1.0,24.19945230067242,5.557163502089679,1.5497207641601562e-06,0.09168472290039062,Attack outcomes select R; norm leakage cannot be removed by R.
+1,True,20,cpu,float32,0.05,0.3,0.05,0.25,1.0,64.17050245509017,62.63165600830689,9.5367431640625e-07,0.17836532592773438,Attack outcomes select R; norm leakage cannot be removed by R.
+2,True,20,cpu,float32,0.05,0.25,0.05,0.25,1.0,120.5667606976931,124.81983898032922,1.0728836059570312e-06,0.12818069458007814,Attack outcomes select R; norm leakage cannot be removed by R.
+3,True,20,cpu,float32,0.05,0.2,0.05,0.25,1.0,190.74308919953182,176.13538850855548,1.3131648302078247e-06,0.10509719848632812,Attack outcomes select R; norm leakage cannot be removed by R.
+4,True,20,cpu,float32,0.05,0.25,0.05,0.25,1.0,209.3451520515373,210.2253040065989,1.6391277313232422e-06,0.09137802124023438,Attack outcomes select R; norm leakage cannot be removed by R.
