@@ -35,6 +35,7 @@ from scripts.e2_roundtrip_runner import _timed, load_latent_cache
 from scripts.output_guard import add_force_flag, refuse_overwrite
 from scripts.run_artifacts import finalize_run, open_run, sha256_file
 from src.crypto.container import VERSION
+from src.crypto.nonce import NonceRegistry
 from src.crypto.s2 import open_anonymous_image, open_latent, seal_anonymous_image, seal_latent
 from src.crypto.sot import transform
 
@@ -151,7 +152,7 @@ def save_integration_grid(items: list[tuple[str, list[np.ndarray]]], output: Pat
 
 
 @torch.inference_mode()
-def integration_rows(args, rows, latents, diffusion, model_fn, device):
+def integration_rows(args, rows, latents, diffusion, model_fn, device, registry):
     output, grid = [], []
     model_hash = sha256_file(args.checkpoint)
     for image_index in INTEGRATION_ROWS:
@@ -176,7 +177,7 @@ def integration_rows(args, rows, latents, diffusion, model_fn, device):
         m1 = seal_anonymous_image(
             anonymous, FIXTURE_KEY, m1_nonce, rounds=args.rounds,
             use_permutation=args.use_permutation, latent_shape=tuple(z.shape),
-            latent_dtype=str(z.detach().cpu().numpy().dtype), aad=aad,
+            latent_dtype=str(z.detach().cpu().numpy().dtype), aad=aad, registry=registry,
         )
         inversion_seconds = [0.0]
 
@@ -192,7 +193,7 @@ def integration_rows(args, rows, latents, diffusion, model_fn, device):
         )
         m2 = seal_latent(
             z, FIXTURE_KEY, m2_nonce, rounds=args.rounds,
-            use_permutation=args.use_permutation, aad=aad,
+            use_permutation=args.use_permutation, aad=aad, registry=registry,
         )
         decrypted_m2 = open_latent(m2, FIXTURE_KEY, device=device)
         recovered_m2, t1_seconds = _timed(
@@ -275,7 +276,10 @@ def main() -> None:
             write_csv(args.quality_table, bootstrap_quality(per_sample))
             scheme, rounds = "S2a/S2", "1/2/3/4"
         else:
-            per_sample, grid = integration_rows(args, rows, latents, diffusion, model_fn, device)
+            with NonceRegistry(context.run_dir / "nonce_registry.sqlite3") as registry:
+                per_sample, grid = integration_rows(
+                    args, rows, latents, diffusion, model_fn, device, registry,
+                )
             write_csv(args.integration_output, per_sample)
             save_integration_grid(grid, args.grid_output)
             scheme, rounds = "S2", args.rounds

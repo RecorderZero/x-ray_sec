@@ -22,6 +22,7 @@ from scripts.m1_storage import (
 from .container import AuthenticatedContainer, make_storage_record, validate_m1_png
 from .errors import CryptoConfigurationError
 from .mac import open_authenticated, seal_container
+from .nonce import NonceRegistry
 from .sot import inverse_transform, transform
 
 
@@ -56,8 +57,12 @@ def seal_latent(
     rounds: int,
     use_permutation: bool,
     aad: Mapping[str, Any],
+    registry: NonceRegistry,
 ) -> bytes:
     """Transform and authenticate an exact M2 latent payload."""
+    if not isinstance(registry, NonceRegistry):
+        raise CryptoConfigurationError("S2 sealing requires a persistent nonce registry")
+    registry.register(master_key, nonce)
     protected = transform(
         latent, master_key, nonce, rounds=rounds, use_permutation=use_permutation,
     )
@@ -116,10 +121,14 @@ def seal_anonymous_image(
     latent_shape: tuple[int, ...],
     latent_dtype: str,
     aad: Mapping[str, Any],
+    registry: NonceRegistry,
 ) -> bytes:
     """Encode one anonymous image as authenticated range-preserving M1 PNG."""
-    if anonymous_image.shape != (1, 1, anonymous_image.shape[-2], anonymous_image.shape[-1]):
+    if anonymous_image.ndim != 4 or anonymous_image.shape[:2] != (1, 1):
         raise CryptoConfigurationError("anonymous image must have shape (1,1,H,W)")
+    if not isinstance(registry, NonceRegistry):
+        raise CryptoConfigurationError("S2 sealing requires a persistent nonce registry")
+    registry.register(master_key, nonce)
     payload, png = encode_range_preserving_png(anonymous_image[0, 0].detach().cpu().numpy())
     full_aad = dict(aad)
     full_aad.update(shape=list(latent_shape), dtype=latent_dtype)
