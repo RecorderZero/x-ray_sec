@@ -67,7 +67,7 @@
 | `scripts/a4_4_cpa.py` | A4.4 CPA：固定金鑰下 d 次基底查詢重建 S0/S1 解密映射，全新明文 max-abs 0；明列 fixed-Q 前提。 | A4.4。 |
 | `scripts/a4_5_deployment_tamper.py` | A4.5 部署路徑竄改（GPU）：竄改存檔的匿名影像後跑完整解密管線（inversion→逆金鑰→生成），確認無任何拒絕。 | A4.5 部署路徑 baseline。 |
 | `src/crypto/kdf.py` | D5.1/D5.2：256-bit random master key、明確的 scrypt password mode、RFC 5869 HKDF-SHA256 與 round/purpose domain separation。 | S2 key pipeline；不得把輸出截成短 seed。 |
-| `src/crypto/prng.py` | D5.3：完整 HKDF subkey 直接驅動 ChaCha20；產生 sign bits 與 rejection-sampling Fisher–Yates permutation。 | D6 structured transform 的 key material。 |
+| `src/crypto/prng.py` | D5.3：完整 HKDF subkey 直接驅動 ChaCha20；image nonce 僅作 HKDF salt，stream IV 固定為 counter 0，避免 AF-037 counter overflow；產生 sign bits 與 rejection-sampling Fisher–Yates permutation。 | D6 structured transform 的 key material。 |
 | `src/crypto/nonce.py` | D5.4：SQLite 持久化、跨 process UNIQUE(scope,nonce) registry；同 master-key scope 顯式 reuse fail closed。 | deployment nonce 發放／登記。 |
 | `src/crypto/container.py`、`src/crypto/mac.py` | D5.5/D5.6：strict canonical container、M1 lo/hi float32 bits、payload bytes 與 AAD 的 HMAC-SHA256；驗證成功前不呼叫 opener。 | S2 authenticated container。 |
 | `src/crypto/key_io.py` | D5.7：僅接受 32-byte raw master key、0600、新檔不覆寫；不使用 pickle-capable loader。 | 本機 key file。 |

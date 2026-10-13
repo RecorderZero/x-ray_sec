@@ -1109,3 +1109,37 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 請使用者檢視 `PROGRESS_summary.md` Week 3；確認後先修復 AF-037、AF-038，再開始 D6 smoke 與估時。
+
+## 2026-10-13 · W3 · AF-037／AF-038 修復
+
+### 1. 當前目標 (Objective)
+* 在 D6 接入 D5 PRNG 前修復 AF-037 的 ChaCha20 counter overflow 可用性問題，並完成 AF-038 的 D5 套件鎖定、Week 3 環境快照與 run-manifest 套件紀錄。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-037] `src/crypto/prng.py` 改為：per-image nonce 只作 HKDF salt；每個 domain-separated subkey 的 ChaCha20 IV 固定為 `counter=0 || 96-bit zero`，不再把隨機 image nonce 前四 bytes 當初始 counter。
+* [AF-037] 更新 frozen sign／permutation vectors；新增 image nonce 前四 bytes 為 `0xFFFFFFFF` 時，仍可完成 65,536 維 sign 與 permutation／inverse 的 regression。
+* [AF-038] `requirements-d5.txt` 精確鎖定 `cryptography==50.0.2`、`cffi==2.1.1`、`pycparser==3.11`；新增、不覆寫 Week 1 的 `artifacts/environment_freeze_w3.txt`。
+* [AF-038] `scripts/run_artifacts.py::package_versions()` 新增 `cryptography`；unit test 驗證 manifest packages 欄，另新增 requirements 與 Week 3 freeze 一致性測試。
+* 原子 source commit：`e22f01c`；其後以 clean tracked HEAD 重新執行驗收。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] AF-037／AF-038 targeted tests：7 passed；極端 nonce regression 不再拋 counter overflow。
+* [事實] 完整 CPU 回歸：81 passed、13 skipped；skip 為既有條件性測試，無 failure。
+* [事實] 現行 CFG_DDIM `pip freeze --all` 與 `environment_freeze_w3.txt` 逐行相同；requirements SHA-256=`6db863da…`、freeze SHA-256=`63c45e4e…`。
+* [事實] `package_versions()` 回報 `cryptography=50.0.2`，因此後續 run manifest 會記錄 provider 版本。
+* [事實] 測試前後 tracked working tree 均為 clean；全程 CPU，沒有 GPU 任務或背景程序。
+
+### 4. 達標判定 (Assessment)
+* [x] **AF-037 已修復待稽核複驗**：fixed counter、docstring、極端 nonce regression 與 frozen vectors 均完成。
+* [x] **AF-038 已修復待稽核複驗**：三個版本鎖定、獨立 Week 3 freeze、manifest package 欄與 regression 均完成。
+* [ ] finding 的正式 `CLOSED` 狀態仍由稽核方裁定；未擅自修改 `AUDIT.md`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 安全理由：不同 image nonce／round／purpose 已透過 HKDF 產生不同 stream key，因此同一固定 ChaCha20 IV 不造成 keystream reuse；反而可保證每條 stream 從 counter 0 開始並保留完整 counter 空間。
+* D6 必須直接使用此 API，不得自行重新拼 ChaCha20 IV 或把 image nonce 當 raw cipher IV；AF-030 的剩餘驗收仍在 D6。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。兩項都是 D5 稽核後、D6 整合前的必要修正；沒有改變 S2 威脅模型或實驗樣本數。
+
+### 7. 下一步
+* 請稽核方依 AUD-20261013-03 驗收 AF-037、AF-038；複驗通過後進入 D6 smoke。任何預估超過 30 分鐘的 GPU 工作仍先請使用者裁決。
