@@ -273,6 +273,8 @@ def main() -> None:
                 "rounds": rounds,
                 "permutation": use_permutation,
                 "n": len(latents),
+                "transform_device": "cpu",
+                "transform_dtype": "float32",
                 "original_abs_top1": topk_accuracy(np.abs(protected_flat), np.abs(original_flat), 1),
                 "original_abs_top5": topk_accuracy(np.abs(protected_flat), np.abs(original_flat), 5),
                 "sorted_abs_top1": topk_accuracy(sorted_protected, sorted_original, 1),

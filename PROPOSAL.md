@@ -180,6 +180,7 @@ z_{r+1}
 - H 為 Walsh–Hadamard transform。
 - P 為 per-image keyed permutation。
 - 預設測 R = 1、2、3、4，並對 permutation P 做 on／off 消融；不得因 SORF 使用三個 HD block 就預設 R = 3 較安全。
+- D6 dev 消融後暫選 `R=1、P off` 進入 D7：original／sorted-magnitude Top-1 已到 1/20 random baseline，更多輪數與 P 沒有觀察到額外效益，且 P 的 CPU Fisher–Yates 成本明顯較高。這只是 dev 候選；若 D7 adaptive／structured probe 揭露額外弱點，須重新選擇。
 
 理論性質：
 
@@ -456,4 +457,3 @@ nonce 的安全需求是同一 master key 下唯一，不是保密或不可預�
 - [NIST SP 800-38D: GCM and GMAC](https://csrc.nist.gov/pubs/sp/800/38/d/final).
 
 正式論文引用前仍須逐篇核對作者、版本、頁碼與 publication status。
-

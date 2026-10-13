@@ -375,6 +375,8 @@ G1：W1–W5 的 baseline evidence 完整；若未完成則取消 P2，並下修
 
 R 的選擇原則：在 original magnitude attack 已大幅下降的設定中選最小 R；不能用 R 消除 norm leakage。
 
+`[D6 dev 決定，2026-10-14]` 目前選 `R=1、permutation off` 作 D7 候選：20 張 dev 的 original-|·|／sorted-|·| Top-1 均為 0.05（random baseline），增加 R 或開啟 P 未改善這兩項攻擊或匿名影像品質；CPU transform 中位時間由 1.15 ms 增至 86.1 ms。norm-only Top-1 在全部設定皆為 1.0，因此此選擇不宣稱處理 norm leakage。若 D7 adaptive／structured probe 顯示額外弱點，必須重新開啟 R/P 選擇，不得把 dev 決定鎖死。
+
 G3：S2 核心單元與 dev integration 全過。
 
 ---

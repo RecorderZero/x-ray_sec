@@ -72,6 +72,10 @@
 | `src/crypto/container.py`、`src/crypto/mac.py` | D5.5/D5.6：strict canonical container、M1 lo/hi float32 bits、payload bytes 與 AAD 的 HMAC-SHA256；驗證成功前不呼叫 opener。 | S2 authenticated container。 |
 | `src/crypto/key_io.py` | D5.7：僅接受 32-byte raw master key、0600、新檔不覆寫；不使用 pickle-capable loader。 | 本機 key file。 |
 | `scripts/d5_security_evidence.py` | 產生 D5.4 100,000 nonce 統計與 D5.6 tamper matrix，不保存 nonce、master/subkey。 | D5 正式 CPU 證據。 |
+| `src/crypto/sot.py` | D6.1/D6.2：torch 正規化 FWHT、D5 CSPRNG 直接導出的逐輪 sign/permutation、`Q_R…Q_1` forward 與反向輪序 inverse；支援 CPU/CUDA。 | S2a/S2 transform 核心。 |
+| `src/crypto/s2.py` | D6.7：M1/M2 authenticated S2 封裝；seal 強制經持久化 nonce registry，open 強制 tag 驗證成功後才 decode/inversion/inverse。 | S2 部署路徑，不可繞過此層自行解密。 |
+| `scripts/d6_sot_evidence.py` | D6.1–D6.6 CPU 證據：數值可逆、顯式 Q、Gaussian、真實 latent 動差、R/P 攻擊／runtime／precision 消融及結構診斷。 | SOT 改動後重建 D6 CPU 結果。 |
+| `scripts/d6_s2_dev_runner.py` | D6.4/D6.7 GPU runner：20 張 × 8 組 generation-quality 消融；4 張 authenticated M1/M2 dev 整合。 | 一律由 `managed_run.py --validate-artifacts` 執行。 |
 | `tests/security/test_environment_lock.py` | AF-038 regression：確認 D5 的三個精確套件版本全部存在於 Week 3 environment freeze。 | D5／後續環境變更時。 |
 | `scripts/a4_5_tamper.py` | A4.5 tamper baseline：S0/S1 無完整性檢查，竄改 latent／儲存紀錄皆被接受並量化影響。 | A4.5。 |
 | `scripts/a4_t2wb_gallery.py` | A4.2：T2-WB magnitude／sorted-magnitude／norm gallery linkage（兩種存檔分欄、方案專屬解密正控制、shuffle 負控制、Wilson CI、Inconclusive 判定、AF-025 norm 校正與 lo/hi 旁道）。CPU，讀 E2.3 gallery 與 A4.1 query cache。 | A4.2 攻擊。 |
@@ -122,6 +126,12 @@
 | `results/A4.5.json`、`paper_assets/tables/table_tamper_baseline.csv` | A4.5 tamper baseline 結果。 |
 | `results/D5.4_nonce_registry.json` | D5.4：100,000 個 128-bit random nonce collision/reuse registry 結果，不含 raw nonce/key。 |
 | `results/D5.6_tamper_matrix.json`、`paper_assets/tables/table_D5_tamper_matrix.csv` | D5.6：未竄改接受；wrong key/tag、payload、nonce、version、params、AAD、storage/quantization、record/PNG lo-hi 等竄改全部 fail closed，並記 opener 呼叫次數。 |
+| `results/D6.1.json`、`results/D6.2.json` | D6 數值正確性：d=65,536、R=1–4、P on/off 的 float64/float32 inverse；d=1,024 顯式 Q 的正交性、norm 與 `Q_2Q_1` 公式。 |
+| `results/D6.3.json`、`image/D6.3_gaussian_distribution.png` | D6 Gaussian synthetic 的 KS、前四階動差、histogram 與 Q-Q；圖與 p-value 都只作診斷，不是安全證明。 |
+| `results/D6.4.csv`、`results/D6.4_generation_per_sample.csv`、`paper_assets/tables/table_D6_generation_quality.csv` | 20 張 dev 真實 latent 在 8 組 R/P 下的動差位移、norm/cosine，以及 target model 匿名影像品質與 runtime。 |
+| `paper_assets/tables/table_rounds_permutation.csv` | D6.5 R=1/2/3/4 × P on/off 的 original-/sorted-magnitude、norm-only、CPU runtime 與 float32 precision；D7 候選選擇依據。 |
+| `paper_assets/tables/table_structure.csv` | D6.6 每組設定的 trace、same-vector cosine expectation、basis probe、矩陣 sparsity 與正交誤差；明列不是安全證明。 |
+| `results/D6.7_dev_integration.csv`、`image/D6.7_s2_dev.png` | 選定 R=1/P off 的 4 張 M2/T1 與 authenticated range-preserving M1 端到端結果；圖依序呈現原圖、匿名圖、M2 還原、M1 還原與差異。 |
 | `results/A3.4_T1_gallery.json` | A3.4 逐 scheme×scorer 的 Top-1/5、mAP、CI、CMC 與正負控制（security_v1 200 張，T1）。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `paper_assets/tables/table_baseline_correctness.csv` | E2.5 主表：P/S0/S1 × 23 項指標的平均、bootstrap 95% CI（B=10,000、seed 1911）、中位數與範圍。 |
