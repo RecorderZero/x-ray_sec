@@ -1049,3 +1049,34 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 使用者完成三條 sudo 指令後，重新執行 direct bwrap smoke、內建 `apply_patch` no-op／temporary-file smoke，並確認 kernel audit 沒有新增 bwrap DENIED；通過後再將本項標為修復完成。
+
+## 2026-10-13 · 環境維護 · sandbox helper 修復複驗完成
+
+### 1. 當前目標 (Objective)
+* 複驗 Ubuntu 24.04 AppArmor 專用 bubblewrap profile 是否已修復 Codex 內建 sandbox helper 與 `apply_patch`。
+
+### 2. 執行動作 (Actions Taken)
+* 核對 `apparmor-profiles`、`apparmor-utils`、`bubblewrap` 與 `/etc/apparmor.d/bwrap-userns-restrict` 已安裝；確認全域 `kernel.apparmor_restrict_unprivileged_userns=1` 仍保持開啟。
+* 在 sandbox 外以 `set -e` 執行 host-level bubblewrap user/network namespace smoke。
+* 在正常 workspace-write sandbox 執行一般讀寫，並以內建 `apply_patch` 完成暫存檔建立、內容更新、讀回驗證與刪除。
+* 檢查 kernel audit，區分修復前 generic `unprivileged_userns` 的 `setpcap`／`net_admin` 拒絕，與 sandbox 內再次啟動巢狀 bubblewrap 時 `unpriv_bwrap` 對 `sys_admin` 的預期拒絕。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] host-level direct bubblewrap 成功，退出碼 0；沒有重現 `loopback: Failed RTM_NEWADDR`。
+* [事實] 內建 `apply_patch` 的 Add／Update／Delete 三種操作全部成功；內容讀回一致，暫存檔已清除，Git tracked working tree 無測試殘留。
+* [事實] 一般 sandbox `exec` 的 workspace 寫入與清理成功。
+* [釐清] sandbox 內再啟動第二層 bubblewrap 會因 `unpriv_bwrap` 禁止 `sys_admin` 而失敗；這是避免巢狀 namespace 的限制，不是原始 helper 故障，頂層 Codex sandbox 與 `apply_patch` 均不受影響。
+
+### 4. 達標判定 (Assessment)
+* [x] **已修復 (Achieved)**：原始 RTM_NEWADDR 問題已由專用 AppArmor profile 修復，核心寫檔路徑與命令 sandbox 均通過。
+* [x] 全域 unprivileged-userns 保護仍啟用，未使用降低全機安全性的 sysctl fallback。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 後續正常使用內建 `apply_patch`；不再預設使用 sandbox 外 Python 精確替換。
+* 若再次失敗，先區分頂層 `profile="unprivileged_userns"` 的 `setpcap`／`net_admin`（回歸）與刻意巢狀測試的 `profile="unpriv_bwrap"`／`sys_admin`（預期限制）。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。此為實驗基礎環境修復，不改變研究方法或結果。
+
+### 7. 下一步
+* sandbox helper 無待辦或背景程序；可恢復 D6 前置估時與 smoke test。
