@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-13T07:13:23.410507+00:00",
+  "git_commit": "9e578ddb85dc9c151290fa9ac05342f4fb8cda7a",
+  "git_dirty_tracked_files": false,
+  "script_sha256": "711d578fcb5eaa2f46557d69bcf8ec8c7787383f2379e7ca8e89eceb7f3a06a6",
+  "python": "3.10.19",
+  "cryptography": "50.0.2",
+  "task_id": "D5.4",
+  "result": {
+    "requested": 100000,
+    "unique": 100000,
+    "collisions": 0,
+    "explicit_reuse_rejected": true,
+    "same_nonce_other_master_scope_accepted": true,
+    "registry_rows": 100001,
+    "nonce_bytes": 16,
+    "raw_nonce_or_key_recorded": false
+  }
+}

@@ -1,0 +1,15 @@
+case,expected_accept,accepted,opener_calls,generic_error,passed
+untampered,True,True,1,,True
+wrong_key,False,False,0,authentication failed,True
+tag,False,False,0,authentication failed,True
+nonce,False,False,0,authentication failed,True
+version,False,False,0,authentication failed,True
+parameters,False,False,0,authentication failed,True
+aad,False,False,0,authentication failed,True
+storage_protocol,False,False,0,authentication failed,True
+quantization,False,False,0,authentication failed,True
+record_lo_only,False,False,0,authentication failed,True
+record_hi_only,False,False,0,authentication failed,True
+png_lo_only,False,False,0,authentication failed,True
+png_and_record_lo,False,False,0,authentication failed,True
+ciphertext_byte,False,False,0,authentication failed,True

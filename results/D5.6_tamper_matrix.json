@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-13T07:13:23.410507+00:00",
+  "git_commit": "9e578ddb85dc9c151290fa9ac05342f4fb8cda7a",
+  "git_dirty_tracked_files": false,
+  "script_sha256": "711d578fcb5eaa2f46557d69bcf8ec8c7787383f2379e7ca8e89eceb7f3a06a6",
+  "python": "3.10.19",
+  "cryptography": "50.0.2",
+  "task_id": "D5.6",
+  "rows": [
+    {
+      "case": "untampered",
+      "expected_accept": true,
+      "accepted": true,
+      "opener_calls": 1,
+      "generic_error": "",
+      "passed": true
+    },
+    {
+      "case": "wrong_key",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "tag",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "nonce",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "version",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "parameters",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "aad",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "storage_protocol",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "quantization",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "record_lo_only",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "record_hi_only",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "png_lo_only",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "png_and_record_lo",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    },
+    {
+      "case": "ciphertext_byte",
+      "expected_accept": false,
+      "accepted": false,
+      "opener_calls": 0,
+      "generic_error": "authentication failed",
+      "passed": true
+    }
+  ]
+}

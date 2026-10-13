@@ -954,3 +954,36 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 完成 source/test 原子 commit；以 clean HEAD 重跑 14-case evidence 與完整 92 tests，再提交 results／README／本條完成補記。
 * 請稽核方複驗 AF-024 D5 部分與 AF-030 D5 部分；之後進入 D6。任何預估超過 30 分鐘的 GPU D6 工作先交由使用者裁決。
+
+
+## 2026-10-13 · W3 · Track D · D5.1–D5.7 clean evidence 完成
+
+### 1. 當前目標 (Objective)
+* 對上一條「實作與驗證中」完成證據硬閘門：以 source commit `9e578dd` 的 clean HEAD 重跑正式 nonce/tamper evidence 與完整回歸。
+
+### 2. 執行動作 (Actions Taken)
+* 執行 `python -m scripts.d5_security_evidence --force`：重新產生 D5.4 100,000 nonce 與最新版 D5.6 14-case tamper matrix。
+* 分組回歸：security 26 tests、既有 unit 45 tests、integration/legacy 21 tests；共 92 tests。
+* 獨立核對兩份 JSON 的 git commit、tracked dirty state、script SHA-256，並核對所有 rejected case 的 opener calls 與外部錯誤字串。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] D5.4：100,000/100,000 random 128-bit nonce 唯一、collision=0；同 master scope 的顯式 reuse 被拒絕；相同 nonce 在不同 master scope 可登記；artifact 不含 raw nonce/key。
+* [事實] D5.6：未竄改 case 接受且 opener=1；wrong key、tag、nonce、version、parameters、AAD、storage protocol、quantization、record-only lo/hi、PNG-only lo、PNG+record lo、ciphertext byte 共 13 個負控制全部拒絕，opener=0，外部錯誤統一為 `authentication failed`。
+* [事實] evidence provenance：git commit=`9e578dd`、`git_dirty_tracked_files=false`；recorded script SHA-256 `711d578f…` 與檔案重算一致。
+* [事實] 92-test 回歸未留下 lastfailed；security 26/26、unit 45/45，integration/legacy 21 項完成。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：D5.1–D5.7 的工程正確性與證據完整性硬閘門全部通過。
+* [ ] **未達標 (Failed)**：無。
+* [注意] AF-024 的剩餘 D5 部分已修復，狀態 `FIXED?` 待稽核；AF-030 的 D5 部分完成，但 finding 必須等 D6 SOT 直接使用 CSPRNG material 與 wrong-key/wrong-nonce sanity test 後才能完全關閉。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* verify-before-open gate 已由控制流測試證明，而非只驗證「最後有報錯」；這可避免 tag 失敗前就使用 lo/hi、inverse 或輸出部分 plaintext。
+* D5 不處理 AF-025 的 confidentiality trade-off；依使用者裁決，必須等 D7 實測 S2 norm/lo-hi attack 效果後，才選擇與風險相稱的保護。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。全部使用 CPU；沒有未經裁決的 >30 分鐘 GPU 任務。
+
+### 7. 下一步
+* 提交 D5 results／table／README／本完成條目，請稽核方複驗。
+* 進入 D6 前先估算各 GPU 工作；任何預估超過 30 分鐘者先請使用者裁決。
