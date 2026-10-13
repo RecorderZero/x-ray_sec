@@ -889,3 +889,29 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 實作 c：`scripts/a4_6_reconstruct.py`（GPU，重用 A4.1 快取密文 + b 的還原金鑰做生成），少數受害者 × S0/S1 × 兩存檔，報影像級相似度。
+
+## 2026-10-13 · W2 · Track A · A4.6c 端到端影像還原（GPU）
+
+### 1. 當前目標 (Objective)
+* 用 A4.6b 的還原金鑰（K=8 已知對）實際生成受害者重構圖，比較「正常使用者（真金鑰）」與「攻擊者（還原金鑰）」對同一張存檔匿名影像解密後的重構圖。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/a4_6_reconstruct.py`（GPU，managed run `A4.6_RECON_20261013T052324279030Z_165666a1`，validate 通過、8 樣本）。受害者 index 100、101 × S0/S1 × legacy／range。
+* 流程：A4.1 快取 ẑ_ano →（真金鑰／還原金鑰）de-anon → 生成；x0 以 preprocess 取得、匿名圖另生成供顯示。指標用 skimage PSNR／SSIM、L∞、RMSE；完全相同時 PSNR 以 100 dB 封頂。輸出面板 `image/A4.6_panels/*.png`（原圖、匿名圖、正常重構、攻擊重構、差異）。不寫出原始金鑰材料。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] **S0（兩存檔）與 S1（range）：攻擊者重構圖與正常使用者重構圖位元相同**（PSNR 封頂 100 dB、SSIM 1.000、L∞ 0）。即 8 組（原圖,匿名圖）對還原的金鑰，解其他受害者可得與合法持金鑰者**完全相同**的重構。對原圖保真度：S0 legacy 31.2／33.1 dB、S0 range 35.2／38.7 dB、S1 range 39.4／39.2 dB（攻擊者＝合法者）。
+* [事實] **S1（legacy）仍部分**：legit~attacker PSNR 14.3／14.6 dB、SSIM 0.35／0.39、L∞ ~1.0；攻擊者重構圖為「貌似胸片但解剖錯誤」，攻擊者對原圖僅 14 dB，合法者為 29.7／30.6 dB。K=8 legacy 置換僅 0.645，故攻擊尚未成功。
+* [結論] 影像級證實 A4.6a/b：對 S0（兩存檔）與保存值域的 S1，少數（~8）配對即可讓攻擊者完整重現任一受害者原圖；前作部署（legacy）的 S1 需更多配對。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：c 完成，managed run 驗證通過、provenance 齊全。影像面板與數值表供論文／內部評估。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 這組 a/b/c 的總結論：前作的全域、與影像無關的金鑰＋幅值不變量，使「少數已知（原圖,匿名圖）對 → 竊得整把金鑰 → 解所有同金鑰影像」成立。保存值域會加速（尤其 S1）。這是 D5（per-image nonce、CSPRNG 金鑰、authenticated container）要解的核心弱點。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* A4.6 為使用者指示的 A4 延伸（同前條目）；GPU 用量 <30 分鐘，使用者已於對話中授權本實驗。
+
+### 7. 下一步
+* 交付影像面板與數值表給使用者；A4.6 可供稽核複驗。後續進入 D5。
