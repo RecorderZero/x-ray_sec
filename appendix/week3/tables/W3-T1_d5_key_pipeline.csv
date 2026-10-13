@@ -1,0 +1,8 @@
+task,component,implementation,security_property
+D5.1,master key / password mode,OS CSPRNG 32 bytes (256 bits); explicit scrypt password mode,no integer-seed API; password entropy remains explicit
+D5.2,domain-separated KDF,HKDF-SHA256; 32-byte subkeys; nonce used as salt,round/purpose/mac labels are separated
+D5.3,signs / permutation CSPRNG,full HKDF subkey drives ChaCha20; rejection-sampling Fisher-Yates,no Python/NumPy/Torch non-cryptographic seed path
+D5.4,nonce registry,"OS CSPRNG 16 bytes (128 bits); SQLite PRIMARY KEY(scope, nonce)",persistent atomic reuse rejection; raw master key is not stored
+D5.5,authenticated container,strict canonical JSON; HMAC tag 32 bytes; M1 lo/hi stored as float32 bits,"version, parameters, AAD, storage metadata and ciphertext bytes are covered"
+D5.6,authentication,HMAC-SHA256; verify-before-open,failed authentication never calls the plaintext opener
+D5.7,key file,raw 32-byte key; mode 0600; O_EXCL,reject overwrite/trailing bytes; no pickle-capable loader

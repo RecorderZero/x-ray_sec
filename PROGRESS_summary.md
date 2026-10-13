@@ -312,3 +312,108 @@
 * G1：Week 2 baseline 的正式 Gate 複驗。
 * D5：S2 金鑰管線（HKDF／CSPRNG、nonce、container、HMAC；對應 AF-024、AF-030）。
 * 準備 D6／D7：S2a／S2 的跨存檔（保存值域 vs 不保存）攻擊比較，作為 AF-025 的裁決依據。
+
+---
+
+## Week 3（2026-10-19～10-25；於 10-13 提前完成 D5）｜Track D 防禦基礎：金鑰管線、nonce 與 authenticated container（D5）
+
+### 3.1 範圍與狀態
+
+| 子任務 | 內容 | 稽核判定 | 主要 commit |
+|---|---|---|---|
+| D5.1 | 隨機 master key 與明確的 password mode | Achieved（AUD-20261013-03） | `9e578dd` |
+| D5.2 | HKDF-SHA256 domain separation | Achieved（AUD-20261013-03） | `9e578dd` |
+| D5.3 | ChaCha20 signs 與無 modulo bias permutation | Achieved；AF-037 須在 D6 整合前修正 | `9e578dd` |
+| D5.4 | 持久化 atomic nonce registry | Achieved（AUD-20261013-03） | `9e578dd`、`16ff619` |
+| D5.5 | strict authenticated container schema | Achieved（AUD-20261013-03） | `9e578dd` |
+| D5.6 | HMAC-SHA256 與 verify-before-open | Achieved；AF-024 CLOSED | `9e578dd`、`16ff619` |
+| D5.7 | no-pickle raw key format | Achieved（AUD-20261013-03） | `9e578dd` |
+
+* **D5.1–D5.7：Achieved；稽核判定 `PASS WITH FINDINGS`**（AUD-20261013-03），可以進入 D6。
+* 本週 D5 程式與 clean evidence：`9e578dd..16ff619`。A4.6、協作規則與 sandbox 維護不列入本 D5 週報的研究成果。
+
+### 3.2 本週重點
+
+1. `[事實]` **S2 的金鑰材料已改為標準密碼學管線。** 預設 master key 由 OS CSPRNG 產生，完整 HKDF-SHA256 subkey 直接驅動 ChaCha20；沒有把 HKDF 輸出截成 Python／NumPy／Torch 的短 seed。master key 與 subkey 為 256 bits，per-image nonce 為 128 bits（W3-T1）。
+2. `[事實]` **nonce reuse 由持久化 constraint 阻止，而非只靠碰撞機率。** clean-HEAD evidence 中 100,000 個 nonce 全部唯一、collision=0，且同一 master-key scope 的顯式重用被拒絕；registry 不記錄 raw nonce／key（W3-T2）。
+3. `[事實]` **容器把 M1 值域 metadata 納入完整性保護。** MAC 涵蓋 nonce、parameters、AAD、storage protocol、quantization、float32 lo/hi、payload hash 與 ciphertext bytes；只有驗證成功才會呼叫 opener（W3-T1、W3-T3）。
+4. `[事實]` **tamper matrix 全部符合預期。** 未竄改容器接受且 opener 呼叫一次；wrong key 與其餘 12 種 tag／header／metadata／ciphertext 竄改全部拒絕，opener 次數為零，對外錯誤統一為 `authentication failed`（W3-T3）。
+5. `[結論]` D5 已補上前作最明確的工程缺口：短 seed、跨影像固定金鑰材料、沒有 nonce reuse 防護、沒有完整性驗證與 pickle-capable key loading。這是 D6 實作 SOT transform 的底層元件，**尚不能單獨宣稱 S2 端到端安全**。
+
+### 3.3 實驗結果與分析
+
+#### (a) 金鑰來源、domain separation 與 CSPRNG（D5.1–D5.3）
+
+* `[事實]` 預設路徑只接受固定長度的隨機 master key；password mode 是明確選項，使用 scrypt，且 manifest 會記錄參數。round 的 sign-pre、perm、sign-post 與 MAC 使用不同 label，避免跨用途重用 subkey（W3-T1）。
+* `[事實]` permutation 使用 ChaCha20 byte stream 驅動 Fisher–Yates，抽樣採 rejection sampling；AST guard 同時禁止 crypto key path 呼叫非密碼學 seed API（W3-T1；AUD-20261013-03）。
+* `[限制]` AF-037 發現 ChaCha20 IV 目前把 image nonce 的前段解讀成初始 counter；極端 counter 會造成決定性的可用性失敗。它 fail closed、不影響機密性，但必須在 D6 使用此 PRNG 前固定 counter、更新向量並複驗。
+
+#### (b) per-image nonce registry（D5.4）
+
+| clean-HEAD nonce evidence | 結果 |
+|---|---|
+| 隨機發行 | 100,000／100,000 唯一 |
+| 碰撞 | 0 |
+| 同 scope 顯式重用 | 拒絕 |
+| 相同 nonce、不同 master scope | 可登記 |
+| artifact 保存 raw nonce／key | 否 |
+
+（數值與 provenance 出自 W3-T2。）
+
+* `[事實]` SQLite `PRIMARY KEY(scope, nonce)` 提供跨 thread／process／restart 的 atomic check-and-insert；scope 是 master-key keyed fingerprint，不存 raw master key（W3-T1、W3-T2）。
+* `[限制]` registry 的存在不會自動約束所有呼叫端；D6 必須讓正式加密流程只能使用 `NonceRegistry.issue()` 發出的 nonce，否則仍可能繞過 reuse gate（AUD-20261013-03）。
+
+#### (c) authenticated container 與 HMAC（D5.5–D5.6）
+
+* `[事實]` container 採 strict schema 與 canonical JSON；canonical 欄位禁止 float，M1 lo/hi 以精確 float32 bit pattern 表示。HMAC-SHA256 驗證成功後才進行 PNG lo/hi 一致性檢查與 plaintext opener（W3-T1）。
+* `[事實]` W3-T3 的每個失敗案例皆 `accepted=False`、`opener_calls=0`，包含只改 record lo/hi、只改 PNG lo、同步改 PNG 與 record lo、以及 ciphertext byte。這關閉了 AF-024 剩餘的「HMAC 必須涵蓋 lo/hi、驗證前不得讀回」要求。
+* `[結論]` 相較 Week 2 前作 baseline 的「竄改照常解密」，D5 已建立可測試的 fail-closed 邊界；但 D6 還要證明 transform 與 container 在真實 S2 流程中沒有繞過此邊界。
+
+#### (d) key file 與可重現性（D5.7）
+
+* `[事實]` key file 僅接受 raw key bytes，以 mode 0600 建立並用 `O_EXCL` 拒絕覆寫；長度不符或 trailing bytes 皆拒絕，loader 不使用 pickle／`torch.load`／`np.load`（W3-T1）。
+* `[事實]` D5 正式 evidence 由 clean tracked HEAD 產生，記錄 source commit 與 script SHA-256；稽核方獨立重跑 security suite、KDF／ChaCha 向量、nonce 與容器控制流均通過（AUD-20261013-03）。
+* `[限制]` AF-038 指出新增的密碼套件與相依套件尚未凍結到 Week 3 環境快照；須在 D6 前補齊，不覆寫 Week 1 baseline。
+
+### 3.4 論文可用素材（`appendix/week3/`）
+
+| 編號 | 內容 | 建議用途 | 建議章節 |
+|---|---|---|---|
+| W3-T1 | D5.1–D5.7 key pipeline／container 設計摘要 | 正文 | Method／S2 key pipeline |
+| W3-T2 | nonce registry clean-HEAD evidence | 正文 | Results／nonce reuse |
+| W3-T3 | authenticated container tamper matrix | 正文主表 | Results／完整性 |
+
+本週沒有需要新增的圖。完整 caption、來源 SHA-256 與輸出 SHA-256 見 `appendix/week3/MANIFEST.csv`；連續重建兩次逐位元相同。
+
+### 3.5 決策紀錄
+
+| 日期 | 決定 | 出處 |
+|---|---|---|
+| 10-13 | `[決定]` 預設使用隨機 master key；password mode 只作明確選項，安全性仍取決於密碼熵 | D5.1、PROGRESS |
+| 10-13 | `[決定]` 使用 `cryptography` 的 HKDF、ChaCha20 與 HMAC primitive，不自行實作密碼 primitive | D5 實作紀錄 |
+| 10-13 | `[決定]` AF-025 不在 D5 裁決；待 D7 實測 S2a／S2 攻擊效果後再決定保護強度 | 使用者裁決、AUD-20261013-03 |
+| 10-13 | `[決定]` AF-037 必須在 D6 接入 PRNG 前修正，避免先凍結錯誤 test vector | AUD-20261013-03 |
+
+### 3.6 稽核狀態
+
+* 稽核輪次：AUD-20261013-03；判定 `PASS WITH FINDINGS`，D5.1–D5.7 全部 Achieved，可進入 D6。
+* AF-024：**CLOSED**。M1 lo/hi 已被 HMAC 涵蓋，只改 lo/hi 會在 opener 前被拒絕。
+* AF-030：D5 部分完成；維持 **OPEN** 到 D6 證明 SOT 直接使用完整 CSPRNG material，並完成 wrong-key／wrong-nonce sanity control。
+* AF-037：**OPEN／MINOR／CORRECTNESS**。ChaCha20 初始 counter 與 nonce 切分須修正後再接入 D6。
+* AF-038：**OPEN／MINOR／REPRO**。須鎖定新增相依套件、建立 Week 3 環境快照並讓 run manifest 記錄密碼套件版本。
+* AF-025：仍為 **OPEN**，關閉時點在 D7 與使用者裁決。
+
+### 3.7 限制與未解問題
+
+* D5 驗證的是獨立密碼與容器元件；尚未完成 D6 的 SOT transform 整合，因此不得宣稱已抵禦所有 KPA／CPA／T2-WB 或達到正式密碼學安全定義。
+* AF-037 與 AF-038 必須先修復；尤其 AF-037 若拖到 D6 後才改，會使 D6 test vector 與證據全部重凍結。
+* password mode 的現行 scrypt 成本低於稽核建議；預設隨機 key 不受此問題影響。若論文要主張 password mode 強度，需提高成本或改用 Argon2id，並報告效能取捨。
+* nonce registry 目前是可用元件，不是 `seal_container` 的強制依賴；D6 的公開加密 API 必須消除繞過 registry 的路徑。
+* canonical MAC 保護語意內容，但語意相同的非 canonical JSON 仍可能有不同檔案 hash；若後續 PACS 以檔案 hash 去重，需另決定是否強制輸入 bytes 本身為 canonical form。
+
+### 3.8 下週計畫（Week 4）
+
+* 先關閉 AF-037、AF-038：修正 ChaCha IV/counter、更新 frozen vector、鎖定依賴與新增 Week 3 environment freeze。
+* D6.1–D6.4：把 D5 的 HKDF／CSPRNG material、per-image nonce 與 SOT transform 接成 S2a／S2，並確保正式入口不能繞過 nonce registry 或 authenticated container。
+* 完成 AF-030 剩餘驗收：wrong-key／wrong-nonce sanity control 與 crypto path 靜態 guard。
+* GPU 工作先跑小型 smoke 並估時；任何預估超過 30 分鐘的任務先交由使用者裁決。

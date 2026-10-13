@@ -1080,3 +1080,32 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * sandbox helper 無待辦或背景程序；可恢復 D6 前置估時與 smoke test。
+
+## 2026-10-13 · W3 · D5 每週摘要與論文素材彙整
+
+### 1. 當前目標 (Objective)
+* 依 `PROGRESS_summary.md` 最新規範整理 Week 3 D5.1–D5.7，並建立所有數字可回溯的 `appendix/week3/` 素材。
+
+### 2. 執行動作 (Actions Taken)
+* 依 AUD-20261013-03 更新 D5 稽核結論、AF-024／AF-030 狀態及 AF-037／AF-038 待辦。
+* 擴充 `scripts/build_weekly_appendix.py` 的 `WEEKS[3]`，產生 W3-T1 key pipeline、W3-T2 nonce registry、W3-T3 tamper matrix。
+* 以 CFG_DDIM 連續重建 Week 3 appendix 兩次，逐檔比較 SHA-256。
+* 在 `PROGRESS_summary.md` 新增固定八節 Week 3 摘要，並同步 `README.md` 的狀態與 appendix 索引。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 兩次重建的 `MANIFEST.csv` 與三份表格 SHA-256 全部相同；素材直接衍生自已追蹤的 D5 source／result／table。
+* [事實] 摘要將 D5 正確標為 Achieved／`PASS WITH FINDINGS`：AF-024 CLOSED、AF-030 留至 D6、AF-037／AF-038 須在 D6 前修正，AF-025 留至 D7 裁決。
+* [事實] 本摘要只涵蓋 D5；A4.6、協作規則與 sandbox 維護未混入 D5 研究成果。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：Week 3 D5 摘要、可追溯素材、雙重建確定性與檔案索引均完成。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* D5 的主要工程結論可直接用於論文 Method／完整性結果，但尚未與 SOT transform 整合；摘要明確避免把元件測試外推成 S2 端到端安全。
+* D6 開始前先處理 AF-037／AF-038，避免錯誤 IV/counter test vector 與未凍結環境進入下一階段證據。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。Week 3 原排 D5；僅因整體進度提前於 2026-10-13 完成並彙整。
+
+### 7. 下一步
+* 請使用者檢視 `PROGRESS_summary.md` Week 3；確認後先修復 AF-037、AF-038，再開始 D6 smoke 與估時。

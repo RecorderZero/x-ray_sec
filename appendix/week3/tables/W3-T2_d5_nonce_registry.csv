@@ -1,0 +1,2 @@
+requested,unique,collisions,explicit_reuse_rejected,same_nonce_other_master_scope_accepted,registry_rows,nonce_bytes,raw_nonce_or_key_recorded,evidence_git_commit,evidence_clean_tracked,cryptography
+100000,100000,0,True,True,100001,16,False,9e578ddb85dc9c151290fa9ac05342f4fb8cda7a,True,50.0.2

@@ -14,7 +14,7 @@
 - 固定 dev split：`dev_v1.1`，20 張、20 位不同病人，健康／積水各 10 張；hash 排除本機路徑。
 - 正式 split：`security_v1`，200 位病人；重現學長抽樣後排除 22,253 位曾入選訓練病人，健康／積水各 100 位。
 - 主線 P/S0/S1/S2a/S2 的生成一律依學長程式寫死的 `guidance_scale=-1`（y=0 健康類條件生成、單次模型呼叫、無 CFG 混合；與 `guidance_scale=0` 逐位元等價，見 AF-021；使用者 2026-10-09 裁決），inversion 為 `null=True` 無條件；論文用語不得寫成「guidance 0」或「無條件生成」。guidance=4 僅可作病灶健康化附表。
-- D5.1–D5.7 已完成實作與 clean-HEAD CPU 證據：100,000 nonce 無碰撞且 reuse fail closed；14-case HMAC tamper matrix 全過；AF-024 的 D5 部分已修復待稽核，AF-030 尚待 D6 整合後完全關閉。
+- D5.1–D5.7 已完成實作、clean-HEAD CPU 證據與稽核：100,000 nonce 無碰撞且 reuse fail closed；14-case HMAC tamper matrix 全過；AF-024 已關閉，AF-030 尚待 D6 整合，AF-037／AF-038 須在 D6 前修正。
 - 主要環境：`CFG_DDIM`、Python 3.10.19、PyTorch 2.14.0+cu130、RTX 5090；D5 primitive provider `cryptography==50.0.2`。
 
 ## 核心規劃與紀錄
@@ -34,6 +34,8 @@
 | `appendix/README.md` | 論文素材附錄規範：`week<N>/` 結構、`W<N>-F<k>`／`W<N>-T<k>` 編號、MANIFEST 欄位、產生方式與使用原則。 |
 | `paper_assets/attack_package/` | P4.1 攻擊素材包：`claims.csv`（11 claim × 表／圖／run ID）與 `index.md`。 |
 | `appendix/week1/` | Week 1 論文素材：6 張圖、10 張表與 `MANIFEST.csv`（含圖說草稿、建議用途、來源 SHA-256 與 run ID）；由 builder 產生，不手動編輯。 |
+| `appendix/week2/` | Week 2 Track A 攻擊素材：3 張圖、10 張表與 `MANIFEST.csv`，涵蓋金鑰空間、不變量、T1／T2-WB、KPA／CPA 與 tamper baseline。 |
+| `appendix/week3/` | Week 3 D5 防禦素材：key pipeline、nonce registry 與 authenticated-container tamper matrix 共 3 張表及 `MANIFEST.csv`。 |
 | `audit/README.md` | 稽核程式與輸出索引；由稽核方維護。 |
 
 ## E0/E1 可重現程式

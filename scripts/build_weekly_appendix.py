@@ -13,6 +13,7 @@ in the paper.  See ``appendix/README.md`` for the conventions.
 from __future__ import annotations
 
 import argparse
+import ast
 import csv
 import hashlib
 import json
@@ -308,6 +309,79 @@ def tab_invariants(out: Path, src: list[Path]) -> None:
     _write_csv(out, rows)
 
 
+# ---------------------------------------------------------------- week 3 tables
+def _module_int_constant(path: Path, name: str) -> int:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == name for target in node.targets
+        ):
+            value = ast.literal_eval(node.value)
+            if isinstance(value, int):
+                return value
+    raise ValueError(f"missing integer constant {name} in {path}")
+
+
+def tab_d5_pipeline(out: Path, src: list[Path]) -> None:
+    kdf, prng, nonce, container, mac, key_io = src
+    master_bytes = _module_int_constant(kdf, "MASTER_KEY_BYTES")
+    nonce_bytes = _module_int_constant(kdf, "NONCE_BYTES")
+    tag_bytes = _module_int_constant(container, "TAG_BYTES")
+    texts = {path.name: path.read_text(encoding="utf-8") for path in src}
+    required = {
+        "kdf.py": ("secrets.token_bytes", "hashes.SHA256", "hashlib.scrypt"),
+        "prng.py": ("algorithms.ChaCha20", "_uniform_below", "Fisher-Yates"),
+        "nonce.py": ("PRIMARY KEY(scope, nonce)", "secrets.token_bytes"),
+        "container.py": ("sort_keys=True", "lo_float32_bits", "ciphertext"),
+        "mac.py": ("hmac.HMAC", "open_authenticated", "authentication failed"),
+        "key_io.py": ("os.O_EXCL", "0o600", "32 raw bytes"),
+    }
+    for filename, needles in required.items():
+        for needle in needles:
+            if needle not in texts[filename]:
+                raise ValueError(f"D5 pipeline source assertion failed: {filename}: {needle}")
+    rows = [
+        {"task": "D5.1", "component": "master key / password mode",
+         "implementation": f"OS CSPRNG {master_bytes} bytes ({master_bytes * 8} bits); explicit scrypt password mode",
+         "security_property": "no integer-seed API; password entropy remains explicit"},
+        {"task": "D5.2", "component": "domain-separated KDF",
+         "implementation": f"HKDF-SHA256; {master_bytes}-byte subkeys; nonce used as salt",
+         "security_property": "round/purpose/mac labels are separated"},
+        {"task": "D5.3", "component": "signs / permutation CSPRNG",
+         "implementation": "full HKDF subkey drives ChaCha20; rejection-sampling Fisher-Yates",
+         "security_property": "no Python/NumPy/Torch non-cryptographic seed path"},
+        {"task": "D5.4", "component": "nonce registry",
+         "implementation": f"OS CSPRNG {nonce_bytes} bytes ({nonce_bytes * 8} bits); SQLite PRIMARY KEY(scope, nonce)",
+         "security_property": "persistent atomic reuse rejection; raw master key is not stored"},
+        {"task": "D5.5", "component": "authenticated container",
+         "implementation": f"strict canonical JSON; HMAC tag {tag_bytes} bytes; M1 lo/hi stored as float32 bits",
+         "security_property": "version, parameters, AAD, storage metadata and ciphertext bytes are covered"},
+        {"task": "D5.6", "component": "authentication",
+         "implementation": "HMAC-SHA256; verify-before-open",
+         "security_property": "failed authentication never calls the plaintext opener"},
+        {"task": "D5.7", "component": "key file",
+         "implementation": f"raw {master_bytes}-byte key; mode 0600; O_EXCL",
+         "security_property": "reject overwrite/trailing bytes; no pickle-capable loader"},
+    ]
+    _write_csv(out, rows)
+
+
+def tab_d5_nonce(out: Path, src: list[Path]) -> None:
+    data = json.loads(src[0].read_text(encoding="utf-8"))
+    result = data["result"]
+    _write_csv(out, [{
+        "requested": result["requested"], "unique": result["unique"],
+        "collisions": result["collisions"],
+        "explicit_reuse_rejected": result["explicit_reuse_rejected"],
+        "same_nonce_other_master_scope_accepted": result["same_nonce_other_master_scope_accepted"],
+        "registry_rows": result["registry_rows"], "nonce_bytes": result["nonce_bytes"],
+        "raw_nonce_or_key_recorded": result["raw_nonce_or_key_recorded"],
+        "evidence_git_commit": data["git_commit"],
+        "evidence_clean_tracked": not data["git_dirty_tracked_files"],
+        "cryptography": data["cryptography"],
+    }])
+
+
 # ---------------------------------------------------------------- registry
 WEEKS: dict[int, list[Item]] = {
     1: [
@@ -441,6 +515,21 @@ WEEKS: dict[int, list[Item]] = {
              "Track A 攻擊素材包（P4.1）：11 條攻擊 claim 與其威脅模型、一句話、headline 數字、來源檔 SHA-256 與 run ID。數字由 scripts/build_attack_package.py 從已追蹤結果檔讀取，不手抄。",
              "每條攻擊宣稱都對應可追溯的表、圖、result JSON 與 run ID（P4.1、AF-034）",
              ["paper_assets/attack_package/claims.csv", "paper_assets/attack_package/index.md"], []),
+    ],
+    3: [
+        Item("W3-T1", "table", "W3-T1_d5_key_pipeline.csv", "正文", "Method／S2 key pipeline",
+             "D5.1–D5.7 的密碼材料、nonce、authenticated container、HMAC 與 key-file 設計摘要。數值常數由實作原始碼 AST 讀取，安全屬性以來源字串斷言防止摘要與實作漂移。",
+             "S2 不再使用前作的短 seed／非密碼學 PRNG；容器採驗證後才開啟的 fail-closed 路徑（AF-024、AF-030）",
+             ["src/crypto/kdf.py", "src/crypto/prng.py", "src/crypto/nonce.py",
+              "src/crypto/container.py", "src/crypto/mac.py", "src/crypto/key_io.py"], [], tab_d5_pipeline),
+        Item("W3-T2", "table", "W3-T2_d5_nonce_registry.csv", "正文", "Results／nonce reuse",
+             "D5.4 clean-HEAD nonce evidence：100,000 個 128-bit random nonce 全部唯一；顯式重用 fail closed；相同 nonce 在不同 master-key scope 可登記；artifact 不含 raw nonce／key。",
+             "per-image nonce registry 具持久化 UNIQUE constraint，阻止同一 master-key scope 的 nonce 重用（D5.4）",
+             ["results/D5.4_nonce_registry.json"], [], tab_d5_nonce),
+        Item("W3-T3", "table", "W3-T3_d5_tamper_matrix.csv", "正文主表", "Results／完整性",
+             "D5.6 clean-HEAD tamper matrix：未竄改容器接受且 opener 呼叫一次；wrong key 與 12 種內容／metadata 竄改全部拒絕，opener 不被呼叫，外部錯誤統一。",
+             "authenticated container 對 key、tag、nonce、header、AAD、storage、lo/hi 與 ciphertext 竄改皆 fail closed（D5.6、AF-024）",
+             ["paper_assets/tables/table_D5_tamper_matrix.csv", "results/D5.6_tamper_matrix.json"], []),
     ],
 }
 
