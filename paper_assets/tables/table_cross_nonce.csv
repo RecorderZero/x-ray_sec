@@ -1,0 +1,5 @@
+attack,known_pairs,dimension,target,samples,rmse,max_abs,cosine_mean,positive_control,rounds,permutation
+CPA_basis,1024,1024,same_nonce,32,4.784231493543897e-16,2.4147350785597155e-15,1.0,True,1,False
+CPA_basis,1024,1024,cross_nonce,32,1.411929699155901,5.623933372379453,0.0010516801638124384,False,1,False
+KPA_full_rank,1024,1024,same_nonce,32,1.3871171923136437e-15,7.549516567451064e-15,1.0,True,1,False
+KPA_full_rank,1024,1024,cross_nonce,32,1.411929699155901,5.6239333723794545,0.0010516801638124319,False,1,False

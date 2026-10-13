@@ -77,6 +77,10 @@
 | `src/crypto/s2.py` | D6.7：M1/M2 authenticated S2 封裝；seal 強制經持久化 nonce registry，open 強制 tag 驗證成功後才 decode/inversion/inverse。 | S2 部署路徑，不可繞過此層自行解密。 |
 | `scripts/d6_sot_evidence.py` | D6.1–D6.6 CPU 證據：數值可逆、顯式 Q、Gaussian、真實 latent 動差、R/P 攻擊／runtime／precision 消融及結構診斷。 | SOT 改動後重建 D6 CPU 結果。 |
 | `scripts/d6_s2_dev_runner.py` | D6.4/D6.7 GPU runner：20 張 × 8 組 generation-quality 消融；4 張 authenticated M1/M2 dev 整合。 | 一律由 `managed_run.py --validate-artifacts` 執行。 |
+| `scripts/d7_metrics.py` | D7 共用 linkage 指標：float64 feature、悲觀 tie-break、Wilson CI 與 bootstrap mAP。 | 固定沿用 A3/A4 經 AF-028/033 修正後的評估口徑。 |
+| `scripts/d7_cpu_security.py` | D7.2–D7.8 CPU formal evidence：T1 magnitude/norm、cross-nonce KPA/CPA、geometry、structured probe、100 次 repeat 與 tamper。 | 讀取凍結的 security_v1 latent cache，不載入 diffusion model。 |
+| `scripts/d7_t2wb_inversion.py` | D7.1 GPU runner：S2 R=1/P-off 匿名生成後，分別經 legacy／range-preserving 存檔再做 target-model inversion。 | 支援 dev smoke/calibration 與 formal N=200 managed run。 |
+| `scripts/d7_t2wb_analyze.py` | 合併 D7 T1 與 T2-WB query cache，執行相同 magnitude scorer、dev-calibrated norm、正負控制。 | 正式產生 `table_attack_original.csv` 與 `table_norm_leakage.csv`。 |
 | `scripts/method_comparison_runner.py` | 固定第一張積水病例，重跑 P/S0/S1/S2a/S2 的原圖、stored anonymous、重構圖；P/S0/S1 用 legacy 丟值域 PNG，S2a/S2 用 range-preserving PNG，另區分 x0 cosine 與前作 estimand。 | 產生五方法直觀比較圖與單張 metrics。 |
 | `tests/security/test_environment_lock.py` | AF-038 regression：確認 D5 的三個精確套件版本全部存在於 Week 3 environment freeze。 | D5／後續環境變更時。 |
 | `scripts/a4_5_tamper.py` | A4.5 tamper baseline：S0/S1 無完整性檢查，竄改 latent／儲存紀錄皆被接受並量化影響。 | A4.5。 |
@@ -134,6 +138,9 @@
 | `paper_assets/tables/table_rounds_permutation.csv` | D6.5 R=1/2/3/4 × P on/off 的 original-/sorted-magnitude、norm-only、CPU runtime 與 float32 precision；D7 候選選擇依據。 |
 | `paper_assets/tables/table_structure.csv` | D6.6 每組設定的 trace、same-vector cosine expectation、basis probe、矩陣 sparsity 與正交誤差；明列不是安全證明。 |
 | `results/D6.7_dev_integration.csv`、`image/D6.7_s2_dev.png` | 選定 R=1/P off 的 4 張 M2/T1 與 authenticated range-preserving M1 端到端結果；圖依序呈現原圖、匿名圖、M2 還原、M1 還原與差異。 |
+| `results/D7_cpu_security.json` | D7.2–D7.8 CPU formal evidence provenance：security_v1 N=200、cache/split hash、S2 參數與各表路徑。 |
+| `paper_assets/tables/table_attack_original.csv`、`table_norm_leakage.csv` | D7.2/D7.3 T1 結果；T2-WB 正式 run 完成後由 analyzer 加入兩種存檔與 dev norm calibration 欄。 |
+| `paper_assets/tables/table_cross_nonce.csv`、`table_geometry.csv`、`table_structured_probe.csv`、`table_repeat.csv`、`table_tamper.csv` | D7.4–D7.8：cross-nonce KPA/CPA、pairwise geometry、非 Gaussian probes、100 次重複加密與 S2/S2a tamper 對照。 |
 | `reports/method_comparison.md`、`image/method_comparison.png` | 固定 `dev_v1.1_010` 的 P/S0/S1/S2a/S2 三欄比較（原圖／stored anonymous／重構圖），含 storage protocol 與 cosine estimand 解讀。 |
 | `paper_assets/tables/table_method_comparison.csv`、`results/method_comparison.json` | 上述單圖的 PSNR、SSIM、L∞、float/uint8 最大 pixel error、MSE/RMSE/MAE、x0 cosine、P-output cosine與完整 provenance。 |
 | `results/A3.4_T1_gallery.json` | A3.4 逐 scheme×scorer 的 Top-1/5、mAP、CI、CMC 與正負控制（security_v1 200 張，T1）。 |

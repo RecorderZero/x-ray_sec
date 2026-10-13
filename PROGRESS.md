@@ -1248,3 +1248,44 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 依 Week 5 計畫進入 D7 formal security evaluation；AF-025 待跨存檔結果完成後由使用者裁決。
+
+## 2026-10-14 · W5 · Track D · D7 CPU formal evidence 與 T2-WB runner 準備
+
+### 1. 當前目標 (Objective)
+* 開始 D7.1–D7.8：先完成不需 diffusion GPU 的 formal N=200 T1／cross-nonce／geometry／probe／repeat／tamper，再建立可驗證的 T2-WB dev/formal runner 與 analyzer。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/d7_metrics.py`，固定 float64 feature、悲觀 tie-break、Wilson CI 與 bootstrap mAP，沿用 A3/A4 修正後口徑。
+* 新增 `scripts/d7_cpu_security.py`，由 frozen `security_v1` E2.3 cache 產生 D7.2–D7.8 CPU evidence；使用 D6 暫選 R=1/P off 與 per-image nonce。
+* D7.4 同時建立 d=1,024 chosen-basis CPA 與 full-rank known-pair KPA 正控制，分別測 same nonce 與 cross nonce transfer。
+* D7.5 對 fixed-Q 與 per-image-Q 分開測 pairwise cosine／distance 及 sorted distance-signature linkage；D7.6 使用 basis、constant 與 sparse probe；D7.7 同一真實 latent 以 100 個 nonce 重複變換；D7.8 對 S2 七種容器竄改與 S2a 無認證正控制並列。
+* 新增 `scripts/d7_t2wb_inversion.py`：每張 S2 匿名圖只生成一次，再經 legacy／range-preserving 兩種存檔反演；新增 `scripts/d7_t2wb_analyze.py`：合併 T1/T2-WB、dev norm calibration 與正負控制。
+* 新增 `tests/unit/test_d7_security.py`；targeted 回歸 23 passed、1 skipped。
+* 使用者於本輪明確預先同意 D7 階段超過 30 分鐘的 GPU 任務，正式 run 不需再次詢問，但仍須回報與監看。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] D7.2 T1 N=200：S2 original-|z| Top-1=0.010、sorted-|z| Top-1=0.005，random baseline=0.005；結果完整保留，不以是否顯著作工程 gate。
+* [事實] D7.3 T1 norm-only Top-1=1.000（Wilson 95% CI 下界 0.981），確認正交變換的已知限制。
+* [事實] D7.4 d=1,024：same-nonce CPA/KPA 正控制 cosine=1.0、MaxAbs ≤7.55e-15；轉移到另一 nonce 後 RMSE=1.412、cosine≈0.00105。
+* [事實] D7.5 fixed-Q distance-signature Top-1=1.0；per-image-Q Top-1=0.005。fixed-Q pairwise cosine MaxAbs error=2.39e-9，per-image-Q=0.145。
+* [事實] D7.6 四種非 Gaussian probe 皆有完整輸出統計且 norm ratio=1.0；只作診斷、不作安全證明。
+* [事實] D7.7 100/100 nonce 與 protected payload hash 均唯一；off-diagonal cosine mean≈3.70e-5、max≈0.0132。
+* [事實] D7.8 S2 tag／nonce／ciphertext／version／parameters／AAD／storage 七種竄改全部拒絕；S2a latent 改值不拒絕且輸出改變。
+* [事實] CPU evidence 完成時沒有背景程序；T2-WB GPU runner 尚未啟動。
+
+### 4. 達標判定 (Assessment)
+* [x] D7.2/D7.3 的 T1 部分、D7.4–D7.8 CPU evidence 工程與資料完整性已通過實作方檢查。
+* [ ] D7.1 T2-WB 尚待 dev smoke/calibration 與 formal N=200；其完成後才合併 D7.2/D7.3 的 T2-WB 結果。
+* [ ] G4 與 AF-025 尚未裁決，須等 T2-WB 正式結果與稽核。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* cross-nonce 實驗以能成功重建同一 Q 的 full-basis/full-rank 上界攻擊作正控制；跨 nonce 失敗只能支持「此映射不能直接轉移」，不代表一般 KPA/CPA 安全證明。
+* S2a/S2 的匿名像素相同，authentication 不改 confidentiality；T2-WB runner 因此共用 query，但 D7.8 另行量測兩者 tamper 差異。
+* T2-WB 必須同時報 legacy 與 range-preserving；前者是 AF-025 的不保存值域反事實對照，後者是 S2 M1 正式協定。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。formal N 維持 200；D7.4 的顯式映射重建因矩陣大小限制使用 d=1,024，並明列為 synthetic diagnostic，不冒充 d=65,536 端到端結果。
+
+### 7. 下一步
+* 先提交 source＋CPU evidence 的 clean HEAD，執行 D7.1 dev smoke/calibration並驗證 artifact schema；通過後依使用者預先授權啟動約 80 分鐘的 formal N=200 managed GPU run。
+* formal 完成後執行 `d7_t2wb_analyze.py`，更新兩張主表、整理 P7.1 defense package、更新 README／PROGRESS，再送稽核。

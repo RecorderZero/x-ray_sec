@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "D7.CPU",
+  "created_at": "2026-10-13T18:28:50.669354+00:00",
+  "git_commit": "5e947304ad8285d268225f8f2095e184516d3cd4",
+  "git_dirty_tracked_files": false,
+  "script_sha256": "49538218af9b54432e8946e16606979dbc12137b1b3d658e9f2d4d374017b933",
+  "cache_run_id": "E2.3_20261009T183736363217Z_84cf642a",
+  "cache_sha256": "195c20b3124af54c5dd40c644bae78af3144ae176204982c4c2f7b5effd69190",
+  "split_sha256": "5843da54d027cbe5b7d518349a374f859b5d2c0e07b9b66ea5f89c9530a94490",
+  "sample_count": 200,
+  "seed": 1911,
+  "rounds": 1,
+  "permutation": false,
+  "fixture_key_sha256": "24e83ec88493eaee6f75312bc7c8908f4f1722a7998f793066c8471452cbe23c",
+  "raw_key_material_recorded": false,
+  "tables": {
+    "D7.2": "paper_assets/tables/table_attack_original.csv",
+    "D7.3": "paper_assets/tables/table_norm_leakage.csv",
+    "D7.4": "paper_assets/tables/table_cross_nonce.csv",
+    "D7.5": "paper_assets/tables/table_geometry.csv",
+    "D7.6": "paper_assets/tables/table_structured_probe.csv",
+    "D7.7": "paper_assets/tables/table_repeat.csv",
+    "D7.8": "paper_assets/tables/table_tamper.csv"
+  },
+  "disclaimer": "attack outcomes are measurements, not engineering pass gates; probes are not a security proof"
+}

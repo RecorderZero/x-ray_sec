@@ -1,0 +1,2 @@
+task,threat_model,method,storage,scorer,n,gallery_size,top1,top1_ci_low,top1_ci_high,top5,mAP,median_rank,negative_top1,random_top1,tie_break,rounds,permutation
+D7.3,T1,S2a/S2,exact_latent,norm,200,200,1.0,0.9811546736227335,1.0,1.0,1.0,1.0,0.005,0.005,pessimistic,1,False
