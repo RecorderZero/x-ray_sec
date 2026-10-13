@@ -62,6 +62,12 @@
 | `scripts/a4_3_kpa.py` | A4.3 KPA：S0 一對精確還原金鑰；S1 真實 latent 量值重複需 2 對（合成 d=4096 一對即可）；held-out 解密驗證。 | A4.3。 |
 | `scripts/a4_4_cpa.py` | A4.4 CPA：固定金鑰下 d 次基底查詢重建 S0/S1 解密映射，全新明文 max-abs 0；明列 fixed-Q 前提。 | A4.4。 |
 | `scripts/a4_5_deployment_tamper.py` | A4.5 部署路徑竄改（GPU）：竄改存檔的匿名影像後跑完整解密管線（inversion→逆金鑰→生成），確認無任何拒絕。 | A4.5 部署路徑 baseline。 |
+| `src/crypto/kdf.py` | D5.1/D5.2：256-bit random master key、明確的 scrypt password mode、RFC 5869 HKDF-SHA256 與 round/purpose domain separation。 | S2 key pipeline；不得把輸出截成短 seed。 |
+| `src/crypto/prng.py` | D5.3：完整 HKDF subkey 直接驅動 ChaCha20；產生 sign bits 與 rejection-sampling Fisher–Yates permutation。 | D6 structured transform 的 key material。 |
+| `src/crypto/nonce.py` | D5.4：SQLite 持久化、跨 process UNIQUE(scope,nonce) registry；同 master-key scope 顯式 reuse fail closed。 | deployment nonce 發放／登記。 |
+| `src/crypto/container.py`、`src/crypto/mac.py` | D5.5/D5.6：strict canonical container、M1 lo/hi float32 bits、payload bytes 與 AAD 的 HMAC-SHA256；驗證成功前不呼叫 opener。 | S2 authenticated container。 |
+| `src/crypto/key_io.py` | D5.7：僅接受 32-byte raw master key、0600、新檔不覆寫；不使用 pickle-capable loader。 | 本機 key file。 |
+| `scripts/d5_security_evidence.py` | 產生 D5.4 100,000 nonce 統計與 D5.6 tamper matrix，不保存 nonce、master/subkey。 | D5 正式 CPU 證據。 |
 | `scripts/a4_5_tamper.py` | A4.5 tamper baseline：S0/S1 無完整性檢查，竄改 latent／儲存紀錄皆被接受並量化影響。 | A4.5。 |
 | `scripts/a4_t2wb_gallery.py` | A4.2：T2-WB magnitude／sorted-magnitude／norm gallery linkage（兩種存檔分欄、方案專屬解密正控制、shuffle 負控制、Wilson CI、Inconclusive 判定、AF-025 norm 校正與 lo/hi 旁道）。CPU，讀 E2.3 gallery 與 A4.1 query cache。 | A4.2 攻擊。 |
 | `scripts/a4_t2wb_inversion.py` | A4.1：從 security/dev E2.3 cache 生成 S0/S1 anonymous image，分別經 legacy PNG 與 range-preserving PNG 讀回後用目標模型 inversion；逐筆記錄 z_ano 對 zhat_ano 指標，並把 query latent cache 留在受控 run 目錄。 | 先以 `--limit` smoke；正式 N=200 必須由 `managed_run.py --validate-artifacts` 執行。 |
@@ -107,6 +113,8 @@
 | `results/A4.4.json`、`paper_assets/tables/table_CPA.csv` | A4.4 CPA 結果與控制（每查詢換金鑰的 nonce 模擬）。 |
 | `paper_assets/tables/table_tamper_deployment.csv` | A4.5 部署路徑竄改結果（2 張，accepted=True）。 |
 | `results/A4.5.json`、`paper_assets/tables/table_tamper_baseline.csv` | A4.5 tamper baseline 結果。 |
+| `results/D5.4_nonce_registry.json` | D5.4：100,000 個 128-bit random nonce collision/reuse registry 結果，不含 raw nonce/key。 |
+| `results/D5.6_tamper_matrix.json`、`paper_assets/tables/table_D5_tamper_matrix.csv` | D5.6：未竄改接受；wrong key/tag、payload、nonce、version、params、AAD、storage/quantization、record/PNG lo-hi 等竄改全部 fail closed，並記 opener 呼叫次數。 |
 | `results/A3.4_T1_gallery.json` | A3.4 逐 scheme×scorer 的 Top-1/5、mAP、CI、CMC 與正負控制（security_v1 200 張，T1）。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `paper_assets/tables/table_baseline_correctness.csv` | E2.5 主表：P/S0/S1 × 23 項指標的平均、bootstrap 95% CI（B=10,000、seed 1911）、中位數與範圍。 |

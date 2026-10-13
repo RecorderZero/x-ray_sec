@@ -915,3 +915,42 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 交付影像面板與數值表給使用者；A4.6 可供稽核複驗。後續進入 D5。
+
+
+## 2026-10-13 · W3 · Track D · D5.1–D5.7 實作與驗證中
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` D5.1–D5.7：完成不依賴 WHT 的 key pipeline、CSPRNG、nonce registry、authenticated container、HMAC 與 no-pickle key format。
+* 回應 open findings：AF-024 的 lo/hi HMAC／verify-before-decode 部分；AF-030 的 D5 部分（完整 256-bit key→HKDF→CSPRNG，不經短 seed 或非密碼學 RNG）。AF-025 留待 D7 實測後由使用者裁決。
+* 使用者規則已版本化於 `AGENTS.md`（commit `a09d591`）：本專案是實驗室自有模型的防禦性弱點驗證；subagent 可用；GPU 預估超過 30 分鐘必須先裁決。本輪 D5 全部為 CPU。
+
+### 2. 執行動作 (Actions Taken)
+* 安裝並鎖定成熟 primitive provider `cryptography==50.0.2`；沒有自行實作 SHA、ChaCha 或 HMAC。
+* D5.1/D5.2：`src/crypto/kdf.py` 提供 OS CSPRNG 32-byte master key、明確 scrypt password mode、RFC 5869 HKDF-SHA256、每輪 sign-pre/perm/sign-post 與 mac domain labels。
+* D5.3：`src/crypto/prng.py` 以完整 HKDF subkey 直接驅動 ChaCha20；sign 取 keystream bits；permutation 使用 uint32 rejection sampling Fisher–Yates；禁止 manual_seed／NumPy／Torch／Python RNG seed 路徑。
+* D5.4：`src/crypto/nonce.py` 以 SQLite UNIQUE(scope,nonce) 做持久化 atomic registry；scope 為 master-key keyed fingerprint，不存 raw key。
+* D5.5/D5.6：strict canonical JSON container，float 禁止進 canonical 欄；M1 lo/hi 使用 float32 bit hex；HMAC-SHA256 覆蓋 nonce、params、ciphertext bytes、AAD、storage/quantization/lo-hi；驗證及 M1 一致性檢查成功前不呼叫 opener。
+* D5.7：32-byte raw key file、0600、拒絕覆寫與 trailing bytes；AST guard 禁止 pickle/torch.load/np.load key loader。
+* 稽核 subagent 僅唯讀列出 D5 DoD／風險，實作與整合由主代理完成。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] D5 security tests 26/26 passed：RFC 5869、scrypt、ChaCha fixed vector、強制 rejection、65,536 signs、permutation inverse、跨 thread/restart nonce reuse、canonical schema、M1 lo-hi bit consistency、tamper-before-opener、no-pickle。
+* [事實] 完整回歸命令退出碼 0；現行套件共收集 92 tests。
+* [事實] 初次 evidence smoke：100,000/100,000 random nonce 唯一、collision=0、顯式 reuse rejected；12-case tamper matrix 全過。其後腳本新增 `png_and_record_lo` 與 `ciphertext_byte` 兩例，因此目前追蹤候選 evidence 是舊 12-case 版本，必須在 source commit 後以 clean provenance 重跑成 14 cases，不能先宣稱正式完成。
+* [釐清] 本輪沒有「資安政策拒絕」。遇到的是本機 filesystem sandbox 的 `bwrap: loopback: Failed RTM_NEWADDR`，使內建 `apply_patch` 偶發失敗；已用精確斷言替換繼續工作。權限提示是執行環境核准，不是研究內容被阻擋。
+
+### 4. 達標判定 (Assessment)
+* [x] **程式硬閘門已通過**：D5.1–D5.7 第一版與 26 項 security tests 通過。
+* [ ] **證據硬閘門進行中**：尚須先提交 source/tests，再 clean rerun 100k nonce＋14-case tamper evidence、完整 92 tests、staged guard，才可將 D5 判為 Achieved。
+* [ ] **未達標 (Failed)**：無。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 最大風險是 canonical serialization、驗證順序、短 seed 回歸與跨程序 nonce reuse；目前分別由 strict schema、internal M1 verify-before-opener、AST/fixed-vector tests、SQLite UNIQUE constraint 控制。
+* AF-030 尚不能完全關閉，因 D6 的 SOT 整合仍需證明這些 CSPRNG 產物被直接使用，且 wrong-key/wrong-nonce sanity control 落在錯誤分布；D5 只完成其 key-material 部分。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。D5 不使用 GPU。`cryptography` 是成熟函式庫，符合「不得自行實作 primitive」。
+
+### 7. 下一步
+* 完成 source/test 原子 commit；以 clean HEAD 重跑 14-case evidence 與完整 92 tests，再提交 results／README／本條完成補記。
+* 請稽核方複驗 AF-024 D5 部分與 AF-030 D5 部分；之後進入 D6。任何預估超過 30 分鐘的 GPU D6 工作先交由使用者裁決。

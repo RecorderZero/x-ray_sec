@@ -1,0 +1,2 @@
+# Week 3 D5 cryptographic primitive provider. Keep exact version for test vectors.
+cryptography==50.0.2
