@@ -160,6 +160,8 @@
 | `tests/unit/test_m1_storage.py` | AF-024：任意值域（含負值、>1）`decode(encode(x))` 誤差 ≤ (hi−lo)/510；lo/hi 精確保存；常數影像；缺值域 metadata 與非有限值 fail closed；對超出 [0,1] 的影像優於前作 min-max。 |
 | `tests/unit/test_output_guard.py` | AF-029：已存在的輸出無 `--force` 時被拒絕且檔案不變；不存在或加 `--force` 時允許；預設 `force=False`。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
+| `tests/security/test_sot.py` | D6.1/D6.2：CPU/CUDA inverse、d=65,536 float64 門檻、顯式 Q 正交與輪次公式、wrong-key/wrong-nonce controls、FWHT 輸入契約。 |
+| `tests/security/test_s2.py` | D6.7：M1/M2 authenticated round-trip、tag 驗證先於 inversion、wrong key/nonce fail closed，以及跨 M1/M2 nonce reuse rejection。 |
 | `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |
 | `tests/test_legacy_repro.py` | E2.2：P/S0/S1 transform 精確可逆；GPU 比對 P/S0/S1 anonymize／deanonymize wrapper 與 legacy sampler bit-exact、guidance −1 與 0 逐位元相同（AF-021），以及恆等金鑰 P 等同無金鑰的 legacy forward→backward（AF-017）；cached x_T 路徑（invert → key → generate）與完整 legacy sampler bit-exact（E2.3）。 |
 

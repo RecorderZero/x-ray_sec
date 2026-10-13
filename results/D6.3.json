@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-13T16:50:23.004808+00:00",
+  "git_commit": "173226ec98834333a6ee9380f0c8e5fc17cf6468",
+  "git_dirty_tracked_files": false,
+  "script_sha256": "181f36f11b8bd05e4d699885f9d3823683f8e0f7add5104bd4d10d468dc9168c",
+  "torch": "2.14.0+cu130",
+  "numpy": "1.23.0",
+  "scipy": "1.10.0",
+  "seed": 1911,
+  "key_mode": "public deterministic reproducibility fixture; not a deployment secret",
+  "key_sha256": "2a3098074bfedda7a5a2cc5a467adc37d54d3de3b3446920811ac3ace343038f",
+  "nonce_mode": "unique deterministic per sample/config fixture",
+  "task_id": "D6.3",
+  "vectors": 128,
+  "dimension": 4096,
+  "before": {
+    "mean": 0.0027102465429651185,
+    "variance": 0.9979911087850961,
+    "skew": -8.492486223976015e-06,
+    "excess_kurtosis": -0.0013175302917396436,
+    "ks_statistic": 0.0017002429851440404,
+    "ks_pvalue": 0.09639027653920063
+  },
+  "after": {
+    "mean": -0.0020234268624156836,
+    "variance": 0.9979943599651525,
+    "skew": -0.0020103850278293434,
+    "excess_kurtosis": -0.00114554841937764,
+    "ks_statistic": 0.0016343181789844063,
+    "ks_pvalue": 0.12137034518125134
+  },
+  "interpretation": "Structural diagnostics and p-values are diagnostics, not a security proof."
+}

@@ -1143,3 +1143,44 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 請稽核方依 AUD-20261013-03 驗收 AF-037、AF-038；複驗通過後進入 D6 smoke。任何預估超過 30 分鐘的 GPU 工作仍先請使用者裁決。
+
+## 2026-10-14 · W4 · Track D · D6.1–D6.7 structured transform 與 S2 dev 整合
+
+### 1. 當前目標 (Objective)
+* D5 稽核 `PASS`、AF-037／AF-038 `CLOSED` 後，完成 `WORKFLOW.md` D6.1–D6.7：torch FWHT、顯式正交性、Gaussian／真實 latent 分布、R/P 消融、結構診斷及 authenticated S2 dev pipeline。
+* 直接使用 D5 HKDF／ChaCha20 sign/permutation、nonce registry、container 與 HMAC；補齊 AF-030 剩餘的 S2 整合證據。
+
+### 2. 執行動作 (Actions Taken)
+* 實作 `src/crypto/sot.py`：正規化 FWHT、`D_post·P·H·D_pre`、多輪 `Q_R…Q_1` 與逆向輪序；單張 latent flatten 後保持 shape/dtype/device，另提供 explicit-Q 診斷批次 API。
+* 實作 `src/crypto/s2.py`：M2 latent 與 M1 range-preserving PNG authenticated container；open 路徑固定為 tag 驗證成功後才 decode/inversion/inverse；seal 強制使用持久化 `NonceRegistry`，M1/M2 跨模式 nonce reuse 亦拒絕。
+* 新增 `tests/security/test_sot.py`、`test_s2.py`：d=65,536 R=1–4/P on-off、d=1,024 顯式 Q、wrong key/nonce、CUDA、M1/M2 ordering 與 nonce reuse regression。
+* `scripts/d6_sot_evidence.py` 由 dev E2.3 cache 產生 D6.1–D6.6 CPU 證據；公開 deterministic fixture 只用於可重現實驗，不是部署 secret，結果明列 p-value／結構指標不是安全證明。
+* `scripts/d6_s2_dev_runner.py` 經 managed runner 完成 20 張 × 8 組 generation-quality 與固定 4 張 M1/M2 integration；正式 run 分別為 `D6.4_QUALITY_20261013T162058881536Z_c2c4465a`、`D6.7_INTEGRATION_20261013T164724711647Z_ecec4bf5`，皆 `succeeded` 且 artifact validation 通過。
+* 原子 commits：`9577ed5`（transform/S2 core）、`b442b5a`（CPU evidence）、`abba1bc`（GPU runner）、`4c99e2f`（nonce registry enforcement）、`173226e`（dev 選型與索引）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] D6.1：d=65,536 float64 inverse MaxAbs 最差 `2.66e-15`（門檻 `1e-12`）；float32 bit-exact rate `8.60%–17.22%`，只記錄、不作 fail gate。
+* [事實] D6.2：d=1,024 顯式 Q 的 orthogonality MaxAbs=`0`、spectral norm error=`8.88e-16`、`Q_2Q_1` formula MaxAbs=`0`，通過。
+* [事實] D6.3：Gaussian 變換後 mean=`-0.00202`、variance=`0.99799`、skew=`-0.00201`、excess kurtosis=`-0.00115`、KS p=`0.121`；只支持與 N(0,1) 相容的診斷，不能推出安全性。
+* [事實] D6.4：真實 latent 經變換後每張 mean/variance 確有位移（八組 mean absolute shift 約 `0.139–0.141`，variance absolute shift 約 `0.0197`），但 norm ratio 最大偏差僅 `5.96e-7`。八組匿名圖對 x0 的平均 PSNR=`5.21–5.35 dB`、SSIM=`0.0076–0.0128`，沒有設定顯著改善匿名圖的醫療可讀性。
+* [事實] D6.5：20 張 dev 中，R=1/P off 的 original-|·| 與 sorted-|·| Top-1 都是 `0.05`（1/20 random baseline）；八組 norm-only Top-1 全為 `1.0`。R=1 CPU transform median 為 P off `1.83 ms`、P on `62.6 ms`；P 未改善這兩種攻擊。
+* [事實] D6.6：八組 trace／trace-over-d、same-vector cosine expectation、basis nonzero fraction、matrix zero fraction 與正交誤差已完整記錄；它們是 probe，不是 security proof。
+* [事實] D6.7：R=1/P off 的 4 張 authenticated dev，M2 decrypted latent MaxAbs 平均 `7.75e-7`；M1 decrypted latent cosine 平均 `0.999811`；M1 端到端 PSNR 平均 `39.37 dB`、SSIM 平均 `0.9720`。最終 GPU 全套回歸 `115 passed`，包含 S0 legacy regression 與 CUDA FWHT。
+* [決定] D7 暫用最小的 `R=1、permutation off`；若 D7 adaptive／structured probe 顯示額外弱點則重開選型。這項決定不處理 AF-025：norm-only 仍 100%，須依 D7 實測再裁決保護強度。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：D6.1–D6.7 的 correctness、distribution、ablation、structural diagnostics 與 authenticated dev integration 均完成；G3 可送稽核。
+* [x] **AF-030 實作方修復完成待複驗**：S2 直接使用完整 HKDF/ChaCha20 material，wrong-key/wrong-nonce control、per-image nonce 與 persistent reuse rejection 均有測試。
+* [ ] 稽核狀態仍由稽核方裁定；未修改 `AUDIT.md`，AF-025 依既定裁決留到 D7。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 一輪 WHT 已足以破壞前作的逐座標與排序幅值等式；增加 R 或 P 對這兩個 dev attack 沒有可見收益，反而增加 runtime 與 float32 累積誤差，因此依預先規則選最小 R。
+* 真實 latent 不符合精確 N(0,I)，所以正交變換雖保 norm，仍會改變座標動差；匿名輸出依然不是可診斷胸片。這是 D6 實測 trade-off，不把 Gaussian 理論外推到真實資料。
+* M2 誤差來自 float32 FWHT；M1 的主要額外損失仍是 image inversion／量化路徑。tag 不改匿名像素，只提供完整性與 verify-before-use。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。D6.4 generation-quality 用固定 dev N=20，D6.7 用預先固定 4 張 integration samples；正式 security N 維持 200 並屬 D7。最長 GPU run 實際 23 分 40 秒，低於需使用者另行裁決的 30 分鐘門檻。
+
+### 7. 下一步
+* 請稽核方複驗 D6.1–D6.7、G3 與 AF-030；若無 blocking finding，進入 D7，以相同 scorer 對 R=1/P off 重跑 T1/T2-WB、adaptive norm、cross-nonce KPA/CPA、geometry、structured probe、repeat 與 tamper。
+* D7 完成前不裁決 AF-025，也不宣稱 S2 達到 IND-CPA/AES 等級；目前沒有背景程序需要等待。
