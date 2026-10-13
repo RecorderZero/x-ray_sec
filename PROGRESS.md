@@ -1184,3 +1184,37 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 請稽核方複驗 D6.1–D6.7、G3 與 AF-030；若無 blocking finding，進入 D7，以相同 scorer 對 R=1/P off 重跑 T1/T2-WB、adaptive norm、cross-nonce KPA/CPA、geometry、structured probe、repeat 與 tamper。
 * D7 完成前不裁決 AF-025，也不宣稱 S2 達到 IND-CPA/AES 等級；目前沒有背景程序需要等待。
+
+## 2026-10-14 · W4 · Track D · P／S0／S1／S2a／S2 單圖比較
+
+### 1. 當前目標 (Objective)
+* 依使用者要求，以固定一張影像產生五種方法的原圖／匿名圖／重構圖，並並列重構圖對原圖的 PSNR、SSIM、L∞、最大 pixel error 與 cosine。
+* 指定 storage：S0/S1 使用前作 legacy PNG（丟棄值域），S2a/S2 使用 range-preserving PNG；P 採 legacy PNG 作與學長流程一致的無加密基準。
+
+### 2. 執行動作 (Actions Taken)
+* 固定使用 dev split 第一張積水病例 `dev_v1.1_010`，未依輸出品質挑圖；從 E2.3 的既有 latent cache 重新執行五條 GPU pipeline。
+* P/S0/S1：latent transform → generation → legacy min-max/uint8 PNG（值域丟棄）→ target-model inversion → inverse transform → generation。
+* S2a/S2：共用 D6 選定的 R=1/P off、相同 nonce 與 range-preserving PNG；S2 另走 nonce registry、HMAC container 與 verify-before-inversion。程式強制檢查未竄改時 S2a/S2 stored anonymous 與 reconstruction 均逐位元相同。
+* 新增 `scripts/method_comparison_runner.py`；managed run `D6.COMPARE_20261013T171753598997Z_69d08919` 成功，5/5 rows 通過 artifact validator。
+* 輸出 `image/method_comparison.png`、`paper_assets/tables/table_method_comparison.csv`、`results/method_comparison.json` 與 `reports/method_comparison.md`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] P：PSNR=`38.291 dB`、SSIM=`0.9713`、L∞=`0.1026`、uint8 最大誤差=`26`、x0 raw-pixel cosine=`0.999796`。
+* [事實] S0：PSNR=`32.558 dB`、SSIM=`0.9428`、L∞=`0.6144`、uint8 最大誤差=`157`、x0 cosine=`0.999182`。
+* [事實] S1：PSNR=`31.946 dB`、SSIM=`0.8865`、L∞=`0.4793`、uint8 最大誤差=`122`、x0 cosine=`0.999044`。
+* [事實] S2a/S2 均為：PSNR=`38.345 dB`、SSIM=`0.9684`、L∞=`0.4269`、uint8 最大誤差=`109`、x0 cosine=`0.999799`；兩者影像逐位元相同，S2 的差異只在認證與拒絕竄改。
+* [事實] 學長 Signed Permutation 原表為 cosine=`0.998978`、PSNR=`30.23 dB`；但其程式比較 Base `samples` 與加解密 `samples`，不是 x0 對 xrec。新表另列 x0→重構與 P-output→重構 cosine，未把不同 estimand 混為一談。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：五方法比較圖、數值表、provenance 與 cosine 語意註解均完成；S2 authentication 路徑實際執行而非以 S2a 複製標籤。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* S0/S1 相對 S2a/S2 的差距同時包含 transform 與 storage protocol 差異；這是使用者指定的完整 pipeline 比較，不可當成只隔離加密方法的因果消融。若論文要做公平歸因，仍應引用既有 2×2 storage comparison。
+* 五種方法的 x0 cosine 全在 `0.9990–0.9998`，但 PSNR 橫跨 `31.95–38.35 dB`、L∞ 橫跨 `0.103–0.614`，再次顯示 raw-pixel cosine 在高相似區飽和，不能取代 PSNR／SSIM／局部最大誤差。
+* S2a/S2 的平均誤差很小但 L∞ 仍可達 `0.4269`；高 PSNR 不代表每個 pixel 都接近，圖表應保留 L∞ 與差異圖語意。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無研究設計衝突；這是 D6 完成後的額外展示素材。P 的 storage 未由使用者明示，因此採 legacy PNG 作學長流程的無加密基準，並在報告／表格明列，沒有隱藏此假設。
+
+### 7. 下一步
+* 將此圖表交付使用者並送稽核方檢查圖說與 cosine estimand；之後依原計畫進入 D7。現在沒有背景程序需要等待。

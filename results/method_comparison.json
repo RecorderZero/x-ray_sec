@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "task_id": "D6.COMPARE",
+  "sample_id": "dev_v1.1_010",
+  "label": "pleural_effusion",
+  "methods": [
+    "P",
+    "S0",
+    "S1",
+    "S2a",
+    "S2"
+  ],
+  "storage_assignment": {
+    "P": "legacy_png/v1_minmax_truncate_discard_range",
+    "S0": "legacy_png/v1_minmax_truncate_discard_range",
+    "S1": "legacy_png/v1_minmax_truncate_discard_range",
+    "S2a": "range_preserving_png/v1",
+    "S2": "range_preserving_png/v1"
+  },
+  "s2_parameters": {
+    "rounds": 1,
+    "permutation": false
+  },
+  "s2_container_sha256": "9cab05a47d1e123a411ade178da0530620fa5b9da67cbc7036fe48c34dddc4e7",
+  "s2a_s2_anonymous_bit_exact": true,
+  "s2a_s2_reconstruction_bit_exact": true,
+  "senior_reference": {
+    "reported_signed_permutation_cosine": 0.998978,
+    "reported_psnr_db": 30.23,
+    "comparison_pair": "Base samples vs encrypted/decrypted samples; not x0 vs xrec"
+  },
+  "table": "paper_assets/tables/table_method_comparison.csv",
+  "grid": "image/method_comparison.png",
+  "report": "reports/method_comparison.md"
+}

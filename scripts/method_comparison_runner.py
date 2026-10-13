@@ -239,6 +239,8 @@ def write_report(path: Path, args, row, records) -> None:
         "",
         f"固定樣本：`{row['sample_id']}`（label=`{row['label_name']}`，未依結果挑圖）。",
         "",
+        "依本次比較規則，P 也使用 legacy range-discarding PNG，作為與學長流程一致的無加密基準；因此此圖是完整 pipeline 比較，不是只隔離 transform 的公平消融。",
+        "",
         f"![五種方法比較](../{args.grid_output.as_posix()})",
         "",
         "| " + " | ".join(headers) + " |",

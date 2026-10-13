@@ -76,6 +76,7 @@
 | `src/crypto/s2.py` | D6.7：M1/M2 authenticated S2 封裝；seal 強制經持久化 nonce registry，open 強制 tag 驗證成功後才 decode/inversion/inverse。 | S2 部署路徑，不可繞過此層自行解密。 |
 | `scripts/d6_sot_evidence.py` | D6.1–D6.6 CPU 證據：數值可逆、顯式 Q、Gaussian、真實 latent 動差、R/P 攻擊／runtime／precision 消融及結構診斷。 | SOT 改動後重建 D6 CPU 結果。 |
 | `scripts/d6_s2_dev_runner.py` | D6.4/D6.7 GPU runner：20 張 × 8 組 generation-quality 消融；4 張 authenticated M1/M2 dev 整合。 | 一律由 `managed_run.py --validate-artifacts` 執行。 |
+| `scripts/method_comparison_runner.py` | 固定第一張積水病例，重跑 P/S0/S1/S2a/S2 的原圖、stored anonymous、重構圖；P/S0/S1 用 legacy 丟值域 PNG，S2a/S2 用 range-preserving PNG，另區分 x0 cosine 與前作 estimand。 | 產生五方法直觀比較圖與單張 metrics。 |
 | `tests/security/test_environment_lock.py` | AF-038 regression：確認 D5 的三個精確套件版本全部存在於 Week 3 environment freeze。 | D5／後續環境變更時。 |
 | `scripts/a4_5_tamper.py` | A4.5 tamper baseline：S0/S1 無完整性檢查，竄改 latent／儲存紀錄皆被接受並量化影響。 | A4.5。 |
 | `scripts/a4_t2wb_gallery.py` | A4.2：T2-WB magnitude／sorted-magnitude／norm gallery linkage（兩種存檔分欄、方案專屬解密正控制、shuffle 負控制、Wilson CI、Inconclusive 判定、AF-025 norm 校正與 lo/hi 旁道）。CPU，讀 E2.3 gallery 與 A4.1 query cache。 | A4.2 攻擊。 |
@@ -132,6 +133,8 @@
 | `paper_assets/tables/table_rounds_permutation.csv` | D6.5 R=1/2/3/4 × P on/off 的 original-/sorted-magnitude、norm-only、CPU runtime 與 float32 precision；D7 候選選擇依據。 |
 | `paper_assets/tables/table_structure.csv` | D6.6 每組設定的 trace、same-vector cosine expectation、basis probe、矩陣 sparsity 與正交誤差；明列不是安全證明。 |
 | `results/D6.7_dev_integration.csv`、`image/D6.7_s2_dev.png` | 選定 R=1/P off 的 4 張 M2/T1 與 authenticated range-preserving M1 端到端結果；圖依序呈現原圖、匿名圖、M2 還原、M1 還原與差異。 |
+| `reports/method_comparison.md`、`image/method_comparison.png` | 固定 `dev_v1.1_010` 的 P/S0/S1/S2a/S2 三欄比較（原圖／stored anonymous／重構圖），含 storage protocol 與 cosine estimand 解讀。 |
+| `paper_assets/tables/table_method_comparison.csv`、`results/method_comparison.json` | 上述單圖的 PSNR、SSIM、L∞、float/uint8 最大 pixel error、MSE/RMSE/MAE、x0 cosine、P-output cosine與完整 provenance。 |
 | `results/A3.4_T1_gallery.json` | A3.4 逐 scheme×scorer 的 Top-1/5、mAP、CI、CMC 與正負控制（security_v1 200 張，T1）。 |
 | `results/E2.2.json` | 單張 noise=500、guidance=-1 的 P（恆等金鑰）/S0/S1 wrapper 對 legacy direct-call regression，P 另比對無金鑰 forward→backward：anonymize、deanonymize、guidance 0 等價對照與 transform round-trip 的 MaxAbs；不含 raw key。 |
 | `paper_assets/tables/table_baseline_correctness.csv` | E2.5 主表：P/S0/S1 × 23 項指標的平均、bootstrap 95% CI（B=10,000、seed 1911）、中位數與範圍。 |
