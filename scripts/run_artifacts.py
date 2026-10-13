@@ -125,6 +125,7 @@ def open_run(
 
 
 def package_versions() -> dict[str, str]:
+    import cryptography
     import cv2
     import numpy
     import PIL
@@ -133,6 +134,7 @@ def package_versions() -> dict[str, str]:
     import torch
 
     return {
+        "cryptography": cryptography.__version__,
         "numpy": numpy.__version__, "opencv": cv2.__version__,
         "pillow": PIL.__version__, "scipy": scipy.__version__,
         "scikit-image": skimage.__version__, "torch": torch.__version__,

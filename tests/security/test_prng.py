@@ -25,11 +25,11 @@ class FakeSource:
 
 def test_frozen_chacha_vectors() -> None:
     assert sign_vector(KEY, NONCE, 0, "sign-pre", 32).tolist() == [
-        1, 1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1,
-        1, 1, 1, -1, 1, -1, -1, -1, -1, -1, -1, -1, 1, -1, 1, 1,
+        -1, 1, 1, -1, 1, -1, -1, 1, 1, 1, 1, -1, 1, 1, -1, 1,
+        1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1, -1, -1, -1, 1, -1,
     ]
     assert permutation(KEY, NONCE, 0, 16).tolist() == [
-        5, 7, 0, 1, 9, 11, 8, 10, 6, 12, 13, 14, 15, 3, 2, 4,
+        4, 5, 0, 6, 12, 9, 2, 14, 3, 13, 1, 7, 10, 15, 11, 8,
     ]
 
 
@@ -54,6 +54,17 @@ def test_signs_are_reproducible_balanced_and_nonce_separated() -> None:
     assert set(np.unique(first)) == {-1, 1}
     assert abs(float(first.mean())) < 0.02
     assert not np.array_equal(first, sign_vector(KEY, bytes(reversed(range(16))), 1, "sign-post", 65_536))
+
+
+def test_image_nonce_near_chacha_counter_limit_cannot_overflow_stream() -> None:
+    # Before AF-037, these first four bytes became ChaCha20's initial counter
+    # and a full d=65,536 permutation deterministically exhausted the stream.
+    near_wrap_nonce = b"\xff\xff\xff\xff" + bytes(range(12))
+    signs = sign_vector(KEY, near_wrap_nonce, 0, "sign-pre", 65_536)
+    indices = permutation(KEY, near_wrap_nonce, 0, 65_536)
+    assert signs.shape == (65_536,) and set(np.unique(signs)) == {-1, 1}
+    assert np.array_equal(np.sort(indices), np.arange(65_536))
+    assert np.array_equal(indices[inverse_permutation(indices)], np.arange(65_536))
 
 
 def test_crypto_key_path_contains_no_noncrypto_seed_calls() -> None:

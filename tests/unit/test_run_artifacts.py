@@ -35,6 +35,7 @@ def test_standalone_run_is_valid_and_records_start_commit(tmp_path: Path, monkey
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["git_commit"] == "start"
     assert manifest["git_dirty"] is False
+    assert manifest["packages"]["cryptography"] == run_artifacts.package_versions()["cryptography"]
     # AF-023(5): untracked files must not make every run look dirty.
     assert ("status", "--porcelain=v1", "--untracked-files=no") in calls
     modules = manifest["imported_project_modules"]

@@ -15,17 +15,25 @@ from .errors import CryptoConfigurationError
 from .kdf import derive_subkey, require_master_key, require_nonce, round_label
 
 
+CHACHA20_IV = bytes(16)  # 32-bit counter=0 || fixed 96-bit stream nonce.
+
+
 class ByteSource(Protocol):
     def read(self, size: int) -> bytes: ...
 
 
 class ChaCha20Stream:
-    """Stateful original-ChaCha20 stream using the full frozen 128-bit nonce."""
+    """Stateful original-ChaCha20 stream with a zero initial counter.
 
-    def __init__(self, key: bytes, nonce: bytes):
+    The per-image nonce is already consumed as the HKDF salt, so each
+    (master key, image nonce, round, purpose) tuple has an independent stream
+    key.  Keeping the cipher IV fixed prevents random image-nonce bytes from
+    becoming a near-overflow 32-bit initial counter (AF-037).
+    """
+
+    def __init__(self, key: bytes):
         require_master_key(key)
-        require_nonce(nonce)
-        self._encryptor = Cipher(algorithms.ChaCha20(key, nonce), mode=None).encryptor()
+        self._encryptor = Cipher(algorithms.ChaCha20(key, CHACHA20_IV), mode=None).encryptor()
 
     def read(self, size: int) -> bytes:
         if not isinstance(size, int) or size < 0:
@@ -54,7 +62,7 @@ def sign_vector(master_key: bytes, nonce: bytes, round_index: int, purpose: str,
     if not isinstance(size, int) or size < 1:
         raise CryptoConfigurationError("sign vector size must be positive")
     key = derive_subkey(master_key, nonce, round_label(round_index, purpose))
-    packed = ChaCha20Stream(key, nonce).read((size + 7) // 8)
+    packed = ChaCha20Stream(key).read((size + 7) // 8)
     bits = np.unpackbits(np.frombuffer(packed, dtype=np.uint8), bitorder="little")[:size]
     return np.where(bits == 0, -1, 1).astype(np.int8)
 
@@ -63,7 +71,7 @@ def permutation(master_key: bytes, nonce: bytes, round_index: int, size: int) ->
     if not isinstance(size, int) or size < 1 or size > 2**32:
         raise CryptoConfigurationError("permutation size must be in 1..2^32")
     key = derive_subkey(master_key, nonce, round_label(round_index, "perm"))
-    source = ChaCha20Stream(key, nonce)
+    source = ChaCha20Stream(key)
     result = np.arange(size, dtype=np.int64)
     for index in range(size - 1, 0, -1):
         other = _uniform_below(source, index + 1)

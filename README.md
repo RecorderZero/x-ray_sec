@@ -14,7 +14,7 @@
 - 固定 dev split：`dev_v1.1`，20 張、20 位不同病人，健康／積水各 10 張；hash 排除本機路徑。
 - 正式 split：`security_v1`，200 位病人；重現學長抽樣後排除 22,253 位曾入選訓練病人，健康／積水各 100 位。
 - 主線 P/S0/S1/S2a/S2 的生成一律依學長程式寫死的 `guidance_scale=-1`（y=0 健康類條件生成、單次模型呼叫、無 CFG 混合；與 `guidance_scale=0` 逐位元等價，見 AF-021；使用者 2026-10-09 裁決），inversion 為 `null=True` 無條件；論文用語不得寫成「guidance 0」或「無條件生成」。guidance=4 僅可作病灶健康化附表。
-- D5.1–D5.7 已完成實作、clean-HEAD CPU 證據與稽核：100,000 nonce 無碰撞且 reuse fail closed；14-case HMAC tamper matrix 全過；AF-024 已關閉，AF-030 尚待 D6 整合，AF-037／AF-038 須在 D6 前修正。
+- D5.1–D5.7 已完成實作、clean-HEAD CPU 證據與稽核：100,000 nonce 無碰撞且 reuse fail closed；14-case HMAC tamper matrix 全過；AF-024 已關閉，AF-030 尚待 D6 整合；AF-037／AF-038 已修復待稽核複驗。
 - 主要環境：`CFG_DDIM`、Python 3.10.19、PyTorch 2.14.0+cu130、RTX 5090；D5 primitive provider `cryptography==50.0.2`。
 
 ## 核心規劃與紀錄
@@ -72,6 +72,7 @@
 | `src/crypto/container.py`、`src/crypto/mac.py` | D5.5/D5.6：strict canonical container、M1 lo/hi float32 bits、payload bytes 與 AAD 的 HMAC-SHA256；驗證成功前不呼叫 opener。 | S2 authenticated container。 |
 | `src/crypto/key_io.py` | D5.7：僅接受 32-byte raw master key、0600、新檔不覆寫；不使用 pickle-capable loader。 | 本機 key file。 |
 | `scripts/d5_security_evidence.py` | 產生 D5.4 100,000 nonce 統計與 D5.6 tamper matrix，不保存 nonce、master/subkey。 | D5 正式 CPU 證據。 |
+| `tests/security/test_environment_lock.py` | AF-038 regression：確認 D5 的三個精確套件版本全部存在於 Week 3 environment freeze。 | D5／後續環境變更時。 |
 | `scripts/a4_5_tamper.py` | A4.5 tamper baseline：S0/S1 無完整性檢查，竄改 latent／儲存紀錄皆被接受並量化影響。 | A4.5。 |
 | `scripts/a4_t2wb_gallery.py` | A4.2：T2-WB magnitude／sorted-magnitude／norm gallery linkage（兩種存檔分欄、方案專屬解密正控制、shuffle 負控制、Wilson CI、Inconclusive 判定、AF-025 norm 校正與 lo/hi 旁道）。CPU，讀 E2.3 gallery 與 A4.1 query cache。 | A4.2 攻擊。 |
 | `scripts/a4_t2wb_inversion.py` | A4.1：從 security/dev E2.3 cache 生成 S0/S1 anonymous image，分別經 legacy PNG 與 range-preserving PNG 讀回後用目標模型 inversion；逐筆記錄 z_ano 對 zhat_ano 指標，並把 query latent cache 留在受控 run 目錄。 | 先以 `--limit` smoke；正式 N=200 必須由 `managed_run.py --validate-artifacts` 執行。 |
@@ -93,7 +94,9 @@
 | `reports/t2wb_protocol.md` | AF-019：可逆性以影像端端到端為主指標、latent 只作診斷；加密流程 P smoke 事實；T2-WB 攻擊的正控制／負控制定義，以及使用者 2026-10-10 裁決的 `Inconclusive` 規則（攻擊成功照實報告；未成功時看各方案專屬正控制）。 |
 | `reports/compute_budget.md` | E2–F9 各 scheme/attack 在加密流程上的 forward／generation 半週期矩陣（實測 batch 1/4/8 成本、guidance −1）與 N=200/500/1,000 GPU 時數；記錄 N=200 裁決，以及 batch 組成會改變結果（batch 4 vs 1 MaxAbs 6.9e-4）而正式 pass 固定 batch 1 的決定。 |
 | `artifacts/environment_baseline.txt` | 當次環境、套件實際來源、GPU、checkpoint hash、freeze hash 與 strict-load 結果。 |
-| `artifacts/environment_freeze.txt` | 由 CFG_DDIM 的 `pip freeze --all` 產生，供 baseline hash 與重建。 |
+| `artifacts/environment_freeze.txt` | Week 1／E1 基準，由 CFG_DDIM 的 `pip freeze --all` 產生；保留不覆寫。 |
+| `artifacts/environment_freeze_w3.txt` | Week 3／D5 環境快照，納入 `cryptography`、`cffi`、`pycparser` 的實際版本，用於 AF-038 重現。 |
+| `requirements-d5.txt` | D5 新增密碼套件的精確版本鎖定：`cryptography` 及相關相依 `cffi`、`pycparser`。 |
 | `model_inventory.csv` | 一列式 checkpoint/model inventory，適合程式與試算表讀取。 |
 | `splits/dev_v1.csv` | 歷史 dev split；hash 含 local path，不再作新 run 預設。 |
 | `splits/dev_v1.1.csv` | 現行 20 張固定 dev images；成員同 v1，stable split hash 排除 local path。 |

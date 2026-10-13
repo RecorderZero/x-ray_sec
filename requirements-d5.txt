@@ -1,2 +1,4 @@
 # Week 3 D5 cryptographic primitive provider. Keep exact version for test vectors.
 cryptography==50.0.2
+cffi==2.1.1
+pycparser==3.11
