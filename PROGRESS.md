@@ -854,3 +854,38 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 請稽核方複驗 AF-033～AF-036。
 * G1（10/18）後進入 Week 3 D5（key pipeline、HKDF、CSPRNG、nonce、container、HMAC；AF-024/AF-030，CPU 為主）。
 * AF-025 的處置待 D7 S2a/S2 跨存檔攻擊結果與使用者裁決。
+
+## 2026-10-13 · W2 · Track A · A4.6 只有影像的金鑰還原（使用者指示的延伸實驗）
+
+### 1. 當前目標 (Objective)
+* 使用者裁決（2026-10-13，對話中）：確認前作架構在「攻擊者只有原圖與匿名圖」下的危害程度（單張與多張），作為架構是否安全與何處該修的依據；屬實驗室內部評估。
+* 補 A4.1（T2-WB 重新反演）與 A4.3（KPA）之間的缺口：A4.3 用的是精確 latent 對；A4.6 改用「影像反演所得的近似密文 latent」。對應 WORKFLOW A4 攻擊章的延伸（非既有子任務；記為 A4.6）。
+* 子項：(a) 單一已知對的危害基線；(b) K=1,2,4,8 對時攻擊者能力的進展。(c) 端到端影像還原另記。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/a4_6_imageonly_keyrec.py`（CPU、確定性）：重用 A4.3 的 `s0_kpa`／`s1_decrypt`／`legacy_truth` 等原語；明文 latent 取 E2.3 cache（原圖反演為確定性，攻擊者可精確取得），密文 latent 取 A4.1 `query_latents.npy`（匿名影像反演，近似）。
+* S0 多對：以 |z| 加權的符號投票（近零明文座標的符號不可靠，降權）。S1 多對：以每座標 K 維幅值簽章做最近鄰匹配（cKDTree）還原置換（A4.3 的 lexsort 需位元相等幅值，近似 latent 下崩潰）。
+* 已知對取 index 0–7，受害者取 index 100–149（50 張，與已知池不相交）；S0/S1 × legacy／range × K∈{1,2,4,8}。
+* 不寫出任何原始金鑰材料，只記準確度與相似度。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 產出 `results/A4.6.json`、`paper_assets/tables/table_A4.6_imageonly_keyrec.csv`；連跑兩次表格位元相同；script_sha256 與 HEAD 一致。
+* [事實] **S0（符號金鑰）單張即大致可破**：legacy 單對符號準確度 0.956、受害者解密 latent 對正常使用者 cosine 中位數 0.914；range 單對 0.992／0.985。多對快速逼近：K=4 近 1.0，**K=8 時 50/50 受害者皆位元相同解密**（legacy 與 range 皆然；range K=4 已位元相同）。
+* [事實] **S1（簽章置換）單張無用、多張可破**：單對置換準確度 ~0（cosine ~0）；range K=4 置換 0.905／cosine 0.904，**K=8 置換 1.000、50/50 位元相同**；legacy 較慢，K=8 僅置換 0.645／cosine 0.647（部分還原）。
+* [事實] **保存值域顯著加速 S1 金鑰還原**：range 在 K=4 已達 0.905，legacy 到 K=8 才 0.645。S0 兩存檔都快，range 略快（單對 0.992 vs 0.956）。
+* [推定] S0 單對殘差來自「已知者該座標近零、符號判不出」；這些座標在別的受害者身上可能很大，故單對 L∞ 仍大（中位數約 6.6–7.7）。多對投票以不同人補齊 → 近零座標被解決。
+* [結論] 前作金鑰與影像無關（一把全域金鑰）、且幅值／排序為不變量，使攻擊者只要蒐集少數幾組（原圖,匿名圖）對，即可還原整把金鑰，之後同金鑰下所有影像都可解密。這直接支持 D5 的 per-image nonce、CSPRNG 金鑰材料與 authenticated container。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：a、b 完成，結果確定性、含正負面向（S0 易、S1 需多對）、provenance 齊全，待稽核複驗。
+* 科學結論只報告：S1 legacy 多對仍未完全還原屬如實結果，不調參湊高。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 「認出配對」≠「還原金鑰」：A4.2 的 S1 linkage（只需幅值集合相近）成立，但還原置換需逐位對應，單對在近似 latent 下崩潰；多對的 K 維簽章才足以辨識。
+* 下一步：以 b 的還原金鑰做 c（端到端影像還原對照，GPU），比較正常使用者與攻擊者重構圖的 PSNR／SSIM／L∞。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* A4.6 非 WORKFLOW 既有子任務，是使用者指示的 A4 攻擊章延伸；不改動既有子任務的定義與結論。
+
+### 7. 下一步
+* 實作 c：`scripts/a4_6_reconstruct.py`（GPU，重用 A4.1 快取密文 + b 的還原金鑰做生成），少數受害者 × S0/S1 × 兩存檔，報影像級相似度。
