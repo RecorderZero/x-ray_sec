@@ -78,6 +78,15 @@ def table_field(rel: str, match: dict[str, str], column: str) -> Callable[[], st
     return read
 
 
+def a46_num(match: dict[str, str], column: str) -> float:
+    return float(table_field("paper_assets/tables/table_A4.6_imageonly_keyrec.csv", match, column)())
+
+
+def a46_recon(scheme: str, storage: str, column: str) -> float:
+    return float(table_field("paper_assets/tables/table_A4.6_reconstruct.csv",
+                             {"image_id": "security_v1_0100", "scheme": scheme, "storage": storage}, column)())
+
+
 CLAIMS = [
     Claim("C1-keyspace", "T1/T3", "前作有效金鑰上界 S0=32／S1=64 bits；已知一對明密文=0；唯密文 seed 搜尋 S0≈2^32、S1≈2^33",
           lambda: "S0 %s / S1 %s bits" % (
@@ -126,6 +135,31 @@ CLAIMS = [
     Claim("C11-tamper", "T4 tamper", "S0/S1 無完整性檢查，全部竄改皆被接受（無拒絕）",
           table_count("paper_assets/tables/table_tamper_baseline.csv", {}, "accepted", "True"),
           ["paper_assets/tables/table_tamper_baseline.csv", "results/A4.5.json"]),
+    Claim("C12-imgonly-s0", "T2-WB→金鑰還原",
+          "只憑（原圖,匿名圖）影像：S0 單對即還原多數符號（legacy／range），約 8 對對 50 位受害者位元相同解密（A4.6）",
+          lambda: "sign K=1 legacy %.3f / range %.3f ; K=8 legacy bit-exact %d/50" % (
+              a46_num({"scheme": "S0", "storage": "legacy_png", "pairs_used": "1"}, "key_sign_accuracy"),
+              a46_num({"scheme": "S0", "storage": "range_preserving_png", "pairs_used": "1"}, "key_sign_accuracy"),
+              int(a46_num({"scheme": "S0", "storage": "legacy_png", "pairs_used": "8"}, "victim_decrypt_bit_exact_vs_legit"))),
+          ["paper_assets/tables/table_A4.6_imageonly_keyrec.csv", "results/A4.6.json"],
+          ["A4.1_20261012T083425685874Z_3132fa49"]),
+    Claim("C13-imgonly-s1", "T2-WB→金鑰還原",
+          "只憑影像：S1 單對無用、多對可破；保存值域顯著加速（range K=4 置換 0.90、K=8 位元相同；legacy K=8 僅 0.645）（A4.6）",
+          lambda: "perm K=8 range %.3f / legacy %.3f ; range K=4 %.3f" % (
+              a46_num({"scheme": "S1", "storage": "range_preserving_png", "pairs_used": "8"}, "key_perm_accuracy"),
+              a46_num({"scheme": "S1", "storage": "legacy_png", "pairs_used": "8"}, "key_perm_accuracy"),
+              a46_num({"scheme": "S1", "storage": "range_preserving_png", "pairs_used": "4"}, "key_perm_accuracy")),
+          ["paper_assets/tables/table_A4.6_imageonly_keyrec.csv", "results/A4.6.json"],
+          ["A4.1_20261012T083425685874Z_3132fa49"]),
+    Claim("C14-recon-e2e", "T2-WB 端到端",
+          "端到端：以 8 對還原金鑰重構受害者原圖，S0（兩存檔）與 S1（range）與合法持金鑰者位元相同；S1 legacy 仍部分（A4.6c）",
+          lambda: "legit~attacker PSNR/SSIM: S0-legacy %.0f/%.2f ; S1-range %.0f/%.2f ; S1-legacy %.1f/%.2f" % (
+              a46_recon("S0", "legacy_png", "legit_vs_attacker_psnr_db"), a46_recon("S0", "legacy_png", "legit_vs_attacker_ssim"),
+              a46_recon("S1", "range_preserving_png", "legit_vs_attacker_psnr_db"), a46_recon("S1", "range_preserving_png", "legit_vs_attacker_ssim"),
+              a46_recon("S1", "legacy_png", "legit_vs_attacker_psnr_db"), a46_recon("S1", "legacy_png", "legit_vs_attacker_ssim")),
+          ["paper_assets/tables/table_A4.6_reconstruct.csv", "results/A4.6_reconstruct.json",
+           "image/A4.6_panels/A4.6_security_v1_0100_S0_legacy_png.png"],
+          ["A4.6_RECON_20261013T052324279030Z_165666a1", "A4.1_20261012T083425685874Z_3132fa49"]),
 ]
 
 def main() -> None:
@@ -180,6 +214,9 @@ def main() -> None:
         "- S0/S1 的「保存值域 vs 不保存」對比**不用來裁決 AF-025**：前作部署本就不保存值域。AF-025 的處置依據是 S2a/S2 的跨存檔攻擊（D7，尚未執行、尚未裁決）。",
         "- C7 採尺度不變 scorer（AF-033）：前作部署（legacy）下 S1 為 0.465，非 0.19。",
         "- lo/hi 旁道在每病人單筆 record 下標 `not_evaluable`（需不同影像的具標籤 enrollment）。",
+        "- C12–C14（A4.6）：攻擊者只需少數幾組（原圖,匿名圖）對即可竊得整把全域金鑰，之後同金鑰下任一影像都可還原；"
+        "S0（兩存檔）與保存值域的 S1 可達與合法持金鑰者**位元相同**的重構，前作部署（legacy）的 S1 需更多配對。"
+        "根因為金鑰與影像無關且幅值為不變量，直接支持 D5 的 per-image nonce、CSPRNG 金鑰與 authenticated container。",
     ]
     index_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"wrote {csv_path.relative_to(ROOT)} ({len(rows)} claims), {index_path.relative_to(ROOT)}")
