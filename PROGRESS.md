@@ -1318,3 +1318,49 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 提交 role 修正，重跑 dev calibration；通過後啟動預先授權的 formal N=200 managed run。
+
+## 2026-10-14 · W5 · Track D · D7.1–D7.8 formal 完成與 P7.1 defense package
+
+### 1. 當前目標 (Objective)
+* 以 frozen `security_v1` N=200 完成 S2a/S2 的 T1/T2-WB、adaptive norm、cross-nonce KPA/CPA、geometry、structured probe、repeat 與 tamper，並建立 claim→evidence 可追溯的 defense package。
+
+### 2. 執行動作 (Actions Taken)
+* 以修正版 clean commit `f365944` 重跑 dev calibration：`D7.1_DEV_20261014T020638335355Z_9223ea81`，20 張 × 2 storage、40 rows，`formal=false`、`evidence_role=dev_calibration`、artifact validator valid。
+* 依使用者預先授權執行 formal GPU managed run `D7.1_T2WB_20261014T021454463115Z_7b959db9`：200 張各生成一次匿名影像，再做 legacy／range-preserving inversion，共 400 rows；實際 77 分 06 秒，無失敗或跳過。
+* formal query cache 為 `(400,1,256,256)`、全部有限；逐筆 query SHA-256 重讀一致；validator valid，manifest 為 `formal=true`、`evidence_role=formal`、`git_dirty=false`。
+* 執行 `scripts/d7_t2wb_analyze.py`，以原先凍結的 abs／abs_unit／sorted_abs／sorted_abs_unit／norm scorer、悲觀 tie-break、dev-only norm bias 與 seed-1911 shuffled negative control，合併 T1/T2-WB 主表。
+* 新增 `scripts/build_defense_package.py`，由 D7 表格產生 9 條 claim 的 source SHA-256 索引、`image/D7_attack_summary.png` 與 `paper_assets/defense_package/index.md`。
+* defense package 連續重建並比較三個輸出 SHA-256，結果完全一致；正式測試範圍 `pytest -q tests` 為 105 passed、14 skipped。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] D7.1 formal inversion：legacy latent cosine mean=`0.990134`（95% CI `[0.989985,0.990285]`）、range-preserving=`0.999798`（`[0.999794,0.999801]`）；兩者正確解密後的 cosine-gallery positive-control Top-1 均為 `1.0`，所以 T2-WB 結果可解釋。
+* [事實] D7.2：T1 original-|z| Top-1=`0.010`、sorted-|z|=`0.005`；T2-WB 的 original-|z| 在 legacy/range 都為 `0.010`，其餘 magnitude scorer 多為 `0.005`，random baseline=`0.005`。指定 magnitude leakage 相較 S0/S1 已大幅下降。
+* [事實] D7.3：精確 T1 norm-only Top-1=`1.000`（Wilson 95% CI 下界 `0.981`）。T2-WB raw norm 兩種 storage 都是 `0.005`；套用只由 dev 凍結的 median bias 後，legacy 仍為 `0.005`，range-preserving 升至 `0.250`（Top-5=`0.745`、median rank=`3`）。
+* [事實] dev norm bias 為 legacy=`1.012647`、range=`0.996747`；formal 沒有用於校正參數。這表示保存值域會讓 inversion norm 更穩定，AF-025 的 storage-dependent leakage 在 S2 上得到正式驗證。
+* [事實] D7.4：d=1,024 full-basis CPA 與 full-rank KPA 的 same-nonce 正控制 cosine=`1.0`、MaxAbs≤`7.55e-15`；相同映射跨 nonce 套用後 RMSE=`1.412`、cosine≈`0.00105`。
+* [事實] D7.5：fixed-Q 完整保留 pairwise geometry，distance-signature Top-1=`1.0`；per-image-Q Top-1=`0.005`、pairwise cosine MaxAbs difference=`0.145`。
+* [事實] D7.6：basis／constant／sparse 非 Gaussian probe 均完整記錄且 norm ratio=`1.0`；只作結構診斷，不作通用安全證明。
+* [事實] D7.7：同一真實 latent 以 100 個不同 nonce 加密，nonce 與 protected payload hash 皆 `100/100` 唯一；不同密文 cosine mean≈`3.70e-5`、max≈`0.0132`。
+* [事實] D7.8：S2 的 tag／nonce／ciphertext／version／parameters／AAD／storage 七種竄改全部拒絕；S2a 無認證正控制接受竄改且還原輸出改變。
+* [事實] P7.1 defense package 共 9 條 claim，每條記錄來源檔與 sha12；GPU 已釋放，目前沒有背景程序。
+* [事實] 從 repository root 直接執行未限範圍的 `pytest -q` 會誤收集封存於 `past/SourceCode/` 的學長測試，因其依賴封存樹中不存在的 `guided_diffusion.anonymization_enhanced` 而在 collection 失敗；本專案正式測試目錄 `tests/` 全數通過，這不是 D7 regression。
+
+### 4. 達標判定 (Assessment)
+* [x] **D7.1–D7.8 實作方 Achieved**：correctness、positive/negative controls、fixed split、formal per-sample rows、summary、run ID、hash 與 failure accounting 齊全。
+* [x] **P7.1 Achieved**：方法圖索引、attack table、norm limitation、tamper matrix 與 claim→evidence package 完成。
+* [x] **G4 實作方條件完成，待稽核判定**：S2 T1/T2-WB、norm、geometry、cross-nonce、structured probe、repeat 與 tamper 均已重跑。
+* [ ] **AF-025 仍待使用者裁決**：正式數據已足以比較保存／不保存值域，但是否接受 25% norm linkage、加強保護或改部署模式屬設計決策，未擅自關閉。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* SOT 已破壞前作逐座標與排序幅值等式；per-image nonce 也阻止 fixed-Q mapping／geometry 直接跨影像轉移。這些結論只限本次指定攻擊。
+* 正交性必然保存 L2 norm。legacy 丟棄值域造成尺度誤差，讓 norm linkage 表面失效；range-preserving 保住重構品質，也讓 dev-calibrated norm attack 在 formal 上達 25%。因此不能把 legacy 的較低攻擊率當成純密碼強度，而是隱私／可逆性的 storage trade-off。
+* S2 的 HMAC 解決完整性，不改 confidentiality；S2a/S2 在未竄改時共用相同匿名像素與 linkage 結果。
+* 若使用者要求降低 AF-025 風險，下一步應比較：接受並揭露 norm limitation、對 norm/值域 metadata 加入額外 keyed concealment、或改用不需匿名影像可計算性的標準 AEAD/M2 storage；不可只增加 WHT 輪數，因其仍保 norm。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。formal N=200、T1/T2-WB 分開、兩種 storage 並列、positive/negative controls 與科學結果非 pass gate 均符合規格。D7.4 顯式 full-map 重建使用 d=1,024 synthetic diagnostic，已在素材包明列限制。
+
+### 7. 下一步
+* 請稽核方複驗 D7.1–D7.8、P7.1 與 G4；尤其獨立重算 range-preserving dev-calibrated norm Top-1=`0.25` 與 cross-nonce 正控制。
+* 請使用者依 AF-025 正式結果裁決是否接受 norm leakage，或在 Week 6/7 加入 keyed norm concealment／其他部署對照；裁決前不更動 S2 protocol。
+* 稽核通過且 AF-025 裁決後，進入 Q8 品質、wrong-key、runtime 與 storage pilot。
