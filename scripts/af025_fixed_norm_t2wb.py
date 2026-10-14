@@ -204,6 +204,8 @@ def main() -> None:
             "source_sampler_sha256": sha256_file(args.source_root / "guided_diffusion" / "gaussian_diffusion.py"),
             "seed_list": [args.seed] * len(per_sample), "steps": args.noise_level,
             "scheme": "S2-fixed-norm/v2", "rounds": ROUNDS, "permutation": USE_PERMUTATION,
+            "container_version": "cxr-auth-container/v1 with S2-fixed-norm/v2 parameters",
+            "nonce_mode": "unique deterministic public AF-025 reproducibility fixture",
             "fixed_norm": float(FIXED_NORM), "private_metadata": "ChaCha20-Poly1305",
             "public_lo_hi": False, "batch_size": 1, "formal": formal,
             "evidence_role": evidence_role, "pipeline": LEGACY_PIPELINE,

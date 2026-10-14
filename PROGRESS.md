@@ -1376,13 +1376,15 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 新增 `tests/security/test_s2_fixed_norm.py`，涵蓋 M2 固定 norm 與往返、M1 lo/hi 不公開、合法原 norm 恢復，以及 private metadata tamper 在 inverter 前拒絕。
 * 新增 `scripts/af025_fixed_norm_cpu.py`、`af025_fixed_norm_t2wb.py`、`af025_fixed_norm_analyze.py`；CPU runner 已對 frozen `security_v1` N=200 執行，GPU runner 尚未啟動。
 * 使用者同意在確認與既有 vLLM 可共存後執行正式 GPU 補驗。檢查 RTX 5090：總 32,607 MiB、vLLM 14,342 MiB、RustDesk 537 MiB、當時 free 17,201 MiB、utilization 0%；先以 N=2 smoke 實測再決定啟動 formal。
+* 第一次 N=2 smoke `AF025_FIXED_NORM_SMOKE_20261014T160133624188Z_f2ea04c4` 完成兩張科學計算但 managed artifact validation fail：manifest 遺漏必填的 `container_version`／`nonce_mode`。已補欄；該 run 保留為 failed，不修改後重用。
 
 ### 3. 執行結果 (Results & Observations)
 * [事實] AF-025 CPU formal N=200：固定 norm T1 norm-only Top-1=`0.005`、Top-5=`0.025`，與 random=`0.005` 一致；原 S2 v1 的 T1 Top-1 為 `1.0`。
 * [事實] float32 protected norm mean=`248.2610001`，相對 C 最大絕對偏差=`1.49e-5`；四種 float64 structured probes 的 protected norm 與 C 最大差約 `1.93e-12`。
 * [事實] 同一 normalized latent 以 100 個 nonce 變換，nonce hash 與 payload hash 均 `100/100` 唯一；off-diagonal cosine mean≈`1.64e-5`、max≈`0.0152`。
 * [事實] 全套正式測試範圍 `pytest -q tests` 為 108 passed、14 skipped；新增／相依 crypto focused tests 27 passed。
-* [事實] 目前沒有 AF-025 GPU managed run 或其他本專案背景程序；vLLM 為使用者既有程序，未停止或修改。
+* [事實] 目前沒有仍在執行的 AF-025 GPU managed run 或其他本專案背景程序；vLLM 為使用者既有程序，未停止或修改。
+* [事實] 第一次 smoke 執行中 DDIM Python 約占 1,712 MiB；含 vLLM/RustDesk 的 GPU 總使用 16,626 MiB，仍有 15,484 MiB free，未發生 OOM。兩張約 50 秒；正式 N=200 因每張一次生成＋攻擊者/合法端各一次 inversion，預估約 80–90 分鐘。
 
 ### 4. 達標判定 (Assessment)
 * [x] AF-025 (a)(b)(e) 實作與 CPU formal T1／D7.6／D7.7 已完成實作方驗證。
