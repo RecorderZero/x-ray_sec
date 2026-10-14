@@ -537,3 +537,121 @@
 * D7.1–D7.3：以 security_v1 N=200 對 S2a／S2 重跑 T1、T2-WB 與保存／不保存值域比較，包含 norm-only adaptive calibration。
 * D7.4–D7.7：cross-nonce KPA/CPA、geometry、structured probes、repeatability 與 authenticated tamper。
 * 依 D7 formal 結果提交 AF-025 的保護強度選項給使用者裁決；必要時重開 R／P 選型。
+
+---
+
+## Week 5（2026-11-02～11-08；於 10-15 提前完成 D7 與 AF-025 補驗）｜S2 攻擊重跑、defense package 與固定 norm 修補（D7、P7、AF-025）
+
+### 5.1 範圍與狀態
+
+| 子任務 | 內容 | 稽核判定 | 主要 commit |
+|---|---|---|---|
+| D7.1 | S2 v1 的 T1／T2-WB formal 資料與雙存檔反演 | Achieved（AUD-20261014-02） | `f365944`、`03505c0` |
+| D7.2 | original／sorted magnitude gallery attacks | Achieved（AUD-20261014-02） | `e2e29d2`、`03505c0` |
+| D7.3 | adaptive norm attack 與 AF-025 量化 | Achieved（AUD-20261014-02） | `e2e29d2`、`03505c0` |
+| D7.4–D7.8 | cross-nonce、geometry、structured probe、repeat、tamper | Achieved（AUD-20261014-02） | `e2e29d2`、`03505c0` |
+| P7.1 | defense claim→evidence 素材包 | Achieved（AUD-20261014-02）；AF-025 延伸待複驗 | `03505c0`、`9c0f381` |
+| AF-025 | 固定 norm S2 v2 與 formal 補驗 | 實作方 **FIXED?**；待稽核 CLOSED | `78a9ba3`、`202c7fc`、`9c0f381` |
+
+* **G4：通過**（AUD-20261014-02）。
+* 本週實作 commit 範圍：`e2e29d2..9c0f381`。
+
+### 5.2 本週重點
+
+1. `[事實]` **S2 v1 已消除前作的主要 magnitude linkage，但仍完整保留 norm。** 在 formal security_v1 N=200 中，T1 original-|z|／sorted-|z| Top-1 分別為 0.010／0.005；T2-WB original-|z| 在兩種存檔皆為 0.010，多數其餘 scorer 為 0.005，而隨機基準為 0.005（W5-T2）。相反地，T1 norm-only Top-1 為 1.000（W5-T3）。
+2. `[事實]` **保存值域提高反演品質，也讓 v1 的 norm 旁道可被利用。** T2-WB latent cosine 從 legacy 的 0.990134 提高到 range-preserving 的 0.999798（W5-T1）；用 dev-only bias 校正後，v1 range-preserving norm-only Top-1 為 0.250、Top-5 為 0.745，而 legacy Top-1 仍為 0.005（W5-T3）。
+3. `[事實]` **per-image nonce 阻止已測的映射與 geometry 跨影像轉移。** d=1,024 的 same-nonce CPA／KPA 正控制 cosine 為 1.0，但跨 nonce cosine 約 0.00105、RMSE 1.412（W5-T4）；fixed-Q distance-signature Top-1 為 1.000，改成 per-image-Q 後為 0.005（W5-T5）。
+4. `[事實]` **S2 的隨機性與完整性行為符合設計。** 同一 latent 重複變換的 nonce 與 protected payload 均 100/100 唯一（W5-T7）；S2 七種容器竄改全數拒絕，S2a 的無認證正控制不拒絕（W5-T8）。
+5. `[決定]` **AF-025 採固定 norm v2，而不是接受 v1 的 norm leakage。** transform 前縮放到公開常數 C=248.261，真實 norm 與 M1 lo/hi 僅放在 AEAD private metadata；補驗後 T1 與 T2-WB norm-only Top-1 均為 0.005（W5-F2、W5-T9）。
+6. `[事實]` **修補未破壞合法端的 latent 重構。** fixed-norm v2 的合法 private-range latent cosine 平均為 0.999797，95% CI [0.999794, 0.999800]，最小值 0.999729（W5-T10）。此數字只證明 latent 路徑正控制，影像品質仍須由 Q8 正式評估。
+
+### 5.3 實驗結果與分析
+
+#### (a) D7.1–D7.3：T2-WB 品質、magnitude 與 norm
+
+![W5-F1](appendix/week5/figures/W5-F1_d7_attack_summary.png)
+
+* `[事實]` D7.1 的兩種 storage 都完成 formal N=200；correct-decrypt gallery 正控制 Top-1 均為 1.0（W5-T1、W5-T13），所以低 magnitude linkage 不能歸因於整條 query pipeline 失效。
+* `[事實]` S2 v1 的 original／sorted magnitude scorer 在 T1 與 T2-WB 大致落於 0.005–0.010 Top-1（W5-T2），相較前作 S0/S1 的已知不變量已有明顯改善；但這不代表沒有其他 adaptive attack。
+* `[事實]` norm 是 v1 的反例：exact latent 可直接以 norm 完整鏈結；range-preserving storage 又使 T2-WB norm 估計足夠穩定，經只用 dev 凍結的校正後達 0.250 Top-1（W5-T3）。這是 AF-025 必須修補而不能只增加 SOT 輪數的實驗依據。
+
+#### (b) D7.4–D7.7：nonce 隔離、geometry 與 probes
+
+* `[事實]` d=1,024 full-basis CPA 與 full-rank KPA 在 same nonce 下可重建映射，最大誤差不超過 7.55e-15；把同一映射套到另一 nonce 後不再有效（W5-T4）。此為 synthetic diagnostic，不能外推為 d=65,536 端到端安全證明。
+* `[事實]` fixed-Q 幾乎完整保存 pairwise cosine／distance，distance-signature Top-1 為 1.000；per-image-Q 的 pairwise cosine 最大差為 0.145，指定 linkage Top-1 回到 0.005（W5-T5）。因此每影像 nonce 是必要條件，不能退回全資料共用 transform。
+* `[事實]` basis、constant、sparse probes 均產生有限輸出，且 v1 norm ratio 都是 1.0（W5-T6）。這些 probe 用來揭露結構與回歸錯誤，不構成安全證明。
+* `[事實]` v1 重複 100 次的 off-diagonal ciphertext cosine 平均約 3.70e-5、最大約 0.0132（W5-T7）；fixed-norm v2 分別約 1.64e-5、0.0152，且仍為 100/100 nonce／payload 唯一（W5-T12）。
+
+#### (c) D7.8：認證與竄改
+
+* `[事實]` S2 對 tag、nonce、ciphertext、version、parameters、AAD 與 storage 共七類竄改全數 fail closed；S2a latent-value tamper 則被接受且輸出改變 0.03125（W5-T8）。authentication 改善的是完整性與錯誤處理，不會改變 S2a/S2 的匿名像素或 confidentiality。
+
+#### (d) AF-025 裁決與 fixed-norm v2 補驗
+
+![W5-F2](appendix/week5/figures/W5-F2_norm_remediation.png)
+
+* `[決定]` 使用者於 2026-10-14 採固定 norm 方案：公開 protected norm 固定為 C=248.261；原始 norm 與合法 M1 重構需要的 lo/hi 改由 private AEAD metadata 保存，public PNG／storage record 不揭露 lo/hi。
+* `[事實]` formal N=200 中，v2 的 T1 norm-only Top-1／Top-5 為 0.005／0.025；T2-WB raw 為 0.005／0.025，dev-calibrated 為 0.005／0.035；各列的隨機與負控制 Top-1 都是 0.005（W5-T9）。這支持「指定 norm linkage 已在此資料與威脅模型下降至隨機基準」，不支持 IND-CPA 或未知攻擊皆無效。
+* `[事實]` float32 protected norm 對 C 的最大偏差為 1.49e-5；四種 float64 structured probe 的最大偏差約 1.93e-12（W5-T9、W5-T11）。因此固定 norm 不是只在表面 metadata 宣告，而是實際進入 transform 的 latent 已被正規化。
+* `[事實]` v2 formal 每張平均匿名生成 7.744 s、攻擊者 inversion 7.679 s、合法端 inversion 7.679 s（W5-T10）。三個 diffusion 階段主導整體時間；這些數字不能單獨分離 fixed-norm、KDF、AEAD 與 HMAC 的微小成本，該分解留到 Q8.4。
+
+#### (e) P7.1 defense package
+
+* `[事實]` defense package 現有 10 條 claim，每條均包含 headline、來源檔 SHA-256 與適用範圍（W5-T13）。其中同時保留 v1 norm limitation 與 v2 remediation，避免用修補後結果覆蓋原始失敗證據。
+
+### 5.4 論文可用素材（`appendix/week5/`）
+
+| 編號 | 內容 | 建議用途 | 建議章節 |
+|---|---|---|---|
+| W5-F1 | D7／AF-025 gallery-linkage 總覽 | 正文 | Results／security evaluation |
+| W5-F2 | v1 與 fixed-norm v2 的 norm attack 比較 | 正文 | Results／AF-025 remediation |
+| W5-T1 | S2 v1 T2-WB 反演品質與 runtime | 正文 | Results／T2-WB inversion |
+| W5-T2 | magnitude linkage 主表 | 正文主表 | Results／magnitude linkage |
+| W5-T3 | S2 v1 norm leakage 主表 | 正文主表 | Results／AF-025 diagnosis |
+| W5-T4 | cross-nonce KPA／CPA | 附錄 | Results／cross-nonce diagnostic |
+| W5-T5 | fixed-Q／per-image-Q geometry | 正文 | Results／pairwise geometry |
+| W5-T6 | v1 structured probes | 附錄 | Results／structured probes |
+| W5-T7 | v1 同明文重複變換 | 附錄 | Results／repeat transform |
+| W5-T8 | S2／S2a tamper matrix | 正文 | Results／integrity |
+| W5-T9 | fixed-norm v2 linkage 主表 | 正文主表 | Results／AF-025 remediation |
+| W5-T10 | v2 合法重構、攻擊者觀測與 runtime | 正文 | Results／correctness and cost |
+| W5-T11 | v2 fixed-norm probes | 附錄 | Results／structured probes |
+| W5-T12 | v2 同明文重複變換 | 附錄 | Results／repeat transform |
+| W5-T13 | defense claim→evidence 索引 | 正文 | Method／defense package |
+
+完整 caption、來源 SHA-256、run ID 與輸出 SHA-256 見 `appendix/week5/MANIFEST.csv`；連續重建兩次逐位元相同。
+
+### 5.5 決策紀錄
+
+| 日期 | 決定 | 出處 |
+|---|---|---|
+| 10-14 | `[決定]` D7 階段超過 30 分鐘的 GPU 任務已預先同意；仍須回報 run 狀態 | 使用者指示、PROGRESS W5 |
+| 10-14 | `[決定]` AF-025 不接受 v1 norm limitation，採 option 2 固定 norm | AUD-20261014-04、使用者裁決 |
+| 10-14 | `[決定]` 固定公開 C=248.261；真實 norm 與 M1 lo/hi 放入獨立 domain 的 AEAD private metadata | WORKFLOW §2.5、W5-T9 |
+| 10-14 | `[決定]` vLLM 保持運行；先以小型 smoke 驗證 VRAM 共存，再執行 formal | 使用者裁決、PROGRESS W5 |
+| 10-15 | `[決定]` formal N 維持 200，不因攻擊結果擴大樣本 | WORKFLOW §3.4、W5-T9 |
+
+### 5.6 稽核狀態
+
+* AUD-20261014-02：D7.1–D7.8、P7.1 **PASS**，G4 **PASS**，新 finding 0。
+* AUD-20261014-03：獨立比較 AF-025 候選，建議固定 norm 方案；屬裁決證據，不取代 formal 補驗。
+* AUD-20261014-04：記錄使用者正式採固定 norm。
+* AUD-20261014-05：攻擊文件／工具範圍確認，未開新 finding。
+* AF-025 目前為實作方 **FIXED?**：v2 補驗與 P7.1 延伸已完成（W5-F2、W5-T9～W5-T13），仍須稽核方獨立複驗後才可標為 CLOSED。
+
+### 5.7 限制與未解問題
+
+* D7 只涵蓋本研究列出的 magnitude、norm、geometry、cross-nonce、structured probe 與 tamper 測試；低於 random baseline 的觀察不等於 IND-CPA、perfect security 或對所有未知攻擊安全（W5-T2～W5-T9）。
+* D7.4 的完整映射實驗是 d=1,024 synthetic diagnostic，尚未在 d=65,536 端到端情境顯式重建矩陣（W5-T4）。
+* fixed-norm v2 的 formal 補驗確認 latent 正控制與指定 norm attack，但尚未完成 N=200 的影像 PSNR／SSIM／L∞ 主表；W5-T10 的 latent cosine 不可取代 Q8.1 影像品質。
+* public PNG 不含 lo/hi 會使未持有 private metadata 的第三方無法恢復實際值域；這是刻意的隱私／部署取捨，PACS 如何綁定 public image 與 private recovery record 仍需在部署章節說明。
+* runtime 來自與既有 vLLM 共用 GPU 的單次 formal run（W5-T10）；其數值包含資源競爭可能性，Q8.4 須把 diffusion 與 crypto 元件分開量測。
+* AF-025 尚未由稽核方關閉；在收到複驗前，論文只能寫「補驗結果支持修補有效」，不能寫成已完成獨立驗證。
+
+### 5.8 下週計畫（Week 6）
+
+* Q8.1：完成 P/S0/S1/S2 的 formal reconstruction fidelity，報 latent 與影像指標及 CI。
+* Q8.2：量測匿名影像差異、LPIPS、cosine 與 nearest-neighbor rank，並避免把影像差異直接等同臨床效用或隱私。
+* Q8.3：正確／錯誤 key 與 nonce 並列，保留定量結果與固定案例圖。
+* Q8.4–Q8.5：分解 transform、KDF、AEAD／MAC、diffusion 的 median／p95 runtime 與各類 storage overhead。
+* P8.1：依預先固定、median、worst 三類病例建立 visual grid；先完成 pilot 並凍結設定，再進 Week 7 formal run。

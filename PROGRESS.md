@@ -1410,3 +1410,35 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 請稽核方獨立複算 fixed-norm T1/T2-WB norm Top-k、確認 public PNG/record 不含 lo/hi、private metadata tamper ordering，以及 repeat／probe 結果；複驗後裁決 AF-025 是否 CLOSED。
 * AF-025 關閉後進入 Q8；影像端合法重構品質沿用稽核 phase-B n=40 作診斷，Q8 formal 另以 PSNR／SSIM／L∞ 完成主表，不以 latent cosine 取代影像品質。
+
+## 2026-10-15 · W5 · D7／P7／AF-025 每週摘要與可重建 appendix
+
+### 1. 當前目標 (Objective)
+* 依 `PROGRESS_summary.md` 規範，彙整 Week 5 的 D7.1–D7.8、P7.1 與 AF-025 裁決／補驗；所有量化宣稱須回指同週可重建素材。
+
+### 2. 執行動作 (Actions Taken)
+* 擴充 `scripts/build_weekly_appendix.py` 的 `WEEKS[5]`，由已提交的 D7 與 AF-025 正式結果建立 2 張圖、13 張表與來源／run ID／SHA-256 manifest。
+* 新增 v1 對 fixed-norm v2 的 norm-only Top-1 對照圖；同時保留 v1 攻擊成功與 v2 修補結果，未覆寫負結果。
+* 依固定八節格式在 `PROGRESS_summary.md` 追加 Week 5，並更新根目錄 `README.md` 的 appendix inventory 與 AF-025 狀態。
+* 連續執行兩次 Week 5 builder，逐檔比較 16 個輸出雜湊。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `appendix/week5/` 已包含 `W5-F1`～`W5-F2`、`W5-T1`～`W5-T13` 與 `MANIFEST.csv`；第二次重建與第一次的 SHA-256 清單無差異。
+* [事實] 摘要清楚區分：D7／G4 已由 AUD-20261014-02 判定 PASS；AF-025 fixed-norm v2 為實作方 `FIXED?`，仍待稽核方複驗才可 CLOSED。
+* [事實] 本輪未啟動 GPU 或背景任務，目前沒有需要監控的本專案程序。
+
+### 4. 達標判定 (Assessment)
+* [x] Week 5 八節摘要已完成，D7、P7 與 AF-025 均有範圍、結果、決策、稽核、限制與下週計畫。
+* [x] 每個科學量化結果均附 W5 圖表編號；appendix 可由 tracked source 重建。
+* [x] v1 limitation 與 v2 remediation 並列，宣稱未擴張為通用密碼學安全。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* Week 5 的核心論述應分成「D7 發現 v1 norm leakage」與「使用者裁決後 v2 指定攻擊下降」兩階段，避免把修補前後混成一次成功實驗。
+* Q8 應補齊 formal 影像品質、錯誤 key／nonce、crypto 與 diffusion 分項 runtime、storage overhead；不可用本週 latent cosine 取代影像端品質。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。Week 5 覆蓋 D7.1–D7.8、P7.1 與 AF-025 v2 補驗；formal N 維持 200，科學結果未作工程 pass gate。
+
+### 7. 下一步
+* 送稽核方複驗 AF-025 fixed-norm T1／T2-WB、public metadata、tamper ordering、repeat 與 probes；通過後才把 AF-025 改為 CLOSED。
+* 進入 Week 6 Q8.1–Q8.5 與 P8.1 pilot，先凍結 formal 設定再執行 Week 7。

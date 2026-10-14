@@ -1,0 +1,6 @@
+task,threat_model,method,storage,scorer,n,gallery_size,top1,top1_ci_low,top1_ci_high,top5,mAP,median_rank,negative_top1,random_top1,tie_break,rounds,permutation,calibration,dev_norm_bias,positive_top1
+D7.3,T1,S2a/S2,exact_latent,norm,200,200,1.0,0.9811546736227335,1.0,1.0,1.0,1.0,0.005,0.005,pessimistic,1,False,,,
+D7.3,T2-WB,S2a/S2,legacy_png,norm,200,200,0.005,0.0008831687156009814,0.02777370439789293,0.025,0.029390154740607223,100.5,0.005,0.005,pessimistic,1,False,raw,1.0126471519470215,1.0
+D7.3,T2-WB,S2a/S2,legacy_png,norm,200,200,0.005,0.0008831687156009814,0.02777370439789293,0.03,0.035724615824568984,86.0,0.005,0.005,pessimistic,1,False,dev_median,1.0126471519470215,1.0
+D7.3,T2-WB,S2a/S2,range_preserving_png,norm,200,200,0.005,0.0008831687156009814,0.02777370439789293,0.025,0.029396021290323242,100.5,0.01,0.005,pessimistic,1,False,raw,0.9967466592788696,1.0
+D7.3,T2-WB,S2a/S2,range_preserving_png,norm,200,200,0.25,0.19508168006817497,0.31434098312045833,0.745,0.4590662850221674,3.0,0.01,0.005,pessimistic,1,False,dev_median,0.9967466592788696,1.0

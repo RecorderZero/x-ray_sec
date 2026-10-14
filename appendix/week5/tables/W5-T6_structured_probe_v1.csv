@@ -1,0 +1,5 @@
+probe,dimension,input_nonzero_fraction,output_nonzero_fraction,output_mean,output_variance,output_max_abs,norm_ratio,interpretation
+basis_0,4096,0.000244140625,1.0,-0.000274658203125,0.00024406518787145615,0.015625,1.0,diagnostic only; not a security proof
+basis_123,4096,0.000244140625,1.0,0.00067138671875,0.0002436898648738861,0.015625,1.0,diagnostic only; not a security proof
+constant,4096,1.0,1.0,0.0107269287109375,0.9998849330004305,4.34375,1.0,diagnostic only; not a security proof
+sparse_16,4096,0.00390625,1.0,-0.001953125,0.003902435302734375,0.15625,1.0,diagnostic only; not a security proof

@@ -450,6 +450,41 @@ def tab_d6_integration(out: Path, src: list[Path]) -> None:
     _write_csv(out, summary)
 
 
+# ---------------------------------------------------------------- week 5 figures
+def fig_w5_norm_remediation(out: Path, src: list[Path]) -> None:
+    """Compare the audited S2-v1 norm leak with the fixed-norm v2 rerun."""
+    plt = _style()
+    v1 = _read_csv(src[0])
+    v2 = _read_csv(src[1])
+    rows = [
+        ("v1 T1", next(r for r in v1 if r["threat_model"] == "T1")),
+        ("v1 T2-WB", next(r for r in v1 if r["threat_model"] == "T2-WB"
+                          and r["storage"] == "range_preserving_png"
+                          and r["calibration"] == "dev_median")),
+        ("v2 T1", next(r for r in v2 if r["threat_model"] == "T1")),
+        ("v2 T2-WB", next(r for r in v2 if r["threat_model"] == "T2-WB"
+                          and r["calibration"] == "dev_median_to_C")),
+    ]
+    values = [float(row["top1"]) for _, row in rows]
+    labels = [label for label, _ in rows]
+    colors = [SLOT[1], SLOT[1], SLOT[0], SLOT[0]]
+    fig, ax = plt.subplots(figsize=(6.4, 3.6))
+    bars = ax.bar(range(len(values)), values, color=colors, width=0.66, zorder=2)
+    ax.axhline(0.005, color=INK_2, linewidth=1, linestyle="--", label="random (1/200)")
+    ax.set_xticks(range(len(labels)), labels)
+    ax.set_ylabel("Norm-only gallery Top-1")
+    ax.set_ylim(0, 1.08)
+    ax.set_title("Fixed-norm v2 removes the measured norm-linkage signal (N=200)",
+                 fontsize=10, color=INK)
+    for bar, value in zip(bars, values):
+        ax.text(bar.get_x() + bar.get_width() / 2, value + 0.025,
+                f"{value:.3f}", ha="center", va="bottom", fontsize=9)
+    ax.legend(loc="upper right")
+    fig.tight_layout()
+    fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.08)
+    plt.close(fig)
+
+
 # ---------------------------------------------------------------- registry
 WEEKS: dict[int, list[Item]] = {
     1: [
@@ -644,6 +679,78 @@ WEEKS: dict[int, list[Item]] = {
              "固定積水病例 dev_v1.1_010 的五方法影像 PSNR、SSIM、L∞、最大 uint8 pixel error、pixel equality、bit-exact 與三階段 runtime。",
              "五方法在指定存檔條件下的單病例定量比較；S2a/S2 相同說明 authentication 不改變像素結果",
              ["paper_assets/tables/table_method_comparison.csv", "results/method_comparison.json"], []),
+    ],
+    5: [
+        Item("W5-F1", "figure", "W5-F1_d7_attack_summary.png", "正文", "Results／security evaluation",
+             "D7 與 AF-025 的主要 gallery-linkage Top-1：S2 v1 的 magnitude、norm 與 geometry 結果，以及 fixed-norm v2 補驗。正式 security_v1 N=200；random baseline 為 1/200。",
+             "S2 的 per-image transform 抑制已測 magnitude／geometry linkage，但 v1 保留 norm；fixed-norm v2 將指定 norm attack 降回隨機基準",
+             ["image/D7_attack_summary.png"], []),
+        Item("W5-F2", "figure", "W5-F2_norm_remediation.png", "正文", "Results／AF-025 remediation",
+             "S2 v1 與 fixed-norm v2 的 norm-only gallery Top-1（security_v1 N=200）。T2-WB 採 dev-only calibration；虛線為 1/200 隨機基準。",
+             "AF-025 的固定-norm 修補把本研究指定的 T1 與 T2-WB norm linkage 降至 0.005；此為特定攻擊實測，不外推為通用密碼學安全",
+             ["paper_assets/tables/table_norm_leakage.csv",
+              "paper_assets/tables/table_AF025_fixed_norm_norm_leakage.csv"],
+             ["D7.1_T2WB_20261014T021454463115Z_7b959db9",
+              "AF025_FIXED_NORM_FORMAL_20261014T161327001754Z_c4eda689"],
+             fig_w5_norm_remediation),
+        Item("W5-T1", "table", "W5-T1_d7_t2wb_inversion.csv", "正文", "Results／T2-WB inversion",
+             "D7.1 formal N=200：S2 v1 匿名影像在 legacy 與 range-preserving storage 下的攻擊者重新反演 latent 品質、runtime 與 95% bootstrap CI。",
+             "T2-WB query 的品質與正控制足以解釋後續 linkage 結果",
+             ["paper_assets/tables/table_D7_T2WB_inversion.csv"],
+             ["D7.1_T2WB_20261014T021454463115Z_7b959db9"]),
+        Item("W5-T2", "table", "W5-T2_d7_magnitude_linkage.csv", "正文主表", "Results／magnitude linkage",
+             "D7.2 formal N=200：S2 v1 在 T1／T2-WB、兩種 storage 與四種 magnitude scorer 下的 Top-k、mAP、rank、正負控制。",
+             "指定 original／sorted magnitude linkage 在 S2 v1 上接近 1/200 隨機基準",
+             ["paper_assets/tables/table_attack_original.csv"],
+             ["D7.1_T2WB_20261014T021454463115Z_7b959db9"]),
+        Item("W5-T3", "table", "W5-T3_d7_norm_leakage_v1.csv", "正文主表", "Results／AF-025 diagnosis",
+             "D7.3 formal N=200：S2 v1 的 norm-only T1／T2-WB linkage；T2-WB 同時列 raw 與只由 dev 凍結的 median calibration。",
+             "正交 S2 v1 保留 exact-latent norm，且 range-preserving T2-WB 經 dev calibration 後仍可鏈結，形成 AF-025 的裁決依據",
+             ["paper_assets/tables/table_norm_leakage.csv"],
+             ["D7.1_DEV_20261014T020638335355Z_9223ea81",
+              "D7.1_T2WB_20261014T021454463115Z_7b959db9"]),
+        Item("W5-T4", "table", "W5-T4_cross_nonce.csv", "附錄", "Results／cross-nonce KPA/CPA",
+             "D7.4 d=1,024 synthetic diagnostic：same-nonce full-basis CPA／full-rank KPA 正控制，及相同映射跨 nonce 套用的 RMSE、MaxAbs 與 cosine。",
+             "固定 nonce 的完整映射可重建，但不轉移至另一 nonce；此合成診斷不冒充 d=65,536 端到端證明",
+             ["paper_assets/tables/table_cross_nonce.csv"], []),
+        Item("W5-T5", "table", "W5-T5_geometry.csv", "正文", "Results／pairwise geometry",
+             "D7.5 formal N=200：fixed-Q 與 per-image-Q 的 pairwise cosine／distance 誤差及 distance-signature linkage。",
+             "fixed-Q 保留跨影像 geometry；per-image-Q 使指定 distance-signature linkage 降至隨機基準",
+             ["paper_assets/tables/table_geometry.csv"], []),
+        Item("W5-T6", "table", "W5-T6_structured_probe_v1.csv", "附錄", "Results／structured probes",
+             "D7.6：basis、constant 與 sparse 非 Gaussian probe 的輸入／輸出稀疏度、動差、最大值與 norm ratio。",
+             "結構探針補足 Gaussian 測試但僅作診斷；S2 v1 對所有 probe 保 norm",
+             ["paper_assets/tables/table_structured_probe.csv"], []),
+        Item("W5-T7", "table", "W5-T7_repeat_v1.csv", "附錄", "Results／repeat transform",
+             "D7.7：同一真實 latent 以 100 個 nonce 重複變換；每列含 nonce／payload hash、全體唯一數與跨密文 cosine 摘要。",
+             "每影像 nonce 讓 100 次 protected payload 全部不同",
+             ["paper_assets/tables/table_repeat.csv"], []),
+        Item("W5-T8", "table", "W5-T8_tamper.csv", "正文", "Results／integrity",
+             "D7.8：S2 對 tag、nonce、ciphertext、version、parameters、AAD、storage 的竄改拒絕，以及 S2a 無認證正控制。",
+             "S2 authenticated container fail closed；S2a 不提供完整性保護",
+             ["paper_assets/tables/table_tamper.csv"], []),
+        Item("W5-T9", "table", "W5-T9_fixed_norm_linkage.csv", "正文主表", "Results／AF-025 remediation",
+             "AF-025 fixed-norm v2 formal N=200：T1 與 T2-WB norm-only raw／dev-calibrated Top-k、mAP、rank、負控制與固定公開 C。",
+             "fixed-norm v2 將本研究指定的 T1／T2-WB norm-only Top-1 降至 1/200 隨機基準",
+             ["paper_assets/tables/table_AF025_fixed_norm_norm_leakage.csv"],
+             ["AF025_FIXED_NORM_FORMAL_20261014T161327001754Z_c4eda689"]),
+        Item("W5-T10", "table", "W5-T10_fixed_norm_inversion.csv", "正文", "Results／AF-025 correctness and cost",
+             "AF-025 fixed-norm v2 formal N=200：攻擊者 public-PNG norm、合法 private-range latent 重構品質，以及匿名生成／兩種 inversion runtime 與 95% CI。",
+             "隱藏真實 norm／lo-hi 後，合法端仍可用 AEAD metadata 恢復並維持高 latent cosine",
+             ["paper_assets/tables/table_AF025_fixed_norm_T2WB_inversion.csv"],
+             ["AF025_FIXED_NORM_FORMAL_20261014T161327001754Z_c4eda689"]),
+        Item("W5-T11", "table", "W5-T11_fixed_norm_probes.csv", "附錄", "Results／AF-025 structured probes",
+             "AF-025 v2 的 basis、constant 與 sparse probe：原 norm、正規化 norm、protected norm 與輸出統計。",
+             "fixed-norm preprocessing 移除 probe 間的 norm 差異；結構輸出仍僅作診斷",
+             ["paper_assets/tables/table_AF025_fixed_norm_probe.csv"], []),
+        Item("W5-T12", "table", "W5-T12_fixed_norm_repeat.csv", "附錄", "Results／AF-025 repeat transform",
+             "AF-025 v2：同一 normalized latent 以 100 個 nonce 重複變換，記錄 protected norm、唯一 nonce／payload 數與跨密文 cosine。",
+             "fixed-norm v2 仍維持 per-image nonce 的重複變換差異性",
+             ["paper_assets/tables/table_AF025_fixed_norm_repeat.csv"], []),
+        Item("W5-T13", "table", "W5-T13_defense_claims.csv", "正文", "Method／defense package",
+             "P7.1 defense package 的 10 條 claim→evidence 索引，含 headline、來源 SHA-256 與適用範圍。",
+             "D7 與 AF-025 的對外宣稱均可追溯至已提交的正式結果",
+             ["paper_assets/defense_package/claims.csv", "paper_assets/defense_package/index.md"], []),
     ],
 }
 
