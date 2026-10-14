@@ -6,7 +6,7 @@
 
 - E0.1、E1.1–E1.5 已由 AUD-20261008-02 複驗通過；E2.2 已完成 S0/S1 legacy regression，並補上恆等金鑰 P（AF-017）。
 - 2026-10-09 起 P/S0/S1 一律走學長**加密流程**（`ddim_sample_loop_anonymization`）；E1 的推論流程結果只作病灶定位流程的歷史基線。AF-017、AF-020、AF-021 已由 AUD-20261010-01 關閉；AF-019 的 E2.5 部分已完成，A4 T2-WB 部分待 Week 2。
-- A3／A4／P3.1／P4.1 已完成且 G1 PASS；A4.1–A4.5 findings 已關閉。AF-025 保留至 D7 實測 S2a/S2 後再由使用者裁決保護強度。
+- A3／A4／P3.1／P4.1 已完成且 G1 PASS；D7/G4 PASS。AF-025 已正式裁決採固定 norm S2 v2，目前進行 N=200 補驗。
 - E2.3 latent cache 已凍結（`security_v1` 200 張、`dev_v1.1` 20 張，batch 1，抽樣重算全部 bit-exact）；E2.4 指標語意報告與 E2.5 dev round-trip 已完成，G0 的子任務全部有交付物。
 - T2-WB `Inconclusive` 規則依使用者 2026-10-10 裁決：攻擊成功照實報告；未成功時才看各方案專屬的正控制（`reports/t2wb_protocol.md` §4）。
 - 目標 checkpoint 可 strict load，missing/unexpected keys 均為 0。
@@ -75,6 +75,7 @@
 | `scripts/d5_security_evidence.py` | 產生 D5.4 100,000 nonce 統計與 D5.6 tamper matrix，不保存 nonce、master/subkey。 | D5 正式 CPU 證據。 |
 | `src/crypto/sot.py` | D6.1/D6.2：torch 正規化 FWHT、D5 CSPRNG 直接導出的逐輪 sign/permutation、`Q_R…Q_1` forward 與反向輪序 inverse；支援 CPU/CUDA。 | S2a/S2 transform 核心。 |
 | `src/crypto/s2.py` | D6.7：M1/M2 authenticated S2 封裝；seal 強制經持久化 nonce registry，open 強制 tag 驗證成功後才 decode/inversion/inverse。 | S2 部署路徑，不可繞過此層自行解密。 |
+| `src/crypto/s2_fixed_norm.py` | AF-025 S2 v2：latent 先縮放至固定 `C=248.261`；原始 norm 與 M1 lo/hi 以 ChaCha20-Poly1305 private metadata 保存，外層 HMAC 驗證後才解密與恢復。 | AF-025 裁決後的正式 S2 路徑；`s2.py` 保留為 v1 稽核基準。 |
 | `scripts/d6_sot_evidence.py` | D6.1–D6.6 CPU 證據：數值可逆、顯式 Q、Gaussian、真實 latent 動差、R/P 攻擊／runtime／precision 消融及結構診斷。 | SOT 改動後重建 D6 CPU 結果。 |
 | `scripts/d6_s2_dev_runner.py` | D6.4/D6.7 GPU runner：20 張 × 8 組 generation-quality 消融；4 張 authenticated M1/M2 dev 整合。 | 一律由 `managed_run.py --validate-artifacts` 執行。 |
 | `scripts/d7_metrics.py` | D7 共用 linkage 指標：float64 feature、悲觀 tie-break、Wilson CI 與 bootstrap mAP。 | 固定沿用 A3/A4 經 AF-028/033 修正後的評估口徑。 |
@@ -82,6 +83,9 @@
 | `scripts/d7_t2wb_inversion.py` | D7.1 GPU runner：S2 R=1/P-off 匿名生成後，分別經 legacy／range-preserving 存檔再做 target-model inversion。 | 支援 dev smoke/calibration 與 formal N=200 managed run。 |
 | `scripts/d7_t2wb_analyze.py` | 合併 D7 T1 與 T2-WB query cache，執行相同 magnitude scorer、dev-calibrated norm、正負控制。 | 正式產生 `table_attack_original.csv` 與 `table_norm_leakage.csv`。 |
 | `scripts/build_defense_package.py` | P7.1 deterministic builder：由 D7 正式表格建立 claim→source hash 索引、素材導覽與 attack summary 圖。 | D7 表格更新後以 `--force` 重建；逐位元重建驗證已通過。 |
+| `scripts/af025_fixed_norm_cpu.py` | 固定 norm v2 的 formal N=200 T1 norm、structured probes 與 100-nonce repeat 證據。 | AF-025 補驗的 CPU 部分。 |
+| `scripts/af025_fixed_norm_t2wb.py` | 固定 norm v2 的 target-model T2-WB runner；分開保存攻擊者 public-PNG inversion 與合法 private-range inversion。 | 先 smoke/dev，再跑 formal N=200 managed run。 |
+| `scripts/af025_fixed_norm_analyze.py` | 合併固定 norm T1、dev calibration 與 formal T2-WB，輸出 norm Top-k、controls 與 provenance。 | formal run 完成後執行。 |
 | `scripts/method_comparison_runner.py` | 固定第一張積水病例，重跑 P/S0/S1/S2a/S2 的原圖、stored anonymous、重構圖；P/S0/S1 用 legacy 丟值域 PNG，S2a/S2 用 range-preserving PNG，另區分 x0 cosine 與前作 estimand。 | 產生五方法直觀比較圖與單張 metrics。 |
 | `tests/security/test_environment_lock.py` | AF-038 regression：確認 D5 的三個精確套件版本全部存在於 Week 3 environment freeze。 | D5／後續環境變更時。 |
 | `scripts/a4_5_tamper.py` | A4.5 tamper baseline：S0/S1 無完整性檢查，竄改 latent／儲存紀錄皆被接受並量化影響。 | A4.5。 |
@@ -177,6 +181,7 @@
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
 | `tests/security/test_sot.py` | D6.1/D6.2：CPU/CUDA inverse、d=65,536 float64 門檻、顯式 Q 正交與輪次公式、wrong-key/wrong-nonce controls、FWHT 輸入契約。 |
 | `tests/security/test_s2.py` | D6.7：M1/M2 authenticated round-trip、tag 驗證先於 inversion、wrong key/nonce fail closed，以及跨 M1/M2 nonce reuse rejection。 |
+| `tests/security/test_s2_fixed_norm.py` | AF-025：固定 norm M2 往返、M1 public PNG 不含 lo/hi、合法值域／原 norm 恢復，以及 private metadata tamper 在 inverter 前拒絕。 |
 | `tests/integration/test_legacy_ddim_equivalence.py` | GPU 比對 wrapper 與學長 progressive sampler 的 latent/reconstruction bit-exact。 |
 | `tests/test_legacy_repro.py` | E2.2：P/S0/S1 transform 精確可逆；GPU 比對 P/S0/S1 anonymize／deanonymize wrapper 與 legacy sampler bit-exact、guidance −1 與 0 逐位元相同（AF-021），以及恆等金鑰 P 等同無金鑰的 legacy forward→backward（AF-017）；cached x_T 路徑（invert → key → generate）與完整 legacy sampler bit-exact（E2.3）。 |
 

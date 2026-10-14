@@ -24,6 +24,7 @@ SCRYPT_SALT_BYTES = 16
 HKDF_BYTES = 32
 LABEL_PREFIX = "cxr-transform/v1"
 MAC_LABEL = f"{LABEL_PREFIX}/mac"
+PRIVATE_METADATA_LABEL = f"{LABEL_PREFIX}/private-metadata-aead"
 PURPOSES = ("sign-pre", "perm", "sign-post")
 
 
@@ -115,7 +116,7 @@ def derive_subkey(master_key: bytes, nonce: bytes, label: str) -> bytes:
     """Derive one 256-bit subkey; the full 128-bit image nonce is the HKDF salt."""
     require_master_key(master_key)
     require_nonce(nonce)
-    allowed = label == MAC_LABEL or any(
+    allowed = label in {MAC_LABEL, PRIVATE_METADATA_LABEL} or any(
         label.endswith(f"/{purpose}") and label.startswith(f"{LABEL_PREFIX}/round/")
         for purpose in PURPOSES
     )

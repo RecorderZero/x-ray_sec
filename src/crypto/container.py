@@ -18,7 +18,7 @@ from typing import Any, Callable, Mapping
 
 from PIL import Image
 
-from scripts.m1_storage import HI_KEY, LO_KEY, RANGE_PRESERVING_PNG
+from scripts.m1_storage import HI_KEY, LO_KEY, PRIVATE_RANGE_PNG, RANGE_PRESERVING_PNG
 
 from .errors import CryptoConfigurationError
 from .kdf import NONCE_BYTES, require_nonce
@@ -111,12 +111,15 @@ class AuthenticatedContainer:
         if self.storage["payload_sha256"] != hashlib.sha256(self.ciphertext).hexdigest():
             raise CryptoConfigurationError("payload hash mismatch")
         if self.storage["mode"] == "M1":
-            if self.storage["storage_protocol"] != RANGE_PRESERVING_PNG:
+            if self.storage["storage_protocol"] not in {RANGE_PRESERVING_PNG, PRIVATE_RANGE_PNG}:
                 raise CryptoConfigurationError("unknown M1 storage protocol")
-            if not HEX8.fullmatch(str(self.storage["lo_float32_bits"])) or not HEX8.fullmatch(
-                str(self.storage["hi_float32_bits"])
-            ):
-                raise CryptoConfigurationError("M1 lo/hi must be exact float32 bit hex")
+            if self.storage["storage_protocol"] == RANGE_PRESERVING_PNG:
+                if not HEX8.fullmatch(str(self.storage["lo_float32_bits"])) or not HEX8.fullmatch(
+                    str(self.storage["hi_float32_bits"])
+                ):
+                    raise CryptoConfigurationError("M1 lo/hi must be exact float32 bit hex")
+            elif self.storage["lo_float32_bits"] or self.storage["hi_float32_bits"]:
+                raise CryptoConfigurationError("private-range M1 must not expose lo/hi")
         elif self.storage["lo_float32_bits"] or self.storage["hi_float32_bits"]:
             raise CryptoConfigurationError("M2 must not carry M1 lo/hi")
         if require_tag and (not isinstance(self.tag, bytes) or len(self.tag) != TAG_BYTES):
@@ -186,10 +189,16 @@ def validate_m1_png(container: AuthenticatedContainer) -> bytes:
         if image.mode != "L":
             raise CryptoConfigurationError("M1 payload is not 8-bit grayscale PNG")
         text = dict(image.text)
-    if text.get(LO_KEY) != container.storage["lo_float32_bits"] or text.get(HI_KEY) != container.storage[
-        "hi_float32_bits"
-    ]:
-        raise CryptoConfigurationError("PNG and authenticated lo/hi differ")
+    if container.storage["storage_protocol"] == RANGE_PRESERVING_PNG:
+        if text.get(LO_KEY) != container.storage["lo_float32_bits"] or text.get(HI_KEY) != container.storage[
+            "hi_float32_bits"
+        ]:
+            raise CryptoConfigurationError("PNG and authenticated lo/hi differ")
+    elif container.storage["storage_protocol"] == PRIVATE_RANGE_PNG:
+        if LO_KEY in text or HI_KEY in text:
+            raise CryptoConfigurationError("private-range PNG exposes lo/hi")
+    else:
+        raise CryptoConfigurationError("unknown M1 storage protocol")
     return container.ciphertext
 
 

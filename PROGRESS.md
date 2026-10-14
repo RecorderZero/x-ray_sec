@@ -1364,3 +1364,39 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 請稽核方複驗 D7.1–D7.8、P7.1 與 G4；尤其獨立重算 range-preserving dev-calibrated norm Top-1=`0.25` 與 cross-nonce 正控制。
 * 請使用者依 AF-025 正式結果裁決是否接受 norm leakage，或在 Week 6/7 加入 keyed norm concealment／其他部署對照；裁決前不更動 S2 protocol。
 * 稽核通過且 AF-025 裁決後，進入 Q8 品質、wrong-key、runtime 與 storage pilot。
+
+## 2026-10-15 · W5 補驗 · AF-025 固定 norm S2 v2 實作與 CPU formal
+
+### 1. 當前目標 (Objective)
+* 落實 AUD-20261014-04 的使用者正式裁決：S2 transform 前固定 norm，真實 norm 與 M1 lo/hi 改為 private AEAD metadata；完成 formal N=200 的 T1、structured probe、repeat，並準備 T2-WB GPU 補驗。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `src/crypto/s2_fixed_norm.py`：固定公開 `C=248.261`（float64 bits 凍結）、原 norm 恢復、M1/M2 wrapper，以及獨立 HKDF domain 的 ChaCha20-Poly1305 private metadata；外層 HMAC 仍先於 metadata decrypt／decode／inversion／inverse。
+* 擴充 `scripts/m1_storage.py` 與 `src/crypto/container.py`：`range_preserving_png_private_range/v2` 沿用相同量化，但 public PNG/text/storage record 不含 lo/hi；合法端只從 AEAD plaintext 取得值域。
+* 新增 `tests/security/test_s2_fixed_norm.py`，涵蓋 M2 固定 norm 與往返、M1 lo/hi 不公開、合法原 norm 恢復，以及 private metadata tamper 在 inverter 前拒絕。
+* 新增 `scripts/af025_fixed_norm_cpu.py`、`af025_fixed_norm_t2wb.py`、`af025_fixed_norm_analyze.py`；CPU runner 已對 frozen `security_v1` N=200 執行，GPU runner 尚未啟動。
+* 使用者同意在確認與既有 vLLM 可共存後執行正式 GPU 補驗。檢查 RTX 5090：總 32,607 MiB、vLLM 14,342 MiB、RustDesk 537 MiB、當時 free 17,201 MiB、utilization 0%；先以 N=2 smoke 實測再決定啟動 formal。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] AF-025 CPU formal N=200：固定 norm T1 norm-only Top-1=`0.005`、Top-5=`0.025`，與 random=`0.005` 一致；原 S2 v1 的 T1 Top-1 為 `1.0`。
+* [事實] float32 protected norm mean=`248.2610001`，相對 C 最大絕對偏差=`1.49e-5`；四種 float64 structured probes 的 protected norm 與 C 最大差約 `1.93e-12`。
+* [事實] 同一 normalized latent 以 100 個 nonce 變換，nonce hash 與 payload hash 均 `100/100` 唯一；off-diagonal cosine mean≈`1.64e-5`、max≈`0.0152`。
+* [事實] 全套正式測試範圍 `pytest -q tests` 為 108 passed、14 skipped；新增／相依 crypto focused tests 27 passed。
+* [事實] 目前沒有 AF-025 GPU managed run 或其他本專案背景程序；vLLM 為使用者既有程序，未停止或修改。
+
+### 4. 達標判定 (Assessment)
+* [x] AF-025 (a)(b)(e) 實作與 CPU formal T1／D7.6／D7.7 已完成實作方驗證。
+* [ ] AF-025 (c) formal N=200 T2-WB 尚待 N=2 smoke、dev calibration 與正式 managed GPU run。
+* [ ] finding 尚不可關閉；正式 GPU 結果與稽核複驗完成前維持「裁決已定、落地補驗中」。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 固定 norm 不是增加 WHT 輪數，而是在正交核心前移除已確認的病人間 norm 指紋；真實尺度只存在於經 AEAD 加密的 recovery metadata。
+* public PNG 刻意只提供 q/255；合法端經驗證後用 private lo/hi 恢復實際值域。T2-WB 必須分開量測攻擊者 public view 與合法 private-range positive control，避免把攻擊失敗誤判成整體 pipeline 無法反演。
+* vLLM 預配置約 14.3 GiB，剩餘約 17.2 GiB；仍須用 smoke 實測 DDIM 共存峰值。vLLM 有請求時可能互搶算力並增加延遲，即使不 OOM。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。依使用者最新裁決新增 §2.5 並更新 S2 v2 定義；formal sample size 維持 N=200，舊 S2 v1 結果保留作修補前基準而不覆寫。
+
+### 7. 下一步
+* 先提交並固定 source commit，執行 AF-025 N=2 GPU smoke，同步觀察 VRAM 與 vLLM；若無 OOM 且餘裕合理，再跑 dev calibration 與使用者已條件同意的 formal N=200。
+* formal 完成後執行 analyzer、更新 AF-025 T1/T2-WB 表格與 defense package，記錄 runtime/storage/合法 fidelity，送稽核關閉 AF-025。

@@ -18,6 +18,7 @@
    - ChaCha20／AES-CTR CSPRNG。
    - per-image unique nonce。
    - WHT-based structured transform；R=1/2/3/4 與 permutation on/off 消融後才選正式設定。
+   - AF-025 固定 norm：transform 前縮放至凍結 `C=248.261`，真實 norm 與 M1 lo/hi 以 private-metadata AEAD 保護，合法端解密後恢復。
    - HMAC-SHA256 transform-then-MAC。
 3. 以相同攻擊比較 P、S0、S1、S2a、S2。
 4. 分開報告 T1 精確 latent 與 T2-WB target-model anonymous-image inversion；T2-BB surrogate attack 僅在 P0 完成後選做。
@@ -30,7 +31,7 @@
 - 病灶定位或醫師評估。
 - 達成 AES／AEAD 等級的 confidentiality。
 - structured transform 在 65,536 維達到 100% bit-exact。
-- adaptive norm attack 必須失敗。
+- 未修補的 adaptive attack 不作數值 pass gate；AF-025 已裁決修補的 norm attack 必須以固定協定補驗，科學結果仍照實報告。
 - 實作 CDF、EDICT、BDIA 或 KCI/O-BELM。
 
 ---
@@ -44,8 +45,8 @@
 | P | 不加密 | 正控制 |
 | S0 | 前作 Rademacher | 被攻擊基線 |
 | S1 | 前作 Signed Permutation | 被攻擊基線 |
-| S2a | HKDF＋CSPRNG＋nonce＋WHT-based structured transform，不含 MAC | transform／leakage ablation |
-| S2 | S2a＋HMAC-SHA256 | authenticated obfuscation 完整方案 |
+| S2a | HKDF＋CSPRNG＋nonce＋固定 norm＋WHT-based structured transform，不含外層 MAC | transform／leakage ablation |
+| S2 | S2a＋private recovery metadata AEAD＋HMAC-SHA256 | authenticated obfuscation 完整方案（AF-025 v2） |
 | AEAD-ref | AES-GCM／ChaCha20-Poly1305 加密原始 bytes | 安全與 byte-exact 參考 |
 
 原 workflow 的 S3 已取消；完整性不是加分項，而是 S2 的必備部分。
@@ -64,8 +65,8 @@
 
 | 模式 | ciphertext／資料 | 用途 |
 |---|---|---|
-| M1 image-only | anonymous image（range_preserving_png：保存 lo/hi）＋nonce＋tag＋manifest | 最接近前作，受 inversion error 影響 |
-| M2 latent payload | authenticated z_ano＋anonymous preview | 可逆性上限與部署對照 |
+| M1 image-only | public anonymous PNG（不公開 lo/hi）＋nonce＋tag＋AEAD private norm/lo/hi | 最接近前作，受 inversion error 影響 |
+| M2 latent payload | authenticated fixed-norm z_ano＋AEAD private original norm＋anonymous preview | 可逆性上限與部署對照 |
 
 前作的 per-image min-max uint8 PNG（`legacy_png_handoff`，不保存值域）是 P/S0/S1「前作重現」的主路徑；本專案的 M1 協定是 `range_preserving_png`，結果表以「legacy PNG」與「range-preserving PNG」分欄報告（AF-024、AUD-20261010-05）。`[決定]`（使用者 2026-10-10）P/S0/S1/S2a/S2 **兩欄都跑**：range-preserving PNG 是對外宣稱的主結果；legacy PNG 欄作為與前作相同基準的對照與歸因（{S0/S1, S2} × {legacy, range-preserving} 2×2，分離加密與存檔的效果），放附表；R／permutation 等設定的選擇只依 range-preserving 欄，legacy 欄受每把金鑰生成的值域影響大，不作選擇依據。S2 與 S2a 的匿名影像相同（MAC 不改像素），legacy 欄只需算一次。
 
@@ -121,7 +122,7 @@
 - cross-nonce transfer。
 - tamper rejection。
 
-S2 的 norm-only attack 預期可能成功，這是應報告的 limitation，不是自動觸發重做變換。trace／cosine 只作 diagnostic，不得作為通用安全判準。
+原始 S2 v1 的 norm-only attack 已正式成功（T1=1.0、range-preserving T2-WB=0.25），並觸發 AF-025 使用者裁決。S2 v2 採固定 norm；須重跑同一攻擊確認效果，科學結果照實報告。trace／cosine 只作 diagnostic，不得作為通用安全判準。
 
 ### 2.3 MAC 提前為核心工作
 
@@ -140,6 +141,14 @@ HMAC 不再排在後期加分項。Week 3 建立 authenticated container，Week 
 - Study/SOP UID 作為 AAD，不直接當唯一 nonce。
 - 同 master key 下禁止 nonce reuse。
 - 測試中的 deterministic nonce 只用於 test vector，正式實驗仍需記錄每筆 nonce hash／ID，但不得記錄 secret。
+
+### 2.5 AF-025 固定 norm 協定（使用者裁決 2026-10-14）
+
+- 固定公開常數 `C=248.261`，以 float64 位元樣式凍結；不得依影像、病人或資料集動態改動。
+- transform 前計算原始 L2 norm 並縮放至 C；inverse transform 後以 private original norm 恢復。
+- original norm 與 M1 lo/hi 使用獨立 HKDF domain 的 ChaCha20-Poly1305 private metadata；public PNG/text/storage record 不得洩露 lo/hi。
+- 外層 HMAC 必須涵蓋 private-metadata ciphertext，且在 HMAC 驗證前不得解密 metadata、decode、inversion 或 inverse。
+- 補驗：formal N=200 的 D7.3 T1/T2-WB、D7.6 structured probes、D7.7 repeat；合法 M1/M2 correctness 與 tamper regression 同時保留。
 
 ---
 
@@ -401,7 +410,7 @@ S2 通過的含義：
 
 - 實作符合 protocol。
 - 指定弱點的結果已量化。
-- 不要求 norm attack 失敗。
+- 原始 v1 結果不因攻擊成功而判工程失敗；AF-025 v2 則須完成固定 norm 補驗，結果仍依科學數據照實報告。
 
 ---
 

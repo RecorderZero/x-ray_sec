@@ -27,6 +27,7 @@ from PIL.PngImagePlugin import PngInfo
 
 
 RANGE_PRESERVING_PNG = "range_preserving_png/v1"
+PRIVATE_RANGE_PNG = "range_preserving_png_private_range/v2"
 QUANTIZATION = "round-half-to-even np.rint((x-lo)/(hi-lo)*255), clipped to 0..255"
 LO_KEY = "x-range-lo-float32-bits"
 HI_KEY = "x-range-hi-float32-bits"
@@ -72,6 +73,34 @@ def encode_range_preserving_png(image: np.ndarray) -> tuple[bytes, dict[str, Any
     return payload, record
 
 
+def encode_private_range_png(image: np.ndarray) -> tuple[bytes, dict[str, Any]]:
+    """Quantize like v1, but keep lo/hi out of the public PNG (AF-025)."""
+    array = np.asarray(image, dtype=np.float32)
+    if array.ndim != 2:
+        raise ValueError(f"expected a 2-D image, got shape {array.shape}")
+    if not np.isfinite(array).all():
+        raise ValueError("cannot store non-finite pixels")
+    lo, hi = np.float32(array.min()), np.float32(array.max())
+    span = np.float32(hi - lo)
+    if span > 0:
+        quantized = np.clip(np.rint((array - lo) / span * np.float32(255)), 0, 255).astype(np.uint8)
+    else:
+        quantized = np.zeros(array.shape, dtype=np.uint8)
+    buffer = io.BytesIO()
+    Image.fromarray(quantized, mode="L").save(buffer, format="PNG")
+    payload = buffer.getvalue()
+    return payload, {
+        "storage_protocol": PRIVATE_RANGE_PNG,
+        "quantization": QUANTIZATION,
+        "lo": float(lo),
+        "hi": float(hi),
+        "lo_float32_bits": _f32_bits(lo),
+        "hi_float32_bits": _f32_bits(hi),
+        "png_sha256": hashlib.sha256(payload).hexdigest(),
+        "png_bytes": len(payload),
+    }
+
+
 def decode_range_preserving_png(payload: bytes) -> np.ndarray:
     """Decode PNG bytes written by ``encode_range_preserving_png`` to float32."""
     with Image.open(io.BytesIO(payload)) as handle:
@@ -83,6 +112,31 @@ def decode_range_preserving_png(payload: bytes) -> np.ndarray:
         raise ValueError("PNG lacks the stored value range; refusing to guess it")
     lo, hi = _f32_from_bits(text[LO_KEY]), _f32_from_bits(text[HI_KEY])
     return quantized.astype(np.float32) / np.float32(255) * np.float32(hi - lo) + lo
+
+
+def decode_private_range_png(payload: bytes, lo_float32_bits: str, hi_float32_bits: str) -> np.ndarray:
+    """Decode a v2 public PNG using lo/hi recovered from private metadata."""
+    with Image.open(io.BytesIO(payload)) as handle:
+        if handle.mode != "L":
+            raise ValueError(f"expected an 8-bit grayscale PNG, got mode {handle.mode}")
+        if LO_KEY in handle.text or HI_KEY in handle.text:
+            raise ValueError("private-range PNG must not expose lo/hi text chunks")
+        quantized = np.asarray(handle, dtype=np.uint8)
+    lo, hi = _f32_from_bits(lo_float32_bits), _f32_from_bits(hi_float32_bits)
+    if not np.isfinite([lo, hi]).all() or hi < lo:
+        raise ValueError("invalid private value range")
+    return quantized.astype(np.float32) / np.float32(255) * np.float32(hi - lo) + lo
+
+
+def decode_private_png_attacker_view(payload: bytes) -> np.ndarray:
+    """Return the only pixel values available without the encrypted range."""
+    with Image.open(io.BytesIO(payload)) as handle:
+        if handle.mode != "L":
+            raise ValueError(f"expected an 8-bit grayscale PNG, got mode {handle.mode}")
+        if LO_KEY in handle.text or HI_KEY in handle.text:
+            raise ValueError("public payload unexpectedly exposes lo/hi")
+        quantized = np.asarray(handle, dtype=np.uint8)
+    return quantized.astype(np.float32) / np.float32(255)
 
 
 def range_preserving_png_handoff(image: torch.Tensor) -> tuple[torch.Tensor, dict[str, Any]]:

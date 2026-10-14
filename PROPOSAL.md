@@ -15,13 +15,14 @@
 2. 每張影像使用唯一 nonce，導出不同的 latent transform。
 3. 採用文獻既有 Hadamard–Rademacher 原語組成的 key-derived structured orthogonal transform，針對前作的逐元素與排序幅值攻擊進行修補。
 4. 加入 HMAC-SHA256，解密前先驗證密文、nonce、參數與必要 metadata。
-5. 保留學長原有的 image inversion／generation pipeline，量測安全修補是否造成額外品質損失。
+5. 依 AF-025 正式裁決，加密前將 latent 縮放至固定公開 norm `C=248.261`；真實 norm 與 M1 lo/hi 以獨立 HKDF 子鑰進行 ChaCha20-Poly1305 加密，合法端驗證後還原。
+6. 保留學長原有的 image inversion／generation pipeline，量測安全修補是否造成額外品質損失。
 
 本方案的定位是：
 
 > 一個與既有 diffusion pipeline 相容、低改動、可逆且具完整性保護的 authenticated latent obfuscation baseline。
 
-本研究**不把此結構化變換稱為標準加密，也不宣稱其等同 AES、AEAD 或達成一般 IND-CPA**。它仍是正交線性映射，必然保存 L2 norm；per-image nonce 能避免同一 transform 跨影像重用，但不能消除單一輸出的 norm leakage。HMAC 只提供完整性與來源驗證，不補足 confidentiality。
+本研究**不把此結構化變換稱為標準加密，也不宣稱其等同 AES、AEAD 或達成一般 IND-CPA**。原始正交 S2 v1 必然保存 L2 norm；D7 formal N=200 實測 T1 Top-1=1.0、保存值域的 T2-WB Top-1=0.25。AF-025 因此採固定 norm S2 v2，將真實 norm／值域作小型 AEAD private metadata；這針對已驗證的 norm 旁道，不把整個 structured transform 提升宣稱為標準加密。外層 HMAC 提供完整性與來源驗證。
 
 ---
 
@@ -138,8 +139,8 @@ x_0
 | P | 不加密 | 正控制 |
 | S0 | 前作 Rademacher | 被攻擊基線 |
 | S1 | 前作 Signed Permutation | 被攻擊基線 |
-| S2a | HKDF＋nonce＋WHT-based structured transform，不含 MAC | transform／leakage ablation |
-| S2 | S2a＋HMAC-SHA256 | authenticated obfuscation 完整方案 |
+| S2a | HKDF＋nonce＋固定 norm＋WHT-based structured transform，不含外層 MAC | transform／leakage ablation |
+| S2 | S2a＋private recovery metadata AEAD＋HMAC-SHA256 | authenticated obfuscation 完整方案（AF-025 v2） |
 | AEAD-ref | 原始 bytes 的標準 AEAD | 安全與 bit-exact 參考，不取代主架構 |
 
 S2a 只用於分析「混合與 nonce 帶來什麼改變」。真正部署／完整評估以 S2 為準。
@@ -155,6 +156,7 @@ S2a 只用於分析「混合與 nonce 帶來什麼改變」。真正部署／完
    - info = cxr-transform/v1/round/{r}/perm
    - info = cxr-transform/v1/round/{r}/sign-post
    - info = cxr-transform/v1/mac
+   - info = cxr-transform/v1/private-metadata-aead
 4. 由 ChaCha20 或 AES-CTR keystream 產生 sign 與 Fisher–Yates permutation 所需亂數。
 5. StudyInstanceUID、SOPInstanceUID、shape、dtype、model hash 與 sampler version 作為 authenticated metadata，不直接拿 UID 當唯一 nonce。
 
@@ -187,7 +189,8 @@ z_{r+1}
 - 在實數算術中可逆。
 - 若 z 精確服從 N(0,I)，正交變換後仍服從 N(0,I)。
 - 一輪 WHT 會混合全部座標，理論上不再保留前作的逐元素幅值等式；對排序幅值 linkage 的實際修補程度由攻擊實驗決定。
-- 必然保存 L2 norm，因此不可能對任意輸入達成一般 IND-CPA。
+- 正交核心必然保存其輸入 norm；S2 v2 在核心前先以固定公開常數 `C=248.261` 正規化，因此公開 protected latent 不再攜帶每張原始 latent 的 norm。真實 norm 經 AEAD 保護並在合法解密後恢復。
+- 固定 norm 只移除這個已驗證的不變量，不使線性核心對任意輸入達成一般 IND-CPA。
 - 上述性質不代表只剩 L2 norm；此受限結構化變換族可能仍有尚未識別的結構性洩漏。
 
 多輪總矩陣記為 \(Q=Q_RQ_{R-1}\cdots Q_1\)，不是在各輪參數不同時寫成 \(Q_{round}^R\)。
@@ -207,10 +210,10 @@ z_{r+1}
 - tag 比對使用 constant-time API。
 - latent-payload 模式認證 latent bytes。
 - image-only 模式認證實際儲存的 lossless image bytes 與穩定 metadata；若 PACS 轉碼或修改被認證欄位，系統應明確拒絕，而不是靜默解密。
-- image-only 模式的 authenticated metadata 必須包含 `storage_protocol`（例如 `range_preserving_png/v1`）、`quantization`（量化方式）與每張影像的 `lo`、`hi`（float32，以原值的 IEEE-754 位元樣式認證，不經十進位字串四捨五入）。讀回公式為 `x = q/255·(hi−lo)+lo`，所以只改 `lo`／`hi` 而不動像素資料，也會直接改變還原結果；這種修改必須被 tag 拒絕（T4 竄改測試須含「只改 lo/hi」，AF-024、AUD-20261010-05）。
+- `[AF-025 決定，2026-10-14]` S2 v2 的真實 latent norm，以及 M1 的 lo／hi，使用獨立 HKDF 子鑰由 ChaCha20-Poly1305 加密；外層 HMAC 同時涵蓋該 AEAD ciphertext。驗證 HMAC 前不得解密 private metadata。
+- image-only 模式的 authenticated data 必須包含 `storage_protocol`、`quantization` 與 private-metadata ciphertext。v1 基準直接認證公開 lo／hi；S2 v2 則在 AEAD plaintext 中保存 lo／hi 的 float32 IEEE-754 位元樣式。讀回公式為 `x = q/255·(hi−lo)+lo`，所以任何 ciphertext 或值域修改都必須被 tag 拒絕。
 - 上述 MAC 驗證成功之前，不得以 `lo`／`hi` 讀回影像，也不得進行 inverse transform、inversion 或 diffusion generation。
-- `lo`／`hi` 同時存在於 PNG text chunk 與 storage record；MAC 須同時涵蓋 PNG 位元組（或其 SHA-256）與 record 中的 `lo`／`hi`，讀回前並檢查兩份值逐位元一致，避免只改其中一份的缺口（D5 實作）。
-- `lo`／`hi` 是公開的儲存 metadata，不是秘密；T2-WB 攻擊者取得匿名影像時同時取得它們（`reports/t2wb_protocol.md` §2）。
+- v1 基準的 `lo`／`hi` 同時存在於 PNG text chunk 與 storage record；S2 v2 的 public PNG 與 public storage record 均不得出現 lo／hi，只存在於 private metadata ciphertext。兩種協定不得混用。
 - MAC 提供 tamper detection，不改變此線性變換的 confidentiality 邊界。
 
 ### 4.5 部署模式
@@ -221,7 +224,7 @@ z_{r+1}
 - 解密由 anonymous image inversion 開始。
 - 優點：維持既有流程。
 - 缺點：受 PNG／DICOM 量化及 DDIM inversion error 影響。
-- 本專案的影像存檔協定為 `range_preserving_png/v1`（AF-024，實作 `scripts/m1_storage.py`）：每張影像以自身實際值域 [lo, hi] 量化為 8-bit 灰階 PNG，`q = clip(rint((x−lo)/(hi−lo)·255), 0, 255)`（四捨五入）；`lo`、`hi` 以 float32 原值逐位元保存（manifest 與 PNG text chunk），讀回時 `x = q/255·(hi−lo)+lo`。缺少值域的 PNG 一律拒絕讀回，不猜測值域。任何需要再 inversion 或還原的影像都依此保存（使用者裁決 2026-10-10，AUD-20261010-05）。
+- S2 v2 的影像存檔協定為 `range_preserving_png_private_range/v2`：量化公式與 v1 相同，但 public PNG 不含 lo／hi；合法端通過 HMAC 並解開 private metadata 後，才以 `x=q/255·(hi−lo)+lo` 還原值域。`range_preserving_png/v1` 保留為 AF-025 前的公開值域基準。
 - 前作的 per-image min-max uint8 PNG（截斷、丟棄值域，`legacy_png_handoff`）只保留作「前作重現」的主路徑，不是本專案的 M1 協定。表格以「legacy PNG」與「range-preserving PNG」分欄報告，使方案間的比較只差在加密方法，不差在存檔方式。`[決定]`（使用者 2026-10-10）P/S0/S1/S2a/S2 **兩欄都跑**：range-preserving PNG 是對外宣稱的主結果；legacy PNG 欄作為與前作相同基準的對照與歸因（{S0/S1, S2} × {legacy, range-preserving} 2×2，分離加密與存檔的效果），放附表；R／permutation 等設定的選擇只依 range-preserving 欄，legacy 欄受每把金鑰生成的值域影響大，不作選擇依據。S2 與 S2a 的匿名影像相同（MAC 不改像素），legacy 欄只需算一次。
 - `[決定]` 歸因（使用者裁決 2026-10-10，AUD-20261010-05）：前作 M1 還原品質約 30–32 dB 的主要損失，來自存檔流程的 per-image min-max 後未保存原值域，屬工程失真，**不是**翻號／置換加密本身的限制。依據是稽核方診斷 `[事實]`（AUD-20261010-04，`audit/out/e2_png_handoff_decomposition.json`）：稽核方在 4 張 dev 影像上量到，只做 8-bit 量化、保留 lo/hi 時與 float 交接相差 ≤ 0.6 dB（逐方案的 4 張平均）。論文須如此歸因，不得把這部分損失寫成加密造成的。
 - 認證欄位見 §4.4：`storage_protocol`、`quantization`、`lo`、`hi` 皆須被 HMAC 涵蓋，驗證通過前不得讀回影像。
@@ -252,10 +255,10 @@ z_{r+1}
 
 nonce 的作用是讓每張影像使用不同 subkey／Q，使針對某張影像取得的 transform 資訊不能直接套用到其他影像。
 
-nonce 不會：
+nonce 本身不會：
 
 - 把線性 transform 變成非線性。
-- 隱藏單一 ciphertext 的 L2 norm。
+- 隱藏單一 ciphertext 的 L2 norm；S2 v2 是由 nonce 之外的固定 norm 前處理與 private metadata 解決此旁道。
 - 自動提供 integrity。
 
 nonce 的安全需求是同一 master key 下唯一，不是保密或不可預測。若 API 允許呼叫者指定 nonce，必須檢查並拒絕 reuse。
@@ -276,7 +279,7 @@ nonce 的安全需求是同一 master key 下唯一，不是保密或不可預�
 
 若要保證原始 DICOM bytes 完全一致，仍需標準 AEAD encrypted original／residual；這是 AEAD-ref 的用途。
 
-### 5.4 adaptive norm attack 預期可能成功
+### 5.4 adaptive norm attack、D7 結果與 AF-025 固定 norm 裁決
 
 正交變換滿足：
 
@@ -291,7 +294,7 @@ nonce 的安全需求是同一 master key 下唯一，不是保密或不可預�
 - trace／cosine diagnostic 只衡量特定平均方向相關性，不是通用安全判準。
 - 不得宣稱此變換「只有 norm 一個不變量」。
 
-在精確 latent gallery 中，norm-only nearest-neighbor 可能直接完成 linkage。此結果不是實作失敗，而是方案的理論限制。
+原始 S2 v1 已正式驗證：N=200 的精確 latent norm-only Top-1=1.0；保存值域的 T2-WB 經 dev-only bias 校正後 Top-1=0.25（random=0.005）。使用者依 AUD-20261014-03/04 裁決採固定 norm S2 v2：所有 transform 輸入先縮放到固定公開 C，真實 norm 加密保存，解密後恢復。v2 必須以相同 N=200 T1/T2-WB、repeat 與 structured probe 補驗；結果不因假說而篩選。
 
 研究中必須分開報：
 
