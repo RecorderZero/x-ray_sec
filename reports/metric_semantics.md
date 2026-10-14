@@ -261,8 +261,6 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 
 **確定性檢查**：同一指令連續執行兩次，`results/E2.4_metric_semantics.json` 在剖析後除 `created_at` 外完全相同（種子 1911、numpy 1.23.0）。
 
----
-
 ## 7. M1 存檔協定與值域保存（AF-024）
 
 > 依據：使用者裁決 2026-10-10（AUDIT.md AUD-20261010-05）；稽核方診斷 AUD-20261010-04。實作：`scripts/m1_storage.py`（`range_preserving_png/v1`）。標記規則同本報告開頭。
@@ -327,3 +325,11 @@ WORKFLOW E2.4 要求「x0 vs xrec 與前作舊定義分開」。本專案的結�
 * `[事實]` dev 20 張中，加密匿名影像的值域下界 lo 最低到 −0.53，上界 hi 最高為 1.0，與稽核方 4 張的觀察（約 [−0.4, 0.7–1.0]）一致。
 * `[結論]` 本實測支持 §7.2 的歸因：前作約 31 dB 的 M1 損失，主要是 legacy PNG 存檔未保存值域造成的工程失真，不是翻號／置換加密本身。
 * `[事實]` 保存值域同樣提升了 T2-WB 攻擊者看到的 latent 保真度：S0/S1 攻擊者視角的 \|z\| Pearson 由 0.976 升到 0.999。`[推定]` 在 range-preserving 協定下，A4 的 magnitude／sorted-magnitude 攻擊至少不會比 legacy PNG 弱；這正是 AF-024 要求兩欄分開報告的原因，待 A4 實測。
+
+## 8. AF-025 固定 norm S2 v2
+
+* `[決定]`（2026-10-14）S2 v2 在 transform 前固定 latent norm `C=248.261`；真實 norm 與 M1 lo/hi 以 private-metadata AEAD 保護，合法端在 HMAC 驗證後恢復。v1 的公開 lo/hi 與 norm leakage 結果保留作修補前基準。
+* `[事實]` formal N=200：T1 norm-only Top-1=`0.005`；T2-WB public-PNG inversion 的 raw 與 dev-calibrated Top-1 均=`0.005`，random=`0.005`。原 v1 對應結果為 T1=`1.0`、range-preserving T2-WB=`0.25`。
+* `[事實]` 合法 private-range inversion 後 latent cosine mean=`0.999797`（95% bootstrap CI `[0.999794,0.999800]`）。此 latent 指標只作合法路徑正控制；影像可逆性仍須用 PSNR／SSIM／L∞ 判斷。
+* `[事實]` public PNG／storage record 不含 lo/hi；修改 private-metadata ciphertext 會在 inverter 呼叫前被拒絕。100 次不同 nonce 的 protected payload hash 全部唯一。
+* 來源：`paper_assets/tables/table_AF025_fixed_norm_norm_leakage.csv`、`table_AF025_fixed_norm_T2WB_inversion.csv`、`results/AF025_fixed_norm_T1_T2WB.json`；formal run `AF025_FIXED_NORM_FORMAL_20261014T161327001754Z_c4eda689`。

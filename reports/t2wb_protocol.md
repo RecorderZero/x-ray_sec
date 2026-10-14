@@ -2,6 +2,7 @@
 
 > 狀態：§1–§3 為量測規則；§4 為使用者 2026-10-10 裁決的 `Inconclusive` 規則（取代原提案），A4／D7 依此實作。
 > 依據：WORKFLOW §3.4 第 4 點、PROPOSAL §5.4、AUD-20261008-03（AF-017、AF-019）。
+> AF-025 更新：2026-10-14 使用者裁決採固定 norm S2 v2；舊有 legacy/range-preserving 兩欄規則保留為 v1 與前作比較，v2 規則見 §3.2。
 
 ## 1. 為什麼不能用 latent cosine 0.906
 
@@ -56,6 +57,14 @@
 - **metadata enrollment 前提**：lo/hi 無法直接和原圖 latent 比距離。其 linkage gallery 明定為攻擊者已持有、以同一固定 legacy key／pipeline 產生的具身分標籤 anonymous enrollment metadata；這比純 T2-WB 多一個 auxiliary enrollment oracle，結果必須標成 `T2-WB+enrollment`，不得冒充 key recovery。若每位病人只有同一筆 deterministic record，禁止拿 query 本身當 enrollment；正式實驗必須使用不同影像／不同 acquisition，否則該格標 `not_evaluable`。
 - **特徵合併**：lo/hi＋原特徵不得用 formal 標籤調權重。各距離先以 dev negative-pair distance 的 median/MAD 做 robust 標準化，再以預先固定的等權平均合併；MAD=0 的 metadata（legacy 常數欄）只保留原特徵並標記 metadata 無變異。
 - **controls**：各 scorer 沿用 §3 的方案專屬正控制與 seed 1911 shuffle 負控制；另記 calibration split hash、樣本數、bias、median/MAD 與 enrollment 前提。科學 Top-k 不作工程通過門檻。
+
+### 3.2 AF-025 裁決後：固定 norm S2 v2
+
+- transform 前把每張 latent 縮放到凍結公開常數 `C=248.261`；真實 norm 只存在於 ChaCha20-Poly1305 private metadata，合法 inverse 後恢復。
+- M1 public PNG 只含量化像素 `q`，不含 lo/hi text chunk；public storage record 的 lo/hi 亦為空。合法端須先通過外層 HMAC，再解密 private lo/hi、decode、inversion、inverse 與 norm restore。
+- T2-WB 攻擊者 query 是 public PNG 的 `q/255` 經目標模型 inversion；合法 positive control 使用 private lo/hi 還原值域後 inversion。兩者不得混用。
+- dev_v1.1 只凍結 `median(||zhat_public||/C)`；security_v1 N=200 同時報 raw 與 dev-calibrated norm-only。正式結果：T1 Top-1=`0.005`；T2-WB raw／dev-calibrated Top-1 均=`0.005`（random=`0.005`）；合法 latent cosine mean=`0.999797`。
+- 結論只限指定 norm attack；fixed norm、repeat 與 structured probes 的成功不構成一般 IND-CPA 或通用安全證明。
 
 ## 4. `Inconclusive` 判定（使用者裁決 2026-10-10，AUD-20261010-02 §1）
 

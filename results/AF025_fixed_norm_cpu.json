@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task_id": "AF025.FIXED_NORM.CPU",
+  "created_at": "2026-10-14T16:01:21.841658+00:00",
+  "git_commit": "78a9ba36d9ae758c24bcdb1fc5f3afb1a868c065",
+  "git_dirty_tracked_files": false,
+  "script_sha256": "658341f0b0e4d900fc9f151f86937a2d17768e6dca5bf911e4799e07aba88a68",
+  "cache_run_id": "E2.3_20261009T183736363217Z_84cf642a",
+  "cache_sha256": "195c20b3124af54c5dd40c644bae78af3144ae176204982c4c2f7b5effd69190",
+  "split_sha256": "5843da54d027cbe5b7d518349a374f859b5d2c0e07b9b66ea5f89c9530a94490",
+  "sample_count": 200,
+  "fixed_norm": 248.261,
+  "fixed_norm_float64_bits": "406f085a1cac0831",
+  "source_norm_min": 246.79464329539266,
+  "source_norm_max": 248.82398151258008,
+  "rounds": 1,
+  "permutation": false,
+  "tables": {
+    "D7.3_T1": "paper_assets/tables/table_AF025_fixed_norm_T1.csv",
+    "D7.6": "paper_assets/tables/table_AF025_fixed_norm_probe.csv",
+    "D7.7": "paper_assets/tables/table_AF025_fixed_norm_repeat.csv"
+  },
+  "disclaimer": "scientific outcomes are measurements, not engineering pass gates"
+}

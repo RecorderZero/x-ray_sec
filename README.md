@@ -147,8 +147,11 @@
 | `paper_assets/tables/table_D7_T2WB_inversion.csv` | D7.1 formal N=200 的兩種存檔 inversion 品質、runtime 與 bootstrap 95% CI；逐樣本 query 留在 managed run，不進 Git。 |
 | `paper_assets/tables/table_attack_original.csv`、`table_norm_leakage.csv` | D7.2/D7.3 的 T1/T2-WB 正式結果；包含兩種存檔、相同 magnitude scorer、dev-only norm calibration 與正負控制。 |
 | `paper_assets/tables/table_cross_nonce.csv`、`table_geometry.csv`、`table_structured_probe.csv`、`table_repeat.csv`、`table_tamper.csv` | D7.4–D7.8：cross-nonce KPA/CPA、pairwise geometry、非 Gaussian probes、100 次重複加密與 S2/S2a tamper 對照。 |
-| `paper_assets/defense_package/`、`image/D7_attack_summary.png` | P7.1 defense 素材包：9 條 claim→source hash 索引、方法／攻擊／norm limitation／tamper 素材導覽與 D7 Top-1 圖。 |
+| `paper_assets/defense_package/`、`image/D7_attack_summary.png` | P7.1 defense 素材包：10 條 claim→source hash 索引、方法／攻擊／norm limitation／AF-025 修補／tamper 素材導覽與 D7 Top-1 圖。 |
 | `results/D7_T1_T2WB_linkage.json` | D7.2/D7.3 完整分析 provenance：formal/dev run ID、dev norm bias、positive/negative controls 與各 storage/scorer metrics。 |
+| `paper_assets/tables/table_AF025_fixed_norm_T1.csv`、`table_AF025_fixed_norm_norm_leakage.csv` | AF-025 固定 norm v2 的 formal N=200 T1/T2-WB norm-only 結果；含 raw、dev calibration、負控制與 random baseline。 |
+| `paper_assets/tables/table_AF025_fixed_norm_probe.csv`、`table_AF025_fixed_norm_repeat.csv` | AF-025 補驗的 structured probes 與同明文 100-nonce repeat evidence。 |
+| `paper_assets/tables/table_AF025_fixed_norm_T2WB_inversion.csv`、`results/AF025_fixed_norm_T1_T2WB.json` | fixed-norm formal/dev run provenance、攻擊者 public-PNG inversion、合法 private-range positive control 與 runtime 摘要。 |
 | `reports/method_comparison.md`、`image/method_comparison.png` | 固定 `dev_v1.1_010` 的 P/S0/S1/S2a/S2 三欄比較（原圖／stored anonymous／重構圖），含 storage protocol 與 cosine estimand 解讀。 |
 | `paper_assets/tables/table_method_comparison.csv`、`results/method_comparison.json` | 上述單圖的 PSNR、SSIM、L∞、float/uint8 最大 pixel error、MSE/RMSE/MAE、x0 cosine、P-output cosine與完整 provenance。 |
 | `results/A3.4_T1_gallery.json` | A3.4 逐 scheme×scorer 的 Top-1/5、mAP、CI、CMC 與正負控制（security_v1 200 張，T1）。 |

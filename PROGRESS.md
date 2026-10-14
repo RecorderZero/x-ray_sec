@@ -1377,6 +1377,9 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 新增 `scripts/af025_fixed_norm_cpu.py`、`af025_fixed_norm_t2wb.py`、`af025_fixed_norm_analyze.py`；CPU runner 已對 frozen `security_v1` N=200 執行，GPU runner 尚未啟動。
 * 使用者同意在確認與既有 vLLM 可共存後執行正式 GPU 補驗。檢查 RTX 5090：總 32,607 MiB、vLLM 14,342 MiB、RustDesk 537 MiB、當時 free 17,201 MiB、utilization 0%；先以 N=2 smoke 實測再決定啟動 formal。
 * 第一次 N=2 smoke `AF025_FIXED_NORM_SMOKE_20261014T160133624188Z_f2ea04c4` 完成兩張科學計算但 managed artifact validation fail：manifest 遺漏必填的 `container_version`／`nonce_mode`。已補欄；該 run 保留為 failed，不修改後重用。
+* 修正版 N=2 smoke `AF025_FIXED_NORM_SMOKE_20261014T160317566922Z_8e4ca5a2` succeeded／valid；dev calibration `AF025_FIXED_NORM_DEV_20261014T160426684716Z_911608a9` 完成 20/20，`formal=false`、`evidence_role=dev_calibration`、clean commit `202c7fc`。
+* formal run `AF025_FIXED_NORM_FORMAL_20261014T161327001754Z_c4eda689` 完成 security_v1 200/200；每張只生成一次 anonymous image，再分別做 attacker public-PNG inversion 與 legitimate private-range inversion。run succeeded、artifact validator valid、query `(200,1,256,256)` 全部有限且 hash 重讀一致。
+* 執行 `scripts/af025_fixed_norm_analyze.py`：dev 只凍結 median attacker-norm/C=`1.013018`；formal 同時報 raw 與 dev-calibrated norm linkage，未用 formal 標籤調參。
 
 ### 3. 執行結果 (Results & Observations)
 * [事實] AF-025 CPU formal N=200：固定 norm T1 norm-only Top-1=`0.005`、Top-5=`0.025`，與 random=`0.005` 一致；原 S2 v1 的 T1 Top-1 為 `1.0`。
@@ -1385,11 +1388,16 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * [事實] 全套正式測試範圍 `pytest -q tests` 為 108 passed、14 skipped；新增／相依 crypto focused tests 27 passed。
 * [事實] 目前沒有仍在執行的 AF-025 GPU managed run 或其他本專案背景程序；vLLM 為使用者既有程序，未停止或修改。
 * [事實] 第一次 smoke 執行中 DDIM Python 約占 1,712 MiB；含 vLLM/RustDesk 的 GPU 總使用 16,626 MiB，仍有 15,484 MiB free，未發生 OOM。兩張約 50 秒；正式 N=200 因每張一次生成＋攻擊者/合法端各一次 inversion，預估約 80–90 分鐘。
+* [事實] formal 實際耗時 77 分 10 秒，無 OOM／失敗／跳過；vLLM 未停止或修改。GPU 已釋放，目前沒有本專案背景程序。
+* [事實] AF-025 formal N=200：T2-WB raw norm-only Top-1=`0.005`、Top-5=`0.025`；dev-calibrated Top-1=`0.005`、Top-5=`0.035`；負控制與 random Top-1 均=`0.005`。原 S2 v1 的 range-preserving dev-calibrated Top-1=`0.250`。
+* [事實] legitimate private-range inversion 的 latent cosine mean=`0.999797`（95% bootstrap CI `[0.999794,0.999800]`）、min=`0.999729`；public PNG／storage record 200/200 均無 lo/hi。
+* [事實] 平均 runtime／張：anonymous generation=`7.744 s`、attacker inversion=`7.679 s`、legitimate inversion=`7.679 s`；三者合計約 `23.103 s`，不含一次性載入與 artifact validation。
+* [事實] defense package 已擴充為 10 條 claim，新增 D7-C10（fixed norm T1/T2-WB 均 `0.005`）；連續重建的 claims/index/figure SHA-256 完全一致。最終 `pytest -q tests` 為 108 passed、14 skipped。
 
 ### 4. 達標判定 (Assessment)
 * [x] AF-025 (a)(b)(e) 實作與 CPU formal T1／D7.6／D7.7 已完成實作方驗證。
-* [ ] AF-025 (c) formal N=200 T2-WB 尚待 N=2 smoke、dev calibration 與正式 managed GPU run。
-* [ ] finding 尚不可關閉；正式 GPU 結果與稽核複驗完成前維持「裁決已定、落地補驗中」。
+* [x] AF-025 (c)(d) formal N=200 T2-WB、repeat、structured probe 與 legitimate positive control 已完成實作方驗證。
+* [x] **AF-025 實作方 FIXED?**：裁決 (a)–(e) 均已落地，指定 norm attack 由 v1 的 T1=`1.0`／T2-WB=`0.25` 降至 v2 的 `0.005`／`0.005`；finding 仍須稽核方複驗後才 CLOSED。
 
 ### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
 * 固定 norm 不是增加 WHT 輪數，而是在正交核心前移除已確認的病人間 norm 指紋；真實尺度只存在於經 AEAD 加密的 recovery metadata。
@@ -1400,5 +1408,5 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 無。依使用者最新裁決新增 §2.5 並更新 S2 v2 定義；formal sample size 維持 N=200，舊 S2 v1 結果保留作修補前基準而不覆寫。
 
 ### 7. 下一步
-* 先提交並固定 source commit，執行 AF-025 N=2 GPU smoke，同步觀察 VRAM 與 vLLM；若無 OOM 且餘裕合理，再跑 dev calibration 與使用者已條件同意的 formal N=200。
-* formal 完成後執行 analyzer、更新 AF-025 T1/T2-WB 表格與 defense package，記錄 runtime/storage/合法 fidelity，送稽核關閉 AF-025。
+* 請稽核方獨立複算 fixed-norm T1/T2-WB norm Top-k、確認 public PNG/record 不含 lo/hi、private metadata tamper ordering，以及 repeat／probe 結果；複驗後裁決 AF-025 是否 CLOSED。
+* AF-025 關閉後進入 Q8；影像端合法重構品質沿用稽核 phase-B n=40 作診斷，Q8 formal 另以 PSNR／SSIM／L∞ 完成主表，不以 latent cosine 取代影像品質。

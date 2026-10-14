@@ -1,12 +1,12 @@
 # P7.1 Defense Package
 
 本素材包由 `scripts/build_defense_package.py` 從 D7 表格重建；headline 不手抄。
-S2a 與 S2 的 confidentiality transform 相同，差別是 S2 加入 authentication。
+v1 顯示正交 transform 的 norm limitation；AF-025 v2 加入固定 norm 與 private recovery metadata。
 
 ## 主素材
 
 - 方法／整合圖：`image/D6.7_s2_dev.png`
-- 攻擊與 norm limitation：`image/D7_attack_summary.png`、`paper_assets/tables/table_attack_original.csv`、`table_norm_leakage.csv`
+- 攻擊、norm limitation 與修補：`image/D7_attack_summary.png`、`paper_assets/tables/table_attack_original.csv`、`table_norm_leakage.csv`、`table_AF025_fixed_norm_norm_leakage.csv`
 - cross-nonce／geometry／probe／repeat／tamper：同目錄各 D7 表格。
 
 ## Claim index
@@ -22,9 +22,10 @@ S2a 與 S2 的 confidentiality transform 相同，差別是 S2 加入 authentica
 | D7-C7 | Same-plaintext repeat | unique protected payloads=100/100 | `paper_assets/tables/table_repeat.csv@78285b58d5d1` |
 | D7-C8 | Authentication | S2 rejected=7/7; S2a rejected=0/1 | `paper_assets/tables/table_tamper.csv@af52e845d625` |
 | D7-C9 | T2-WB inversion positive-control quality | latent cosine legacy=0.990134; range=0.999798 | `paper_assets/tables/table_D7_T2WB_inversion.csv@f90d555fc1f7` |
+| D7-C10 | AF-025 fixed-norm remediation | norm Top-1 T1=0.005; T2-WB=0.005 | `paper_assets/tables/table_AF025_fixed_norm_norm_leakage.csv@a8eae222e1b5` |
 
 ## 限制
 
 - magnitude／norm 與 geometry 結果是指定攻擊的實測，不是通用安全證明。
 - D7.4 的顯式 full-map KPA/CPA 為 d=1,024 synthetic diagnostic；同 nonce positive control 通過。
-- range-preserving T2-WB norm linkage 仍明顯高於 random，屬 AF-025，需使用者裁決保護強度。
+- v1 range-preserving T2-WB norm linkage 明顯高於 random；AF-025 v2 的指定 T1/T2-WB norm attack 已回到 random，但仍不是通用安全證明。

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "task_id": "AF025.FIXED_NORM.D7.3",
+  "created_at": "2026-10-14T17:35:07.966877+00:00",
+  "git_commit": "202c7fcd16c8d7e1a772ba2a9bf2c888db7d9b36",
+  "git_dirty_tracked_files": false,
+  "script_sha256": "274ef257001cc50b08857f837c888a3ec0e29f854abadf7a3ae9ed040bd110d1",
+  "formal_run_id": "AF025_FIXED_NORM_FORMAL_20261014T161327001754Z_c4eda689",
+  "dev_run_id": "AF025_FIXED_NORM_DEV_20261014T160426684716Z_911608a9",
+  "cache_run_id": "E2.3_20261009T183736363217Z_84cf642a",
+  "sample_count": 200,
+  "fixed_norm": 248.261,
+  "dev_norm_bias": 1.0130175471693517,
+  "cells": {
+    "raw": {
+      "queries": 200,
+      "gallery_size": 200,
+      "random_top1": 0.005,
+      "top1": 0.005,
+      "top1_ci95_wilson": [
+        0.0008831687156009814,
+        0.02777370439789293
+      ],
+      "top5": 0.025,
+      "top5_ci95_wilson": [
+        0.010724719651761264,
+        0.05717834040664198
+      ],
+      "mAP": 0.029390154740607223,
+      "mAP_ci95_bootstrap": [
+        0.01957016881646343,
+        0.04283163957672184
+      ],
+      "median_rank": 100.5,
+      "max_rank": 200
+    },
+    "dev_median_to_C": {
+      "queries": 200,
+      "gallery_size": 200,
+      "random_top1": 0.005,
+      "top1": 0.005,
+      "top1_ci95_wilson": [
+        0.0008831687156009814,
+        0.02777370439789293
+      ],
+      "top5": 0.035,
+      "top5_ci95_wilson": [
+        0.017055542008567192,
+        0.07047061152229073
+      ],
+      "mAP": 0.033583946007278716,
+      "mAP_ci95_bootstrap": [
+        0.022629006761351877,
+        0.04796007716130677
+      ],
+      "median_rank": 94.5,
+      "max_rank": 200
+    }
+  },
+  "negative_control": {
+    "queries": 200,
+    "gallery_size": 200,
+    "random_top1": 0.005,
+    "top1": 0.005,
+    "top1_ci95_wilson": [
+      0.0008831687156009814,
+      0.02777370439789293
+    ],
+    "top5": 0.025,
+    "top5_ci95_wilson": [
+      0.010724719651761264,
+      0.05717834040664198
+    ],
+    "mAP": 0.029390154740607227,
+    "mAP_ci95_bootstrap": [
+      0.019650405012479062,
+      0.042523930348685325
+    ],
+    "median_rank": 100.5,
+    "max_rank": 200
+  },
+  "legitimate_latent_cosine_mean": 0.999797277982209,
+  "legitimate_latent_cosine_min": 0.9997285482830902,
+  "calibration_rule": "dev median attacker norm divided by public fixed C"
+}

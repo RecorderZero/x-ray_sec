@@ -1,0 +1,5 @@
+probe,dimension,original_norm,normalized_norm,protected_norm,protected_norm_minus_C,output_mean,output_variance,output_max_abs,interpretation
+basis_0,4096,1.0,248.261,248.26100000000193,1.9326762412674725e-12,-0.034093460083007815,15.046084735833132,3.879078125,fixed norm removes norm distinction; structural diagnostics are not a security proof
+basis_123,4096,1.0,248.261,248.26100000000193,1.9326762412674725e-12,-0.018940811157226574,15.046888345527059,3.879078125,fixed norm removes norm distinction; structural diagnostics are not a security proof
+constant,4096,64.0,248.26100000000193,248.26099999999994,-5.684341886080802e-14,0.039302183151245104,15.045702438252935,15.516312500000002,fixed norm removes norm distinction; structural diagnostics are not a security proof
+sparse_16,4096,4.0,248.261,248.26099999999843,-1.5631940186722204e-12,0.012311527252197273,15.0470955261505,5.8186171875,fixed norm removes norm distinction; structural diagnostics are not a security proof

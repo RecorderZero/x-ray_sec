@@ -57,6 +57,7 @@ def main() -> None:
         "repeat": ROOT / "paper_assets/tables/table_repeat.csv",
         "tamper": ROOT / "paper_assets/tables/table_tamper.csv",
         "inversion": ROOT / "paper_assets/tables/table_D7_T2WB_inversion.csv",
+        "fixed_norm": ROOT / "paper_assets/tables/table_AF025_fixed_norm_norm_leakage.csv",
     }
     data = {name: read_csv(path) for name, path in sources.items()}
     abs_t1 = select(data["attack"], threat_model="T1", scorer="abs")
@@ -74,6 +75,8 @@ def main() -> None:
     repeat_unique = int(data["repeat"][0]["unique_payloads_total"])
     inv_legacy = select(data["inversion"], storage="legacy_png", metric="attacker_latent_cosine")
     inv_range = select(data["inversion"], storage="range_preserving_png", metric="attacker_latent_cosine")
+    fixed_norm_t1 = select(data["fixed_norm"], threat_model="T1")
+    fixed_norm_t2 = select(data["fixed_norm"], threat_model="T2-WB", calibration="dev_median_to_C")
     claims = [
         ("D7-C1", "T1 original-|z| linkage", f"Top-1={float(abs_t1['top1']):.3f} (random=0.005)", "attack"),
         ("D7-C2", "T2-WB original-|z| linkage across storage", f"legacy={float(abs_t2_legacy['top1']):.3f}; range={float(abs_t2_range['top1']):.3f}", "attack"),
@@ -84,6 +87,7 @@ def main() -> None:
         ("D7-C7", "Same-plaintext repeat", f"unique protected payloads={repeat_unique}/100", "repeat"),
         ("D7-C8", "Authentication", f"S2 rejected={sum(r['rejected']=='True' for r in tamper_s2)}/{len(tamper_s2)}; S2a rejected={sum(r['rejected']=='True' for r in tamper_s2a)}/{len(tamper_s2a)}", "tamper"),
         ("D7-C9", "T2-WB inversion positive-control quality", f"latent cosine legacy={float(inv_legacy['mean']):.6f}; range={float(inv_range['mean']):.6f}", "inversion"),
+        ("D7-C10", "AF-025 fixed-norm remediation", f"norm Top-1 T1={float(fixed_norm_t1['top1']):.3f}; T2-WB={float(fixed_norm_t2['top1']):.3f}", "fixed_norm"),
     ]
     claim_rows = [{
         "claim_id": claim_id, "claim": claim, "headline": headline,
@@ -93,14 +97,15 @@ def main() -> None:
     } for claim_id, claim, headline, source_name in claims]
     write_csv(claims_path, claim_rows)
 
-    labels = ("T1\nabs", "T2 legacy\nabs", "T2 range\nabs", "T1\nnorm", "T2 legacy\nnorm cal", "T2 range\nnorm cal")
+    labels = ("T1\nabs", "T2 legacy\nabs", "T2 range\nabs", "v1 T1\nnorm", "v1 T2 legacy\nnorm cal", "v1 T2 range\nnorm cal", "v2 T1\nnorm", "v2 T2\nnorm cal")
     values = [float(abs_t1["top1"]), float(abs_t2_legacy["top1"]), float(abs_t2_range["top1"]),
-              float(norm_t1["top1"]), float(norm_legacy["top1"]), float(norm_range["top1"])]
-    colours = ["#2a78d6"] * 3 + ["#eb6834"] * 3
-    fig, ax = plt.subplots(figsize=(10, 4.8))
+              float(norm_t1["top1"]), float(norm_legacy["top1"]), float(norm_range["top1"]),
+              float(fixed_norm_t1["top1"]), float(fixed_norm_t2["top1"])]
+    colours = ["#2a78d6"] * 3 + ["#eb6834"] * 3 + ["#2a9d66"] * 2
+    fig, ax = plt.subplots(figsize=(12, 5.0))
     bars = ax.bar(labels, values, color=colours)
     ax.axhline(1 / 200, color="black", linestyle="--", linewidth=1, label="random Top-1 = 0.005")
-    ax.set_ylim(0, 1.05); ax.set_ylabel("Top-1 linkage rate"); ax.set_title("D7 S2 linkage: magnitude attacks and norm limitation")
+    ax.set_ylim(0, 1.05); ax.set_ylabel("Top-1 linkage rate"); ax.set_title("D7 S2 linkage and AF-025 fixed-norm remediation")
     ax.grid(axis="y", color="#dddddd", linewidth=0.8); ax.legend()
     for bar, value in zip(bars, values):
         ax.text(bar.get_x() + bar.get_width() / 2, value + 0.018, f"{value:.3f}", ha="center", fontsize=9)
@@ -110,10 +115,10 @@ def main() -> None:
     lines = [
         "# P7.1 Defense Package", "",
         "本素材包由 `scripts/build_defense_package.py` 從 D7 表格重建；headline 不手抄。",
-        "S2a 與 S2 的 confidentiality transform 相同，差別是 S2 加入 authentication。", "",
+        "v1 顯示正交 transform 的 norm limitation；AF-025 v2 加入固定 norm 與 private recovery metadata。", "",
         "## 主素材", "",
         "- 方法／整合圖：`image/D6.7_s2_dev.png`",
-        "- 攻擊與 norm limitation：`image/D7_attack_summary.png`、`paper_assets/tables/table_attack_original.csv`、`table_norm_leakage.csv`",
+        "- 攻擊、norm limitation 與修補：`image/D7_attack_summary.png`、`paper_assets/tables/table_attack_original.csv`、`table_norm_leakage.csv`、`table_AF025_fixed_norm_norm_leakage.csv`",
         "- cross-nonce／geometry／probe／repeat／tamper：同目錄各 D7 表格。", "",
         "## Claim index", "",
         "| ID | Claim | Headline | Source |", "|---|---|---|---|",
@@ -121,7 +126,7 @@ def main() -> None:
     lines.extend(f"| {row['claim_id']} | {row['claim']} | {row['headline']} | `{row['source']}@{row['source_sha256_12']}` |" for row in claim_rows)
     lines.extend(["", "## 限制", "", "- magnitude／norm 與 geometry 結果是指定攻擊的實測，不是通用安全證明。",
                   "- D7.4 的顯式 full-map KPA/CPA 為 d=1,024 synthetic diagnostic；同 nonce positive control 通過。",
-                  "- range-preserving T2-WB norm linkage 仍明顯高於 random，屬 AF-025，需使用者裁決保護強度。", ""])
+                  "- v1 range-preserving T2-WB norm linkage 明顯高於 random；AF-025 v2 的指定 T1/T2-WB norm attack 已回到 random，但仍不是通用安全證明。", ""])
     index_path.parent.mkdir(parents=True, exist_ok=True)
     index_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"wrote {claims_path}, {index_path}, {args.figure}")
