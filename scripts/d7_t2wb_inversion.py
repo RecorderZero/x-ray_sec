@@ -181,13 +181,17 @@ def main() -> None:
         checkpoint_hash = sha256_file(args.checkpoint)
         if checkpoint_hash != cache_manifest.get("checkpoint_hash"):
             raise ValueError("checkpoint hash differs from E2.3 cache")
-        formal = args.limit == 0
+        # ``--limit 0`` only means "use the whole selected split".  It does not
+        # make the 20-image dev split a formal run.  Evidence roles must follow
+        # the frozen split contract, not merely the absence of a smoke limit.
+        formal = args.limit == 0 and len(rows) == 200 and args.split.name == "security_v1.csv"
+        evidence_role = "formal" if formal else ("smoke" if args.limit else "dev_calibration")
         if args.limit:
             if args.limit < 1:
                 raise ValueError("--limit must be positive")
             rows, latents = rows[:args.limit], latents[:args.limit]
         config = {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()}
-        config.update(storages=list(STORAGES), formal=formal, batch_size=1,
+        config.update(storages=list(STORAGES), formal=formal, evidence_role=evidence_role, batch_size=1,
                       pipeline=LEGACY_PIPELINE, guidance_scale=LEGACY_GUIDANCE_SCALE)
         context = open_run(args.task_id, config, args.artifacts_root)
         device = torch.device("cuda:0")
@@ -215,6 +219,7 @@ def main() -> None:
             "inversion_conditioning": "null=True (unconditional)",
             "storage_protocols": [LEGACY_STORAGE, RANGE_PRESERVING_PNG],
             "range_quantization": QUANTIZATION, "batch_size": 1, "formal": formal,
+            "evidence_role": evidence_role,
             "latent_cache_run_id": cache_manifest["run_id"],
             "latent_cache_sha256": sha256_file(args.latent_cache / "latents.npy"),
             "query_cache_file": query_path.name, "query_cache_sha256": sha256_file(query_path),

@@ -84,7 +84,10 @@ def main() -> None:
     t1 = linkage_rows(latents, protected)
     formal_q, formal_index, formal_manifest, _ = load_run(args.formal_run)
     _, _, dev_manifest, dev_rows = load_run(args.dev_run)
-    if formal_manifest.get("formal") is not True or dev_manifest.get("formal") is not False:
+    if (formal_manifest.get("formal") is not True
+            or formal_manifest.get("evidence_role") != "formal"
+            or dev_manifest.get("formal") is not False
+            or dev_manifest.get("evidence_role") != "dev_calibration"):
         raise RuntimeError("formal/dev run roles are not explicit")
     if formal_manifest["dataset_split_hash"] != cache_meta["split_sha256"]:
         raise RuntimeError("formal split differs from latent cache")

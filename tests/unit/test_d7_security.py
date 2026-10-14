@@ -5,6 +5,7 @@ import torch
 
 from scripts.d7_cpu_security import FIXTURE_KEY, nonce_for, tamper_rows
 from scripts.d7_metrics import feature, rank_metrics, ranks_l2
+from scripts.d7_t2wb_inversion import STORAGES
 from src.crypto.sot import transform_vectors
 
 
@@ -43,3 +44,7 @@ def test_d7_tamper_matrix_rejects_s2_but_not_s2a() -> None:
     s2a = [row for row in rows if row["method"] == "S2a"]
     assert len(s2a) == 1 and not s2a[0]["rejected"]
     assert s2a[0]["output_max_abs_change"] > 0
+
+
+def test_d7_storage_cells_are_frozen() -> None:
+    assert STORAGES == ("legacy_png", "range_preserving_png")

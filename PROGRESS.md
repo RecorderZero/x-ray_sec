@@ -1289,3 +1289,32 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 先提交 source＋CPU evidence 的 clean HEAD，執行 D7.1 dev smoke/calibration並驗證 artifact schema；通過後依使用者預先授權啟動約 80 分鐘的 formal N=200 managed GPU run。
 * formal 完成後執行 `d7_t2wb_analyze.py`，更新兩張主表、整理 P7.1 defense package、更新 README／PROGRESS，再送稽核。
+
+## 2026-10-14 · W5 · Track D · D7.1 smoke 與 dev evidence-role 修正
+
+### 1. 當前目標 (Objective)
+* 以 managed GPU smoke 驗證 D7.1 雙存檔 inversion runner；再建立 dev-only norm calibration artifact，正式 N=200 前先通過 schema 與角色檢查。
+
+### 2. 執行動作 (Actions Taken)
+* sandbox 內第一次 smoke 在載入模型前因 CUDA 不可見而 fail，隨即在 GPU 可見環境以完全相同命令重跑；沒有重用失敗 artifact。
+* `D7.1_SMOKE_20261013T183021510503Z_77120b9f` 完成 2 張 × 2 storages，artifact validator valid（4 rows）。
+* `D7.1_DEV_20261013T183135566676Z_1b415cd1` 完成 20 張 × 2 storages，40 筆 query 均有限且 hash 驗證通過；但檢查 manifest 發現 `formal=true`。
+* 根因為 runner 原本以 `--limit == 0` 判 formal，錯把「完整跑 dev split」視為 formal。已改為同時要求 `security_v1.csv`、N=200、無 limit，並新增 `evidence_role=formal/dev_calibration/smoke`；analyzer fail closed 檢查兩個角色。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] smoke 每張約 23.5 秒；legacy attacker latent cosine 約 0.990，range-preserving 約 0.9998，與既有 A4 量級一致。
+* [事實] 第一個 dev run 的數值與 query cache 正確，但角色 metadata 錯誤，因此不作正式 calibration 輸入、不修改後重用。
+* [事實] 目前沒有背景程序；formal N=200 尚未開始。
+
+### 4. 達標判定 (Assessment)
+* [x] GPU smoke 與 artifact validator 通過。
+* [ ] dev calibration 須以修正版 clean HEAD 重跑，確認 `formal=false`、`evidence_role=dev_calibration` 後才能進入 formal。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* `--limit` 是取樣控制，不是 evidence role；未來角色由 split contract 與明確 manifest 欄共同決定，analyzer 不再接受推測或錯標 artifact。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。錯標 artifact 已在 formal 前攔截，未進入統計或論文表格。
+
+### 7. 下一步
+* 提交 role 修正，重跑 dev calibration；通過後啟動預先授權的 formal N=200 managed run。
