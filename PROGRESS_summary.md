@@ -550,8 +550,8 @@
 | D7.2 | original／sorted magnitude gallery attacks | Achieved（AUD-20261014-02） | `e2e29d2`、`03505c0` |
 | D7.3 | adaptive norm attack 與 AF-025 量化 | Achieved（AUD-20261014-02） | `e2e29d2`、`03505c0` |
 | D7.4–D7.8 | cross-nonce、geometry、structured probe、repeat、tamper | Achieved（AUD-20261014-02） | `e2e29d2`、`03505c0` |
-| P7.1 | defense claim→evidence 素材包 | Achieved（AUD-20261014-02）；AF-025 延伸待複驗 | `03505c0`、`9c0f381` |
-| AF-025 | 固定 norm S2 v2 與 formal 補驗 | 實作方 **FIXED?**；待稽核 CLOSED | `78a9ba3`、`202c7fc`、`9c0f381` |
+| P7.1 | defense claim→evidence 素材包 | Achieved（AUD-20261014-02）；AF-025 延伸已複驗（AUD-20261015-01） | `03505c0`、`9c0f381` |
+| AF-025 | 固定 norm S2 v2 與 formal 補驗 | **CLOSED**（AUD-20261015-01） | `78a9ba3`、`202c7fc`、`9c0f381` |
 
 * **G4：通過**（AUD-20261014-02）。
 * 本週實作 commit 範圍：`e2e29d2..9c0f381`。
@@ -637,7 +637,7 @@
 * AUD-20261014-03：獨立比較 AF-025 候選，建議固定 norm 方案；屬裁決證據，不取代 formal 補驗。
 * AUD-20261014-04：記錄使用者正式採固定 norm。
 * AUD-20261014-05：攻擊文件／工具範圍確認，未開新 finding。
-* AF-025 目前為實作方 **FIXED?**：v2 補驗與 P7.1 延伸已完成（W5-F2、W5-T9～W5-T13），仍須稽核方獨立複驗後才可標為 CLOSED。
+* AUD-20261015-01：fixed-norm v2 獨立複驗 **PASS**，新 finding 0；AF-025 **CLOSED**。稽核方獨立確認 T1／T2-WB norm 結果、public PNG／record 不公開 lo/hi、HKDF domain separation、M1／M2 驗證順序與合法還原，且目前沒有未關閉的 MAJOR／MINOR finding（W5-F2、W5-T9～W5-T13）。
 
 ### 5.7 限制與未解問題
 
@@ -646,7 +646,7 @@
 * fixed-norm v2 的 formal 補驗確認 latent 正控制與指定 norm attack，但尚未完成 N=200 的影像 PSNR／SSIM／L∞ 主表；W5-T10 的 latent cosine 不可取代 Q8.1 影像品質。
 * public PNG 不含 lo/hi 會使未持有 private metadata 的第三方無法恢復實際值域；這是刻意的隱私／部署取捨，PACS 如何綁定 public image 與 private recovery record 仍需在部署章節說明。
 * runtime 來自與既有 vLLM 共用 GPU 的單次 formal run（W5-T10）；其數值包含資源競爭可能性，Q8.4 須把 diffusion 與 crypto 元件分開量測。
-* AF-025 尚未由稽核方關閉；在收到複驗前，論文只能寫「補驗結果支持修補有效」，不能寫成已完成獨立驗證。
+* AF-025 已經獨立複驗並關閉，但其結論仍限定於已測 norm attack 與本研究威脅模型；不得擴張成一般 IND-CPA 或未知攻擊皆無效（W5-T9）。
 
 ### 5.8 下週計畫（Week 6）
 

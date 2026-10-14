@@ -5,8 +5,8 @@
 ## 目前狀態
 
 - E0.1、E1.1–E1.5 已由 AUD-20261008-02 複驗通過；E2.2 已完成 S0/S1 legacy regression，並補上恆等金鑰 P（AF-017）。
-- 2026-10-09 起 P/S0/S1 一律走學長**加密流程**（`ddim_sample_loop_anonymization`）；E1 的推論流程結果只作病灶定位流程的歷史基線。AF-017、AF-020、AF-021 已由 AUD-20261010-01 關閉；AF-019 的 E2.5 部分已完成，A4 T2-WB 部分待 Week 2。
-- A3／A4／P3.1／P4.1 已完成且 G1 PASS；D7/G4 PASS。AF-025 已正式裁決採固定 norm S2 v2，N=200 補驗已完成，待稽核方複驗後關閉 finding。
+- 2026-10-09 起 P/S0/S1 一律走學長**加密流程**（`ddim_sample_loop_anonymization`）；E1 的推論流程結果只作病灶定位流程的歷史基線。AF-017、AF-020、AF-021 已由 AUD-20261010-01 關閉；AF-019 的 E2.5 與 A4 T2-WB 均已完成並關閉。
+- A3／A4／P3.1／P4.1 已完成且 G1 PASS；D7/G4 PASS。AF-025 的 fixed-norm S2 v2 與 N=200 補驗已由 AUD-20261015-01 獨立複驗通過並 CLOSED；目前無未關閉的 MAJOR／MINOR finding。
 - E2.3 latent cache 已凍結（`security_v1` 200 張、`dev_v1.1` 20 張，batch 1，抽樣重算全部 bit-exact）；E2.4 指標語意報告與 E2.5 dev round-trip 已完成，G0 的子任務全部有交付物。
 - T2-WB `Inconclusive` 規則依使用者 2026-10-10 裁決：攻擊成功照實報告；未成功時才看各方案專屬的正控制（`reports/t2wb_protocol.md` §4）。
 - 目標 checkpoint 可 strict load，missing/unexpected keys 均為 0。
@@ -14,7 +14,7 @@
 - 固定 dev split：`dev_v1.1`，20 張、20 位不同病人，健康／積水各 10 張；hash 排除本機路徑。
 - 正式 split：`security_v1`，200 位病人；重現學長抽樣後排除 22,253 位曾入選訓練病人，健康／積水各 100 位。
 - 主線 P/S0/S1/S2a/S2 的生成一律依學長程式寫死的 `guidance_scale=-1`（y=0 健康類條件生成、單次模型呼叫、無 CFG 混合；與 `guidance_scale=0` 逐位元等價，見 AF-021；使用者 2026-10-09 裁決），inversion 為 `null=True` 無條件；論文用語不得寫成「guidance 0」或「無條件生成」。guidance=4 僅可作病灶健康化附表。
-- D5.1–D5.7 已完成實作、clean-HEAD CPU 證據與稽核：100,000 nonce 無碰撞且 reuse fail closed；14-case HMAC tamper matrix 全過；AF-024 已關閉，AF-030 尚待 D6 整合；AF-037／AF-038 已修復待稽核複驗。
+- D5.1–D5.7 已完成實作、clean-HEAD CPU 證據與稽核：100,000 nonce 無碰撞且 reuse fail closed；14-case HMAC tamper matrix 全過；AF-024、AF-030、AF-037、AF-038 均已關閉。
 - 主要環境：`CFG_DDIM`、Python 3.10.19、PyTorch 2.14.0+cu130、RTX 5090；D5 primitive provider `cryptography==50.0.2`。
 
 ## 核心規劃與紀錄

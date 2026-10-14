@@ -1442,3 +1442,32 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 送稽核方複驗 AF-025 fixed-norm T1／T2-WB、public metadata、tamper ordering、repeat 與 probes；通過後才把 AF-025 改為 CLOSED。
 * 進入 Week 6 Q8.1–Q8.5 與 P8.1 pilot，先凍結 formal 設定再執行 Week 7。
+
+## 2026-10-15 · W5 · AF-025 稽核關閉同步
+
+### 1. 當前目標 (Objective)
+* 讀取稽核方最新 `AUD-20261015-01`，將 AF-025 的正式狀態同步到實作方進度、每週摘要與 README；不修改 auditor-owned 文件。
+
+### 2. 執行動作 (Actions Taken)
+* 核對 `AUDIT.md` 的本輪範圍、獨立驗證項目、finding 狀態及附帶限制。
+* 更新 `PROGRESS_summary.md` Week 5 的 P7.1／AF-025 狀態、稽核段落與限制段落；更新 `README.md` 專案現況。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] AUD-20261015-01 判定 PASS、新 finding 0，AF-025 CLOSED；目前沒有未關閉的 MAJOR／MINOR finding。
+* [事實] 稽核方獨立確認 fixed-norm T1／T2-WB norm linkage、public lo/hi 隱藏、HKDF domain separation、private metadata tamper 在 inversion 前拒絕，以及合法 M1／M2 還原。
+* [事實] 本輪只更新文件狀態，未啟動 GPU 或背景程序；目前沒有需要監控的本專案程序。
+
+### 4. 達標判定 (Assessment)
+* [x] AF-025 已由唯一有權關閉 finding 的稽核方正式標記 CLOSED。
+* [x] Week 5 摘要不再顯示過期的 `FIXED?`／待複驗狀態。
+* [x] 稽核關閉沒有被誤寫成一般密碼學安全證明。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* AF-025 的工程與稽核流程已終止；後續研究焦點轉為 Q8 的影像端品質、wrong-key／nonce、runtime 與 storage，而不是繼續調整 fixed norm。
+* 稽核仍指出正式影像 PSNR／SSIM／L∞ 主表屬 Q8 範圍；本輪關閉只代表 AF-025 驗收條件完成。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。AF-025 已依 WORKFLOW §2.5 以 formal N=200 補驗並經獨立稽核關閉。
+
+### 7. 下一步
+* 開始 Week 6 Q8.1–Q8.5 與 P8.1 pilot；正式長時間 GPU 任務仍依既有授權與 managed-run／監控規範執行。
