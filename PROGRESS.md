@@ -1532,3 +1532,39 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 提交經驗證的 Q8/P8 基礎設施後，以 clean commit 執行 N=2 GPU smoke（預估約 5 分鐘，低於 30 分鐘門檻），再執行 CPU analyzer 並檢查五表、P8 圖與 provenance。
 * smoke 通過後，向使用者報告 N=20 dev pilot 的目的、約 45 分鐘估時與 CPU/smaller-smoke 替代方案，取得明確裁決才啟動。
+
+## 2026-10-15 · W6 · Q8／P8 真實 N=2 GPU smoke
+
+### 1. 當前目標 (Objective)
+* 以真實 checkpoint、dev E2.3 latent cache 與 clean Q8/P8 commit 驗證 GPU runner、artifact schema、五張 Q8 表與 P8 視覺格可完整執行；本 smoke 不作正式科學結論。
+
+### 2. 執行動作 (Actions Taken)
+* 將基礎設施以 commit `e0723aa` 提交；commit 前只 stage 7 個明確路徑，`scripts/check_staged_files.sh` 與 cached diff check 均通過。
+* 一般沙箱首次啟動 `Q8_PILOT_SMOKE_20261015T030314601820Z_955298c1`，因無法看見 NVIDIA driver 在 1 秒內 fail closed；未載入模型、未處理樣本，failed run 保留不覆寫。
+* 以相同設定、樣本與 commit 在 GPU 權限下重跑 `Q8_PILOT_SMOKE_20261015T030330332601Z_955298c1`：dev_v1.1 前 2 張、noise level 500、range-preserving 主 cell、smoke fixture key/nonce。
+* 對成功 run 執行 `scripts.q8_analyze --lpips auto`，輸出到本地未追蹤的 `paper_assets/q8_pilot_smoke/`；大型／逐樣本或 smoke 產物未加入 Git。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 成功 run 為 2/2、artifact validator valid、無 failure/skip；總牆鐘約 4 分 43 秒，每張完整四方法比較約 132 秒。
+* [事實] smoke M1 對 x0（N=2，僅工程診斷）mean PSNR：P=`38.314`、S0=`37.943`、S1=`39.370`、S2=`38.239` dB；mean SSIM：P=`0.98020`、S0=`0.97715`、S1=`0.97824`、S2=`0.97671`。S2 未觸發「比 S0 低超過 1 dB」檢查條件。
+* [事實] S2 wrong-key 與 wrong-nonce authenticated open rejection rate 均=`1.0`，inverter calls 均=`0`；artifact/analyzer 的 fail-closed consistency checks 通過。
+* [事實] cached-latent→M1 median 約 `7.75–7.78 s`，M1→reconstruction median約 `15.42–15.49 s`；名稱明確排除 E2.3 初始 x0→z inversion。
+* [事實] analyzer 產生 fidelity 228 rows、anonymity 285、wrong-key 94、runtime 61、storage 106；LPIPS 因 AlexNet backbone 不在 cache 而標 `deferred`，未下載或替代。
+* [事實] GPU run 已結束、session `35258` exit 0；目前沒有需監控的本專案程序。
+
+### 4. 達標判定 (Assessment)
+* [x] 真實模型 API、E2.3 cache provenance／x0 hash、S2 fixed-norm v2 M1/M2、auth controls、managed artifacts 與 CPU analyzer 已在 N=2 跑通。
+* [x] Q8/P8 pilot 基礎設施可進入 dev N=20；目前結果角色仍為 `smoke`、`formal=false`，不得取代 pilot 或 formal。
+* [ ] P8 固定病例尚不完整：dev 前 2 張皆 label 0，因此 smoke 沒有 fixed label-1 row；完整 dev N=20 才涵蓋預先固定的健康與積水病例。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 真實 smoke 未出現 CPU synthetic 測不到的 model/API 錯誤，且實測約 132 秒／張；依線性外推，N=20 主 cell 約 44 分鐘，加載與分析後估 45–50 分鐘。
+* N=2 的 CI 與平均數不具穩健科學解釋，只用來確認工程管線；下一輪不得因 smoke 數值調參或改樣本。
+* dev pilot 使用 `evidence_role=pilot`，因此會自動改用每 run 隨機 256-bit master key 與唯一 random nonce，不沿用 smoke fixture。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* LPIPS 仍 deferred；其他 Q8.1–Q8.5／P8.1 smoke 路徑均依凍結規格執行。N=2 是 smoke，不是 WORKFLOW 的完整 dev pilot。
+
+### 7. 下一步
+* N=20 dev pilot 預估 GPU 45–50 分鐘，超過 30 分鐘門檻，需使用者明確裁決後才啟動；CPU 替代只能重跑 synthetic plumbing，不能驗證 diffusion 科學結果。
+* 若獲准，啟動 managed run、低頻監控至完成，再執行 analyzer；若暫不跑，可先只保留本次 N=2 smoke 作工程驗證。
