@@ -1,0 +1,107 @@
+method,mode,component,applicable,n_expected,n,n_failed,mean,median,min,max,share_of_total_mean,status,note
+P,M1_image_only,nonce_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M1_image_only,tag_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M1_image_only,manifest_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M1_image_only,private_metadata_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M1_image_only,latent_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M1_image_only,image_payload_bytes,1,20,20,0,32814.35,32506.0,30178.0,36264.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M1_image_only,encoding_overhead_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M1_image_only,total_bytes,1,20,20,0,32814.35,32506.0,30178.0,36264.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_latent_payload,nonce_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_latent_payload,tag_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_latent_payload,manifest_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_latent_payload,private_metadata_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_latent_payload,latent_payload_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_latent_payload,image_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_latent_payload,encoding_overhead_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_latent_payload,total_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_plus_preview,nonce_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_plus_preview,tag_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_plus_preview,manifest_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_plus_preview,private_metadata_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_plus_preview,latent_payload_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,0.8887492081509136,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_plus_preview,image_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_plus_preview,encoding_overhead_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_plus_preview,total_bytes,1,20,20,0,294958.35,294650.0,292322.0,298408.0,1.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M2_plus_preview,preview_image_bytes,1,20,20,0,32814.35,32506.0,30178.0,36264.0,0.1112507918490865,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+P,M1_image_only,total_vs_P_ratio,1,20,20,0,1.0,1.0,1.0,1.0,,ok,per-sample ratio of this method's M1 object to P's PNG
+S0,M1_image_only,nonce_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M1_image_only,tag_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M1_image_only,manifest_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M1_image_only,private_metadata_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M1_image_only,latent_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M1_image_only,image_payload_bytes,1,20,20,0,53334.0,53426.5,51319.0,54902.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M1_image_only,encoding_overhead_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M1_image_only,total_bytes,1,20,20,0,53334.0,53426.5,51319.0,54902.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_latent_payload,nonce_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_latent_payload,tag_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_latent_payload,manifest_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_latent_payload,private_metadata_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_latent_payload,latent_payload_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_latent_payload,image_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_latent_payload,encoding_overhead_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_latent_payload,total_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_plus_preview,nonce_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_plus_preview,tag_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_plus_preview,manifest_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_plus_preview,private_metadata_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_plus_preview,latent_payload_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,0.8309422527085882,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_plus_preview,image_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_plus_preview,encoding_overhead_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_plus_preview,total_bytes,1,20,20,0,315478.0,315570.5,313463.0,317046.0,1.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M2_plus_preview,preview_image_bytes,1,20,20,0,53334.0,53426.5,51319.0,54902.0,0.16905774729141176,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S0,M1_image_only,total_vs_P_ratio,1,20,20,0,1.6313007945484288,1.626993465029435,1.4637749445676276,1.8158425665619315,,ok,per-sample ratio of this method's M1 object to P's PNG
+S1,M1_image_only,nonce_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M1_image_only,tag_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M1_image_only,manifest_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M1_image_only,private_metadata_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M1_image_only,latent_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M1_image_only,image_payload_bytes,1,20,20,0,54171.55,54270.5,51135.0,55731.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M1_image_only,encoding_overhead_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M1_image_only,total_bytes,1,20,20,0,54171.55,54270.5,51135.0,55731.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_latent_payload,nonce_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_latent_payload,tag_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_latent_payload,manifest_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_latent_payload,private_metadata_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_latent_payload,latent_payload_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_latent_payload,image_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_latent_payload,encoding_overhead_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_latent_payload,total_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,1.0,ok,"no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_plus_preview,nonce_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_plus_preview,tag_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_plus_preview,manifest_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_plus_preview,private_metadata_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_plus_preview,latent_payload_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,0.8287420583654519,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_plus_preview,image_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_plus_preview,encoding_overhead_bytes,0,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_plus_preview,total_bytes,1,20,20,0,316315.55,316414.5,313279.0,317875.0,1.0,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M2_plus_preview,preview_image_bytes,1,20,20,0,54171.55,54270.5,51135.0,55731.0,0.1712579416345482,ok,"anonymous preview PNG stored next to the M2 payload; no container: payload only; key held outside the object, no nonce/tag/manifest"
+S1,M1_image_only,total_vs_P_ratio,1,20,20,0,1.6565202323351387,1.6402167209505503,1.4790425766600486,1.8219282288738217,,ok,per-sample ratio of this method's M1 object to P's PNG
+S2,M1_image_only,nonce_bytes,1,20,20,0,16.0,16.0,16.0,16.0,0.00021440536013400335,ok,
+S2,M1_image_only,tag_bytes,1,20,20,0,32.0,32.0,32.0,32.0,0.0004288107202680067,ok,
+S2,M1_image_only,manifest_bytes,1,20,20,0,850.0,850.0,850.0,850.0,0.011390284757118929,ok,
+S2,M1_image_only,private_metadata_bytes,1,20,20,0,123.0,123.0,123.0,123.0,0.0016482412060301508,ok,
+S2,M1_image_only,latent_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,
+S2,M1_image_only,image_payload_bytes,1,20,20,0,55083.65,55096.0,53224.0,56235.0,0.7381393634840872,ok,
+S2,M1_image_only,encoding_overhead_bytes,1,20,20,0,18520.35,18524.0,17902.0,18903.0,0.2481788944723618,ok,
+S2,M1_image_only,total_bytes,1,20,20,0,74625.0,74641.0,72147.0,76159.0,1.0,ok,
+S2,M2_latent_payload,nonce_bytes,1,20,20,0,16.0,16.0,16.0,16.0,4.56411295038524e-05,ok,
+S2,M2_latent_payload,tag_bytes,1,20,20,0,32.0,32.0,32.0,32.0,9.12822590077048e-05,ok,
+S2,M2_latent_payload,manifest_bytes,1,20,20,0,780.0,780.0,780.0,780.0,0.002225005063312804,ok,
+S2,M2_latent_payload,private_metadata_bytes,1,20,20,0,65.0,65.0,65.0,65.0,0.00018541708860940037,ok,
+S2,M2_latent_payload,latent_payload_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,0.7477842657911177,ok,
+S2,M2_latent_payload,image_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,
+S2,M2_latent_payload,encoding_overhead_bytes,1,20,20,0,87524.0,87524.0,87524.0,87524.0,0.24966838866844857,ok,
+S2,M2_latent_payload,total_bytes,1,20,20,0,350561.0,350561.0,350561.0,350561.0,1.0,ok,
+S2,M2_plus_preview,nonce_bytes,1,20,20,0,16.0,16.0,16.0,16.0,3.944338967616114e-05,ok,anonymous preview PNG stored next to the M2 payload
+S2,M2_plus_preview,tag_bytes,1,20,20,0,32.0,32.0,32.0,32.0,7.888677935232228e-05,ok,anonymous preview PNG stored next to the M2 payload
+S2,M2_plus_preview,manifest_bytes,1,20,20,0,780.0,780.0,780.0,780.0,0.0019228652467128556,ok,anonymous preview PNG stored next to the M2 payload
+S2,M2_plus_preview,private_metadata_bytes,1,20,20,0,65.0,65.0,65.0,65.0,0.00016023877055940463,ok,anonymous preview PNG stored next to the M2 payload
+S2,M2_plus_preview,latent_payload_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,0.6462404964542241,ok,anonymous preview PNG stored next to the M2 payload
+S2,M2_plus_preview,image_payload_bytes,1,20,20,0,0.0,0.0,0.0,0.0,0.0,ok,anonymous preview PNG stored next to the M2 payload
+S2,M2_plus_preview,encoding_overhead_bytes,1,20,20,0,87524.0,87524.0,87524.0,87524.0,0.21576520237602048,ok,anonymous preview PNG stored next to the M2 payload
+S2,M2_plus_preview,total_bytes,1,20,20,0,405644.65,405657.0,403785.0,406796.0,1.0,ok,anonymous preview PNG stored next to the M2 payload
+S2,M2_plus_preview,preview_image_bytes,1,20,20,0,55083.65,55096.0,53224.0,56235.0,0.1357928669834546,ok,anonymous preview PNG stored next to the M2 payload
+S2,M1_image_only,total_vs_P_ratio,1,20,20,0,2.281787840515139,2.2855869135103983,2.0588738142510477,2.4974258075094276,,ok,per-sample ratio of this method's M1 object to P's PNG
+raw_reference,reference,uint8_image_bytes,1,20,20,0,65536.0,65536.0,65536.0,65536.0,,ok,"256x256x1 byte, uncompressed"
+raw_reference,reference,float32_latent_bytes,1,20,20,0,262144.0,262144.0,262144.0,262144.0,,ok,256x256 float32

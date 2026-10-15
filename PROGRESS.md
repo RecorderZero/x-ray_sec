@@ -1601,3 +1601,42 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 依使用者最新明確授權，以 clean commit 啟動 N=20 dev GPU pilot（預估 45–50 分鐘），使用 subagent 低頻監控；完成後以 `--lpips require` 產生完整 Q8/P8 pilot 結果。
+
+## 2026-10-15 · W6 · Q8.1–Q8.5／P8.1 真實 N=20 dev pilot
+
+### 1. 當前目標 (Objective)
+* 依使用者對超過 30 分鐘 GPU 任務的明確裁決，以凍結的 dev_v1.1 20 張／20 病人、真實 checkpoint 與 E2.3 latent cache 完成 Q8/P8 pilot；再以 `--lpips require` 產生五張 aggregate 表與固定規則視覺格。
+
+### 2. 執行動作 (Actions Taken)
+* 從 clean commit `820cd80` 啟動 managed run `Q8_PILOT_20261015T044834956998Z_a03d6951`；角色為 `pilot`、`formal=false`、真實 backend、每 run 隨機 256-bit master key 與唯一 nonce，主 storage cell 為 range-preserving。
+* 低頻監控 heartbeat/status；監控 subagent 中途觸及其用量限制，但 GPU 子程序與 managed run 未中斷，主代理改以 run status／log 驗證完成狀態。
+* run 成功後以 CPU 執行 `scripts.q8_analyze --lpips require`，產生 fidelity、anonymity、wrong-key、runtime、storage 五表及 P8 fixed-label／median／worst grid；主代理另目視核對 grid。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] managed run 為 20/20、exit code 0、artifact validation valid、stderr 0 bytes；牆鐘約 44 分 32 秒，每張約 132.2–132.8 秒。PID `997744` 已結束，目前沒有需監控的 GPU／背景程序。
+* [事實] M1 reconstruction 對 x0 的 mean PSNR／SSIM／LPIPS／L∞：P=`37.809/0.97529/0.06252/0.20464`、S0=`38.439/0.97199/0.06459/0.26657`、S1=`39.168/0.97247/0.06258/0.15501`、S2=`39.275/0.97271/0.06233/0.15722`。S2 比 S0 高 `0.836 dB`，未觸發「低超過 1 dB」review trigger；這是 pilot 數據，不是 pass gate。
+* [事實] `public_available` cosine NN（gallery 20）Top-1／Top-5：P=`1.00/1.00`、S0=`0.05/0.25`、S1=`0.10/0.45`、S2=`0.00/0.15`；random expectation 為 `0.05/0.25`。N=20 很小，僅供 pilot 診斷，不宣稱通用匿名安全。
+* [事實] S2 wrong-key 與 wrong-nonce authenticated open 均 `20/20` 拒絕，rejection rate=`1.0` 且 inverter calls=`0`；bypass-auth counterfactual 仍只作錯誤條件品質示意。
+* [事實] cached-latent→M1 median 為 P/S0/S1/S2=`7.798/7.797/7.808/7.802 s`，M1→reconstruction=`15.515/15.506/15.516/15.518 s`；S2 container seal/open median=`7.96/3.78 ms`，顯示本 pilot 的 wall time 主要由 diffusion 支配。
+* [事實] mean storage total bytes（M1／M2／M2+preview）：P=`32,814/262,144/294,958`、S0=`53,334/262,144/315,478`、S1=`54,172/262,144/316,316`、S2=`74,625/350,561/405,645`；S2 額外包含 nonce、tag、manifest、private metadata 與編碼成本。
+* [事實] LPIPS state=`computed`，backbone 與 linear weights hashes 均吻合；manifest 明列 LPIPS clip [0,1]、其他影像指標使用未裁切 float 及各陣列 clipping fraction。
+* [事實] P8 固定選樣為 `dev_v1.1_000`（label 0）與 `_010`（label 1）；S2 M1 PSNR lower-median 為 `_018`（39.373 dB），worst 為 `_007`（38.390 dB）。視覺格欄位、公開視角與固定 [0,1] display range 均正常。
+* [事實] 唯讀 subagent 獨立重算 8 個分析輸出、3 個來源檔與 latent cache hashes，全部吻合；另確認 nonce registry 為 40 筆。唯一 metadata 小瑕疵是 managed `status.json.progress` 未隨子程序更新，最終 `state=succeeded`、exit 0 與 artifact validator 不受影響。
+
+### 4. 達標判定 (Assessment)
+* [x] Q8.1–Q8.5 dev pilot 的五張 aggregate 表、bootstrap CI、LPIPS、authenticated controls、runtime/storage 拆分與 provenance 已完整產生。
+* [x] P8.1 使用預先固定規則而非手挑最佳案例，健康／積水 fixed cases 與 median／worst 均有輸出。
+* [x] runner/artifact/analyzer 工程管線可進入 Week 7 formal；科學結果仍標 `pilot`、`formal=false`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* P/S0/S1/S2 的 M1 reconstruction 品質接近，且 S2 未出現相對 S0 超過 1 dB 的品質下降；正式 N=200 仍須保留 paired statistics 與 effect size，不能由 N=20 宣告等效。
+* 四方法總 runtime 接近是因每張都執行相同次數的 DDIM generation/inversion；毫秒級 transform/KDF/MAC/container 成本被每段約 7.8 秒的 diffusion 成本淹沒。正式表仍須分項呈現，而非只報總時間。
+* `public_available` 對 S2 使用 q/255，對 P/S0/S1 使用公開 lo/hi 還原，這是部署資訊不對稱而非相同像素域；正式論文須保留該註解並把 generator-float 視角列為診斷。
+* managed wrapper 目前只知道子程序存活與最終狀態，沒有接收 Q8 runner 的逐樣本 progress；若 Week 7 需要 UI 精確進度，應在 formal 前補 heartbeat/progress bridge，但不需為此重跑本 pilot。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。Q8/P8 本輪按 Week 6 定義執行 dev pilot；正式樣本數仍維持 N=200，將留到 Week 7，且本輪結果未被用作工程 pass/fail gate。
+
+### 7. 下一步
+* 先由稽核方複驗 N=20 run provenance、五表 estimand、auth ordering、LPIPS disclosure 與 P8 選樣；若無新 finding，凍結 Q8 formal 設定。
+* Week 7 以 security_v1 N=200 執行 formal Q8/F9，補 paired test、effect size、multiple-comparison 規則與 claim-evidence matrix；超過 30 分鐘 GPU 任務仍須在啟動前取得新的明確裁決。
