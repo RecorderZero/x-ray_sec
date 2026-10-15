@@ -1471,3 +1471,64 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 開始 Week 6 Q8.1–Q8.5 與 P8.1 pilot；正式長時間 GPU 任務仍依既有授權與 managed-run／監控規範執行。
+
+## 2026-10-15 · W6 · Q8／P8 Claude 委派前置授權阻擋
+
+### 1. 當前目標 (Objective)
+* 開始 Q8.1–Q8.5 與 P8.1 pilot；依使用者指示，由主代理規格化工作並委派 Claude 實作，再由主代理獨立驗證。
+
+### 2. 執行動作 (Actions Taken)
+* 主代理重新核對 `AGENTS.md`、`CLAUDE.md`、`WORKFLOW.md` Week 6、`loop_engineering_spec.md`、最新 `PROGRESS.md` 與既有 D6／D7／AF-025 runner。
+* 準備以 Claude Sonnet、high effort 委派 bounded implementation：只做 Q8/P8 pilot 程式與 CPU 測試，不跑 GPU、不 commit、不修改稽核方檔案。
+* 外部執行審核拒絕啟動，理由是尚缺「允許將完成 Q8/P8 所需的本地研究程式與文件內容提供給 Anthropic Claude」的明確資料外傳授權。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] Claude session 未建立，Claude 沒有讀取任何專案檔案，也沒有產生或修改 Q8/P8 程式。
+* [事實] 本輪未啟動 GPU、managed run 或其他背景程序；目前沒有 run ID／PID 需要監控。
+
+### 4. 達標判定 (Assessment)
+* [ ] 未達標：Q8/P8 實作尚未開始，阻擋點是外部資料分享授權，不是程式或 GPU 錯誤。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 使用 Claude CLI 的最小 `OK` 測試不涉及 repository 內容；實作 Q8/P8 則必須把必要程式與文件內容傳給 Anthropic，兩者資料範圍不同。
+* 使用者明確授權後，依原 bounded prompt 啟動 Claude；若不授權，改由本地 Codex／內建 subagent 完成，不對外提供專案內容。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。尚未更改 Q8/P8 規格或啟動實驗。
+
+### 7. 下一步
+* 等待使用者明確決定是否允許 Anthropic Claude 讀取完成 Q8/P8 所需的 `/data2/paper` 程式碼與研究文件；取得授權後再啟動委派。
+
+## 2026-10-15 · W6 · Q8.1–Q8.5／P8.1 pilot 基礎設施完成
+
+### 1. 當前目標 (Objective)
+* 在不先執行長時間 GPU 任務的前提下，建立 Q8 品質／匿名性／wrong-key、runtime、storage 與 P8 固定選圖的可追溯 pilot runner、CPU analyzer 與 regression tests。
+
+### 2. 執行動作 (Actions Taken)
+* 依使用者授權，以 Claude Sonnet 5.5 high effort 在隔離 worktree 實作；主代理另用內建 subagent 與本地檢查做獨立審查，未直接接受第一版。
+* 新增 `scripts/q8_pilot_runner.py`、`q8_metrics.py`、`q8_analyze.py`、`tests/unit/test_q8_pilot.py` 與 `reports/q8_pilot_infrastructure.md`，並更新 `README.md` 檔案地圖。
+* 第一輪審查發現 authenticated rejection 未作工程硬閘、cache provenance 未完整綁定、runtime 名稱過度宣稱、公開影像視角不一致、pilot/formal fixture nonce policy、cross-patient 前提與 LPIPS clipping 揭露等問題；全部退回修正後再驗。
+* 修正版強制 wrong key／nonce 在 inversion 前拒絕、逐樣本核對 E2.3 cache/x0/設定、要求病人唯一、區分 `public_available` 與 diagnostic views、pilot/formal 使用每 run CSPRNG key/nonce，並明列 cached-latent 計時邊界及 LPIPS clipping fraction。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 主工作目錄 `py_compile` 通過；`tests/unit/test_q8_pilot.py` 為 64 passed、1 個 Pillow 相容性 deprecation warning。
+* [事實] 隔離 worktree 的 3-sample synthetic managed run succeeded／artifact validator valid；CPU analyzer 產生 `table_fidelity.csv`、`table_anonymity.csv`、`table_wrong_key.csv`、`table_runtime.csv`、`table_storage.csv` 與 P8 grid。
+* [事實] LPIPS backbone 目前不在本機 cache，因此 analyzer 依規格標 `deferred` 並保留空值及 clipping disclosure，未下載權重、未代換其他指標。
+* [事實] 本段工作未啟動 GPU；Claude 工作 `98c2641c`／`aa6b901a` 均已 done，錯誤續接工作 `782c7317` 為 blocked 且未執行專案修改，沒有需監控的本專案程序。
+
+### 4. 達標判定 (Assessment)
+* [x] Q8.1–Q8.5／P8.1 pilot 基礎設施的 CPU plumbing、schema、fail-closed controls 與 deterministic analyzer 已完成實作方驗證。
+* [x] S2 主方法固定為 `S2-fixed-norm/v2`；P/S0/S1/S2 主 fidelity cell 均走 range-preserving storage，legacy 只作可選 attribution cell。
+* [ ] 真實 GPU smoke 與 dev N=20 pilot 尚未在本條目執行；目前沒有科學 Q8 結果，synthetic 數字不得引用。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 匿名性的公平比較不能只看 generator float；實際公開資訊不對稱，因此主視角定義為 `public_available`：P/S0/S1 可用公開 lo/hi 還原，S2 只能看到 q/255。
+* runtime 從既有 E2.3 latent cache 起算，故使用 `cached_latent_to_m1` 與 `m1_to_reconstruction`，明確不把原圖初始 inversion 偽稱為本次端到端時間。
+* 先以 dev 前 2 張執行預估約 5 分鐘的 GPU smoke；通過後 N=20 pilot 預估約 45 分鐘，依 AGENTS 規則須另取得使用者裁決。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* LPIPS 尚未實際計算，因本機缺少已核對的 AlexNet backbone 權重；目前是明確 deferred，不以替代指標填值。Week 7 formal 前必須補齊本機權重並用 `--lpips require`，或由使用者／稽核方正式裁決延後。
+
+### 7. 下一步
+* 提交經驗證的 Q8/P8 基礎設施後，以 clean commit 執行 N=2 GPU smoke（預估約 5 分鐘，低於 30 分鐘門檻），再執行 CPU analyzer 並檢查五表、P8 圖與 provenance。
+* smoke 通過後，向使用者報告 N=20 dev pilot 的目的、約 45 分鐘估時與 CPU/smaller-smoke 替代方案，取得明確裁決才啟動。

@@ -7,6 +7,7 @@
 - E0.1、E1.1–E1.5 已由 AUD-20261008-02 複驗通過；E2.2 已完成 S0/S1 legacy regression，並補上恆等金鑰 P（AF-017）。
 - 2026-10-09 起 P/S0/S1 一律走學長**加密流程**（`ddim_sample_loop_anonymization`）；E1 的推論流程結果只作病灶定位流程的歷史基線。AF-017、AF-020、AF-021 已由 AUD-20261010-01 關閉；AF-019 的 E2.5 與 A4 T2-WB 均已完成並關閉。
 - A3／A4／P3.1／P4.1 已完成且 G1 PASS；D7/G4 PASS。AF-025 的 fixed-norm S2 v2 與 N=200 補驗已由 AUD-20261015-01 獨立複驗通過並 CLOSED；目前無未關閉的 MAJOR／MINOR finding。
+- Q8.1–Q8.5／P8.1 pilot 基礎設施已完成 CPU 驗證：P/S0/S1/S2-fixed-norm v2 的品質、匿名性、wrong-key/nonce、runtime、storage 與固定選圖共用同一套可追溯 runner/analyzer；真實 GPU smoke／pilot 結果另由 managed run 產生，不把 synthetic self-test 當科學證據。
 - E2.3 latent cache 已凍結（`security_v1` 200 張、`dev_v1.1` 20 張，batch 1，抽樣重算全部 bit-exact）；E2.4 指標語意報告與 E2.5 dev round-trip 已完成，G0 的子任務全部有交付物。
 - T2-WB `Inconclusive` 規則依使用者 2026-10-10 裁決：攻擊成功照實報告；未成功時才看各方案專屬的正控制（`reports/t2wb_protocol.md` §4）。
 - 目標 checkpoint 可 strict load，missing/unexpected keys 均為 0。
@@ -97,6 +98,10 @@
 | `scripts/output_guard.py` | AF-029：寫入 results/、paper_assets/、reports/、image/、appendix/ 的腳本共用；輸出檔已存在時預設拒絕，需 `--force` 才覆寫。 | 所有會寫追蹤檔的腳本啟動時。 |
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
+| `scripts/q8_pilot_runner.py` | Q8/P8 GPU runner：從已驗證的 E2.3 latent cache 比較 P/S0/S1/S2-fixed-norm v2，保存寬表、hash-verified arrays、wrong-key/nonce 控制、分段時間／記憶體與 storage accounting；pilot/formal 使用每 run 隨機 key/nonce。 | 先做 ≤4 張 smoke，再做 dev N=20 pilot；formal N=200 留到 Week 7。 |
+| `scripts/q8_analyze.py` | CPU analyzer：驗證 Q8 run 後產生五張 Q8 表、CI-ready long table、P8 固定／中位／最差視覺格與 analysis manifest；LPIPS 缺權重時明確 deferred。 | GPU run 完成後執行，不需重跑 diffusion。 |
+| `scripts/q8_metrics.py` | Q8/P8 共用統計、NN rank、LPIPS 可用性、選圖、array evidence 與 S2 container storage 拆解定義。 | runner、analyzer 與單元測試共用；變更會改 estimand，需先凍結規格。 |
+| `reports/q8_pilot_infrastructure.md` | Q8/P8 pilot 的方法、公開視角、LPIPS clipping、key/nonce policy、cache provenance、失敗規則與執行指令。 | 執行或稽核 Q8 前先閱讀；不含科學結果。 |
 
 ## E0/E1 結果檔
 
@@ -183,6 +188,7 @@
 | `tests/unit/test_m1_storage.py` | AF-024：任意值域（含負值、>1）`decode(encode(x))` 誤差 ≤ (hi−lo)/510；lo/hi 精確保存；常數影像；缺值域 metadata 與非有限值 fail closed；對超出 [0,1] 的影像優於前作 min-max。 |
 | `tests/unit/test_output_guard.py` | AF-029：已存在的輸出無 `--force` 時被拒絕且檔案不變；不存在或加 `--force` 時允許；預設 `force=False`。 |
 | `tests/unit/test_staged_guard.py` | 在暫存 repo 驗證 checkpoint 副檔名與 private-key 內容會被拒絕。 |
+| `tests/unit/test_q8_pilot.py` | Q8/P8 CPU 合成後端測試：metrics、artifact schema、公開視角、auth fail-closed、cache provenance、key/nonce role policy、storage/runtime、LPIPS deferred 與固定選圖。 |
 | `tests/security/test_sot.py` | D6.1/D6.2：CPU/CUDA inverse、d=65,536 float64 門檻、顯式 Q 正交與輪次公式、wrong-key/wrong-nonce controls、FWHT 輸入契約。 |
 | `tests/security/test_s2.py` | D6.7：M1/M2 authenticated round-trip、tag 驗證先於 inversion、wrong key/nonce fail closed，以及跨 M1/M2 nonce reuse rejection。 |
 | `tests/security/test_s2_fixed_norm.py` | AF-025：固定 norm M2 往返、M1 public PNG 不含 lo/hi、合法值域／原 norm 恢復，以及 private metadata tamper 在 inverter 前拒絕。 |
