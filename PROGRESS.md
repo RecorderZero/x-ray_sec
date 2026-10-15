@@ -1712,3 +1712,39 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 啟動 Week 7 formal 前，先提出 parent／legacy supplement 的 GPU 用途、預估時間及小型替代方案供使用者裁決；獲准後執行 N=200 並建立 Week 7 appendix。
+
+## 2026-10-15 · W7 · Track F · F9 CPU 部分（Q8 formal parent 執行期間）
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md`：F9.3（adaptive norm limitation note）、F9.4（statistical comparison 機制）、F9.5（claim matrix v1）。
+* 使用者裁決（2026-10-15）：先背景執行 Q8 品質 formal **parent**（N=200，~7.5h），**停在 legacy supplement 前等下一次同意**；期間並行做不需 GPU 的 F9 部分。Week 7 sampler 維持現狀（DDIM + 非對稱條件）。
+
+### 2. 執行動作 (Actions Taken)
+* 啟動背景 GPU managed run `Q8_FORMAL`（`--evidence-role formal --split security_v1.csv`，security_v1 既有 cache，不重跑 inversion）；僅 parent，supplement 待裁決。
+* 新增 `scripts/build_claim_matrix.py` → `paper_assets/claim_matrix/{claims.csv,index.md}`（F9.5）：由已凍結、已稽核的 `attack_package/claims.csv`（A3/A4/A4.6）與 `defense_package/claims.csv`（D5/D6/D7/AF-025）彙整，headline 不手抄；RQ1–RQ3 的攻擊與 S2 防禦假設對應證據，H3c/RQ4 品質假設標 `pending`（待 Q8_FORMAL）。
+* 新增 `reports/f9_3_norm_limitation.md`（F9.3）：T1 vs T2-WB norm-only linkage 與固定 norm remediation 的機制分析，數字引自 `table_norm_leakage.csv`、`table_AF025_fixed_norm_norm_leakage.csv`、`table_D7_T2WB_inversion.csv`。
+* 新增 `scripts/f9_statistics.py`（F9.4 機制）：paired Wilcoxon signed-rank、matched-pairs rank-biserial 效果量、Holm-Bonferroni 固定多重比較（alpha=0.05）；在 N=20 pilot long rows 上驗證並確認確定性，待 formal 輸出重跑產生正式 `table_statistics.csv`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `Q8_FORMAL` parent 已啟動並進入 running（通過 formal guard：security_v1、N=200、無 limit）；預估約 7.5 小時，完成後通知。
+* [事實] claim matrix v1：10 條假設，**8 條已由 N=200 formal 證據支持**（H1a/b/c、H2a/b/c、H3a/b），2 條（H3c、RQ4 品質）`pending`；連續重建兩次位元相同。
+* [事實] F9.3 note 彙整：S2 v1 T1 norm Top-1=**1.0**、T2-WB range dev-calibrated=**0.25**（legacy=0.005）；AF-025 固定 norm v2 後 T1／T2-WB 皆**0.005**（=random），合法還原不變。明載 legacy 低攻擊率是存檔 trade-off、非密碼強度。
+* [事實] F9.4 在 N=20 pilot（mixed deployment）驗證：S2 對 S0/S1 的 PSNR 中位差 +8.11/+8.13 dB、SSIM、LPIPS、cosine、rmse 經 Holm 後皆顯著（rank-biserial |r|≈1）；S2−P 的 PSNR +1.62 dB 顯著、LPIPS/L∞ 不顯著。**此為 mixed deployment（含存檔效應），JSON 已註明不可歸因為加密本身**。腳本確定性通過。
+* [事實] 本輪為 CPU 文件／機制建置（parent 在背景跑）；新增檔案皆為 additive，未改既有模組。
+
+### 4. 達標判定 (Assessment)
+* [x] F9.5 claim matrix v1 完成（security/attack 面已凍結，品質面標 pending）。
+* [x] F9.3 norm limitation note 完成。
+* [x] F9.4 統計機制完成並在 pilot 驗證；正式 `table_statistics.csv` 待 formal。
+* [ ] F9.1 formal security freeze（複用 D7/AF025 N=200）、F9.2 formal bootstrap CI、F9.4 formal 表：待 parent（+使用者同意後的 supplement）與 `q8_analyze` 落地。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* F9.2 的 patient-bootstrap CI 與 paired difference 已內建於 `q8_analyze.py`（percentile bootstrap、seed 1911、10000 resamples；Wilson for Top-k），formal 輸出即自動產生；F9.4 的顯著性檢定／效果量／多重比較則由新 `f9_statistics.py` 補上。
+* claim matrix 已標出品質假設為唯一 pending 項，精準界定 Q8_FORMAL 要填的內容，避免把部署差異誤當加密消融。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。F9.4 以新腳本補「顯著性檢定＋效果量＋固定多重比較」，WORKFLOW 僅指定 `table_statistics.csv` 交付物與規則固定，未指定腳本名。
+
+### 7. 下一步
+* 等 `Q8_FORMAL` parent 完成（通知後）→ 向使用者報告 parent 結果與 supplement 的 ~3.5h GPU 估計，取得同意後再跑 legacy supplement。
+* supplement 完成後：跑 `q8_analyze`（mixed deployment）產生 formal fidelity/anonymity/wrong-key/runtime/storage 與 bootstrap CI（F9.2），再跑 `f9_statistics` 產生正式 `table_statistics.csv`（F9.4），更新 claim matrix 的品質列（F9.5），建立 `appendix/week7/`。
