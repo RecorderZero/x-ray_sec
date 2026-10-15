@@ -1,0 +1,124 @@
+{
+  "cases": [
+    {
+      "label": "0",
+      "n": 20,
+      "rank_ascending": 16,
+      "role": "fixed_label0",
+      "sample_id": "dev_v1.1_000",
+      "selection_metric": "S2__m1__psnr_db",
+      "selection_score": 39.65274821302266
+    },
+    {
+      "label": "1",
+      "n": 20,
+      "rank_ascending": 20,
+      "role": "fixed_label1",
+      "sample_id": "dev_v1.1_010",
+      "selection_metric": "S2__m1__psnr_db",
+      "selection_score": 39.757828066833085
+    },
+    {
+      "label": "1",
+      "n": 20,
+      "rank_ascending": 10,
+      "role": "median",
+      "sample_id": "dev_v1.1_018",
+      "selection_metric": "S2__m1__psnr_db",
+      "selection_score": 39.373018705055856
+    },
+    {
+      "label": "0",
+      "n": 20,
+      "rank_ascending": 1,
+      "role": "worst",
+      "sample_id": "dev_v1.1_007",
+      "selection_metric": "S2__m1__psnr_db",
+      "selection_score": 38.38955349557714
+    }
+  ],
+  "metric": "S2__m1__psnr_db",
+  "ranking_ascending": [
+    {
+      "sample_id": "dev_v1.1_007",
+      "score": 38.38955349557714
+    },
+    {
+      "sample_id": "dev_v1.1_014",
+      "score": 38.4780640518646
+    },
+    {
+      "sample_id": "dev_v1.1_008",
+      "score": 38.53290152092216
+    },
+    {
+      "sample_id": "dev_v1.1_012",
+      "score": 38.70925528544281
+    },
+    {
+      "sample_id": "dev_v1.1_017",
+      "score": 39.07277375651518
+    },
+    {
+      "sample_id": "dev_v1.1_011",
+      "score": 39.1030218888351
+    },
+    {
+      "sample_id": "dev_v1.1_001",
+      "score": 39.23289587062002
+    },
+    {
+      "sample_id": "dev_v1.1_006",
+      "score": 39.25632446961468
+    },
+    {
+      "sample_id": "dev_v1.1_004",
+      "score": 39.2747065428101
+    },
+    {
+      "sample_id": "dev_v1.1_018",
+      "score": 39.373018705055856
+    },
+    {
+      "sample_id": "dev_v1.1_015",
+      "score": 39.4148781243176
+    },
+    {
+      "sample_id": "dev_v1.1_016",
+      "score": 39.42182996195555
+    },
+    {
+      "sample_id": "dev_v1.1_019",
+      "score": 39.491917002901225
+    },
+    {
+      "sample_id": "dev_v1.1_013",
+      "score": 39.596422069461326
+    },
+    {
+      "sample_id": "dev_v1.1_002",
+      "score": 39.60074404117771
+    },
+    {
+      "sample_id": "dev_v1.1_000",
+      "score": 39.65274821302266
+    },
+    {
+      "sample_id": "dev_v1.1_009",
+      "score": 39.70077423809249
+    },
+    {
+      "sample_id": "dev_v1.1_003",
+      "score": 39.71905191068674
+    },
+    {
+      "sample_id": "dev_v1.1_005",
+      "score": 39.72209609837145
+    },
+    {
+      "sample_id": "dev_v1.1_010",
+      "score": 39.757828066833085
+    }
+  ],
+  "rule": "fixed = first no_finding (label 0) and first label-1 sample in split order; median = lower-median of ascending S2__m1__psnr_db (ties by sample_id); worst = minimum S2__m1__psnr_db (ties by sample_id); a sample selected twice is shown twice, never substituted"
+}

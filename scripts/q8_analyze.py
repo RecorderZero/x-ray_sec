@@ -338,7 +338,7 @@ LPIPS_PAIRS = (
 
 def array_methods(kind: str) -> tuple[str, ...]:
     if kind in ("recon_m1_range_attribution", "anonymous_public_range_attribution"):
-        return METHODS
+        return ("P", "S0", "S1")
     return ARRAY_KINDS[kind][1]
 
 
@@ -859,7 +859,8 @@ def analyze(run_dir: Path, output_dir: Path, *, deployment_supplement: Path | No
         "schema_version": 1, "source_run_id": run.manifest["run_id"], "evidence_role": run.role,
         "formal": bool(run.manifest.get("formal")), "synthetic_backend": bool(run.manifest.get("synthetic_backend")),
         "n_expected": run.n_expected, "n_ok": run.n, "n_failed": run.n_expected - run.n,
-        "storages": list(run.storages), "ci_method": CI_METHOD,
+        "storages": sorted(set(run.deployment_storage.values())),
+        "source_parent_storages": list(run.storages), "ci_method": CI_METHOD,
         "deployment_storage_by_method": run.deployment_storage,
         "source_manifest_sha256": sha256_file(run.run_dir / "manifest.json"),
         "source_per_sample_sha256": sha256_file(run.run_dir / "per_sample.csv"),

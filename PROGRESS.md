@@ -1640,3 +1640,44 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 先由稽核方複驗 N=20 run provenance、五表 estimand、auth ordering、LPIPS disclosure 與 P8 選樣；若無新 finding，凍結 Q8 formal 設定。
 * Week 7 以 security_v1 N=200 執行 formal Q8/F9，補 paired test、effect size、multiple-comparison 規則與 claim-evidence matrix；超過 30 分鐘 GPU 任務仍須在啟動前取得新的明確裁決。
+
+## 2026-10-15 · W6 · Q8/P8 mixed-storage 主部署修正與 N=20 補跑
+
+### 1. 當前目標 (Objective)
+* 依使用者最新裁決，將 Q8/P8 主端到端比較由「四方法皆 range-preserving」改為 **P/S0/S1 使用學長 `legacy_png_handoff`，S2 使用 authenticated private-range preserving**；保留舊 N=20 結果作 storage-controlled attribution，不覆寫歷史證據。
+
+### 2. 執行動作 (Actions Taken)
+* 更新 `WORKFLOW.md`、`PROPOSAL.md` 與 Q8 infrastructure 規格，明列 2026-10-15 決定取代舊主欄口徑；P 亦採 legacy，作學長流程的 identity baseline。
+* 新增 `scripts/q8_legacy_supplement.py`：嚴格驗證 parent manifest/config/per-sample/array-index、checkpoint/sampler、E2.3 cache 與逐 latent hashes，重用 parent 的 anonymous float arrays，只補 P/S0/S1 legacy encode/decode→DDIM inversion→inverse→reconstruction，並以 legacy inverted latent 重算 S0/S1 wrong-key；S2 完全不重算，也不需要其未保存 raw key。
+* 修改 `scripts/q8_analyze.py`：以逐方法 deployment storage map 合併 parent/supplement，主 fidelity/anonymity/wrong-key/runtime/storage 與 P8 grid 使用 mixed deployment；P/S0/S1 原 range 結果另標 `range_attribution`。
+* 先執行 N=2 真 GPU supplement smoke `Q8_LEGACY_SUPPLEMENT_SMOKE_20261015T082923364032Z_ff340c06` 與 mixed analyzer；修正 warmup 唯讀 NumPy warning 後，67 個 Q8 unit tests 全通過。
+* 執行 N=20 managed supplement `Q8_LEGACY_SUPPLEMENT_20261015T083637049107Z_cf941408`，再以 `--deployment-supplement ... --lpips require` 產生 `paper_assets/q8_pilot_deployment/`；舊 `paper_assets/q8_pilot/` 保留不覆寫。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] N=20 supplement 為 20/20、exit code 0、artifact validation valid、stderr 0 bytes；起訖 `08:36:37Z–08:57:55Z`，牆鐘約 21 分 18 秒。PID `1360098` 已結束，目前沒有需監控的 GPU／背景程序。
+* [事實] mixed-deployment M1 reconstruction 對 x0 的 mean PSNR／SSIM／LPIPS／L∞：P=`37.708/0.97486/0.06227/0.23219`、S0=`31.467/0.92721/0.11697/0.55780`、S1=`31.305/0.89795/0.16593/0.41613`、S2=`39.275/0.97271/0.06233/0.15722`。
+* [事實] S2−S0 paired difference：PSNR=`+7.808 dB`（95% patient-bootstrap CI `[+6.980,+8.658]`）、SSIM=`+0.04550`、LPIPS=`−0.05464`、L∞=`−0.40059`。差異包含「新加密設計＋新 storage protocol」，不可歸因為 SOT/AEAD 單獨造成。
+* [事實] parent P/S0/S1 全 range-preserving 的 PSNR 仍為 `37.809/38.439/39.168 dB` 並保留於 attribution rows；由此可見 S0/S1 mixed 主欄降至約 31 dB 的主要原因是 legacy handoff 丟失原值域，與 AF-024 的既有歸因一致。
+* [事實] `public_available` cosine NN Top-1／Top-5：P=`1.00/1.00`、S0=`0.05/0.25`、S1=`0.10/0.45`、S2=`0.00/0.15`；N=20 random expectation=`0.05/0.25`，僅作 pilot 診斷。
+* [事實] deployment cached-latent→M1 median 為 P/S0/S1/S2=`7.797/7.796/7.807/7.802 s`，M1→reconstruction=`15.645/15.671/15.670/15.518 s`；M1 total mean bytes=`32,728/53,248/54,083/74,625`。S2 auth wrong-key/wrong-nonce 仍 20/20 拒絕、inverter calls=0。
+* [事實] supplement merge 前後，S2 的 `anonymous_public_q`、`anonymous_public_available`、`recon_m1`、`recon_wrong_key` arrays 逐值完全相同；P8 selection JSON 亦完全相同，只替換 P/S0/S1 panel 為 legacy public/reconstruction。
+* [事實] LPIPS=`computed`；mixed analysis 產生 fidelity 285 rows、anonymity 360、wrong-key 98、runtime 93、storage 115，output manifest 綁定 parent 與 supplement hashes。
+* [事實] 唯讀 subagent 獨立重算 parent／supplement／analysis 全部 file 與 slice hashes、檢查 20 unique patients/IDs、13,060 筆 final long rows及 finite，均通過；其指出的 manifest 頂層 storage 語意已修成 mixed deployment 清單，另保留 `source_parent_storages=[range_preserving]`，67 個 unit tests 再次全通過。
+
+### 4. 達標判定 (Assessment)
+* [x] Q8/P8 N=20 主端到端比較已符合使用者最新 storage 口徑：P/S0/S1 legacy、S2 private-range preserving。
+* [x] 舊全 range 結果未刪除，已降級並明標為 storage-controlled attribution，可分離 storage 與方法效應。
+* [x] bounded supplement 避免重跑匿名生成與 S2；hash binding、synthetic bit-exact regression、N=2 真 GPU smoke、N=20 artifact validation 與 mixed analyzer 均通過。
+* [ ] 目前仍是 `pilot/formal=false`；N=200 與正式 paired statistics 屬 Week 7，尚未執行。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* mixed-deployment 主欄最貼近「學長原部署 vs S2 新部署」，但它同時改變加密與 storage；論文不能用 `+7.8 dB` 宣稱 S2 加密本身提升品質，必須同列 range-attribution 說明主要增益來自保存值域。
+* P 的 legacy PSNR 只比其 range cell低約 0.10 dB，但 S0/S1 低約 6.97/7.86 dB，顯示逐 key 產生的匿名輸出值域使 legacy min-max 丟尺度問題特別嚴重；這也是使用者希望主欄呈現的真實舊流程成本。
+* bounded supplement 的來源是 parent hash-verified anonymous arrays；正式 N=200 可沿用「parent＋deployment supplement」分段設計，先凍結 parent，再補 legacy，避免把所有 control 重跑兩次。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。`WORKFLOW.md` 已依使用者 2026-10-15 最新裁決同步；既有 N=20 全 range 主結果沒有被竄改，而是保留並重新標示為 attribution。
+
+### 7. 下一步
+* 由稽核方複驗 supplement 的 parent/source/cache hash binding、P/S0/S1 legacy bit-exact 路徑、mixed table storage labels、S2 不變性、range attribution 與 P8 panel 來源。
+* 稽核通過後凍結 Week 7 formal 設定；N=200 預估仍超過 30 分鐘，啟動前另向使用者報告正式 parent/supplement GPU 預估與 CPU/smaller alternative，取得明確裁決。

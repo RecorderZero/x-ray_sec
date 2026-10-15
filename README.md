@@ -8,7 +8,7 @@
 - 2026-10-09 起 P/S0/S1 一律走學長**加密流程**（`ddim_sample_loop_anonymization`）；E1 的推論流程結果只作病灶定位流程的歷史基線。AF-017、AF-020、AF-021 已由 AUD-20261010-01 關閉；AF-019 的 E2.5 與 A4 T2-WB 均已完成並關閉。
 - A3／A4／P3.1／P4.1 已完成且 G1 PASS；D7/G4 PASS。AF-025 的 fixed-norm S2 v2 與 N=200 補驗已由 AUD-20261015-01 獨立複驗通過並 CLOSED；目前無未關閉的 MAJOR／MINOR finding。
 - Q8.1–Q8.5／P8.1 pilot 基礎設施已完成 CPU 驗證：P/S0/S1/S2-fixed-norm v2 的品質、匿名性、wrong-key/nonce、runtime、storage 與固定選圖共用同一套可追溯 runner/analyzer；真實 GPU smoke／pilot 結果另由 managed run 產生，不把 synthetic self-test 當科學證據。
-- Q8 真實 N=2 GPU smoke `Q8_PILOT_SMOKE_20261015T030330332601Z_955298c1` 與 N=20 dev parent `Q8_PILOT_20261015T044834956998Z_a03d6951` 均成功且 artifacts valid。使用者 2026-10-15 最新裁決將 Q8/P8 主部署口徑改為 P/S0/S1=legacy、S2=private-range preserving；既有 `paper_assets/q8_pilot/` 因四方法皆為 range-preserving，保留為 storage-controlled attribution，不再當主端到端比較。兩者皆為 `formal=false`，不可取代 Week 7 N=200 formal。
+- Q8 N=20 dev parent `Q8_PILOT_20261015T044834956998Z_a03d6951` 與 legacy supplement `Q8_LEGACY_SUPPLEMENT_20261015T083637049107Z_cf941408` 均成功且 artifacts valid；最新主部署結果位於 `paper_assets/q8_pilot_deployment/`，口徑為 P/S0/S1=legacy、S2=private-range preserving。舊 `paper_assets/q8_pilot/` 四方法皆 range-preserving，保留為 storage-controlled attribution，不再當主端到端比較。全部仍為 `formal=false`，不可取代 Week 7 N=200 formal。
 - LPIPS 已使用官方 torchvision AlexNet backbone（SHA-256 `7be5be79…cdee02`）在上述 smoke arrays 上以 `--lpips require` 計算成功；不需安裝額外 `lpips` 套件。
 - E2.3 latent cache 已凍結（`security_v1` 200 張、`dev_v1.1` 20 張，batch 1，抽樣重算全部 bit-exact）；E2.4 指標語意報告與 E2.5 dev round-trip 已完成，G0 的子任務全部有交付物。
 - T2-WB `Inconclusive` 規則依使用者 2026-10-10 裁決：攻擊成功照實報告；未成功時才看各方案專屬的正控制（`reports/t2wb_protocol.md` §4）。
@@ -105,9 +105,10 @@
 | `scripts/q8_analyze.py` | CPU analyzer：驗證 Q8 run 後產生五張 Q8 表、CI-ready long table、P8 固定／中位／最差視覺格與 analysis manifest；LPIPS 缺權重時明確 deferred。 | GPU run 完成後執行，不需重跑 diffusion。 |
 | `scripts/q8_metrics.py` | Q8/P8 共用統計、NN rank、LPIPS 可用性、選圖、array evidence 與 S2 container storage 拆解定義。 | runner、analyzer 與單元測試共用；變更會改 estimand，需先凍結規格。 |
 | `reports/q8_pilot_infrastructure.md` | Q8/P8 pilot 的方法、公開視角、LPIPS clipping、key/nonce policy、cache provenance、失敗規則與執行指令。 | 執行或稽核 Q8 前先閱讀；不含科學結果。 |
-| `paper_assets/q8_pilot/analysis_manifest.json`、`P8_selection.json` | N=20 dev pilot 的來源 run/cache/script/output hashes、LPIPS 權重與 clipping 揭露，以及 fixed-label／median／worst 預先規則選樣。 | Q8/P8 pilot provenance；`formal=false`，不可當正式主表。 |
-| `paper_assets/q8_pilot/table_fidelity.csv`、`table_anonymity.csv`、`table_wrong_key.csv`、`table_runtime.csv`、`table_storage.csv` | Q8.1–Q8.5 N=20 aggregate 結果：bootstrap CI、公開視角 NN、authenticated controls、分段成本與 M1/M2 storage accounting。 | pilot 稽核與 Week 7 formal 規格凍結；不含逐樣本資料。 |
-| `paper_assets/q8_pilot/fig_P8_visual_grid.png` | P8.1 依固定規則呈現 label 0、label 1、S2 M1 中位與最差案例的 original／各方法 public anonymous／reconstruction／S2 error。 | pilot 視覺檢查；不得改成手挑最佳案例。 |
+| `paper_assets/q8_pilot_deployment/analysis_manifest.json`、`P8_selection.json` | 最新 N=20 mixed-deployment pilot 的 parent/supplement/cache/script/output hashes、逐方法 storage map、LPIPS 權重與 fixed-label／median／worst 選樣。 | Q8/P8 主部署 pilot provenance；`formal=false`。 |
+| `paper_assets/q8_pilot_deployment/table_fidelity.csv`、`table_anonymity.csv`、`table_wrong_key.csv`、`table_runtime.csv`、`table_storage.csv` | Q8.1–Q8.5 mixed-deployment aggregate：P/S0/S1 legacy、S2 private-range；表內另保留 P/S0/S1 range attribution。 | Week 7 formal 規格凍結與稽核；不含逐樣本資料。 |
+| `paper_assets/q8_pilot_deployment/fig_P8_visual_grid.png` | P8.1 mixed-deployment 視覺格：固定 label 0/1、S2 median/worst，P/S0/S1 顯示 legacy public/reconstruction，S2 顯示 private-range public/reconstruction。 | 最新主 pilot 視覺檢查；不得手挑案例。 |
+| `paper_assets/q8_pilot/` | 第一版 N=20 四方法皆 range-preserving 的 aggregate 五表、manifest 與視覺格。 | 保留作 storage-controlled attribution 與歷史 provenance，不再當主端到端比較。 |
 
 ## E0/E1 結果檔
 
