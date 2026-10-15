@@ -8,7 +8,7 @@
 - 2026-10-09 起 P/S0/S1 一律走學長**加密流程**（`ddim_sample_loop_anonymization`）；E1 的推論流程結果只作病灶定位流程的歷史基線。AF-017、AF-020、AF-021 已由 AUD-20261010-01 關閉；AF-019 的 E2.5 與 A4 T2-WB 均已完成並關閉。
 - A3／A4／P3.1／P4.1 已完成且 G1 PASS；D7/G4 PASS。AF-025 的 fixed-norm S2 v2 與 N=200 補驗已由 AUD-20261015-01 獨立複驗通過並 CLOSED；目前無未關閉的 MAJOR／MINOR finding。
 - Q8.1–Q8.5／P8.1 pilot 基礎設施已完成 CPU 驗證：P/S0/S1/S2-fixed-norm v2 的品質、匿名性、wrong-key/nonce、runtime、storage 與固定選圖共用同一套可追溯 runner/analyzer；真實 GPU smoke／pilot 結果另由 managed run 產生，不把 synthetic self-test 當科學證據。
-- Q8 真實 N=2 GPU smoke `Q8_PILOT_SMOKE_20261015T030330332601Z_955298c1` 與經使用者裁決的 N=20 dev pilot `Q8_PILOT_20261015T044834956998Z_a03d6951` 均成功且 artifacts valid；N=20 aggregate 五表、analysis manifest、P8 選樣與視覺格位於 `paper_assets/q8_pilot/`，逐樣本 long table 與原始 run 只留本機、不入 Git。兩者皆為 `formal=false`，不可取代 Week 7 N=200 formal。
+- Q8 真實 N=2 GPU smoke `Q8_PILOT_SMOKE_20261015T030330332601Z_955298c1` 與 N=20 dev parent `Q8_PILOT_20261015T044834956998Z_a03d6951` 均成功且 artifacts valid。使用者 2026-10-15 最新裁決將 Q8/P8 主部署口徑改為 P/S0/S1=legacy、S2=private-range preserving；既有 `paper_assets/q8_pilot/` 因四方法皆為 range-preserving，保留為 storage-controlled attribution，不再當主端到端比較。兩者皆為 `formal=false`，不可取代 Week 7 N=200 formal。
 - LPIPS 已使用官方 torchvision AlexNet backbone（SHA-256 `7be5be79…cdee02`）在上述 smoke arrays 上以 `--lpips require` 計算成功；不需安裝額外 `lpips` 套件。
 - E2.3 latent cache 已凍結（`security_v1` 200 張、`dev_v1.1` 20 張，batch 1，抽樣重算全部 bit-exact）；E2.4 指標語意報告與 E2.5 dev round-trip 已完成，G0 的子任務全部有交付物。
 - T2-WB `Inconclusive` 規則依使用者 2026-10-10 裁決：攻擊成功照實報告；未成功時才看各方案專屬的正控制（`reports/t2wb_protocol.md` §4）。
@@ -101,6 +101,7 @@
 | `scripts/artifact_schema.py` | 建立／驗證 manifest、per-sample CSV、summary；檢查 ID、finite 與摘要一致性。 | 新實驗 runner 寫出結果後。 |
 | `scripts/check_staged_files.sh` | commit 前拒絕禁傳路徑、secret 名稱及超過 90 MiB 的 staged file。 | 每次 commit 前必跑。 |
 | `scripts/q8_pilot_runner.py` | Q8/P8 GPU runner：從已驗證的 E2.3 latent cache 比較 P/S0/S1/S2-fixed-norm v2，保存寬表、hash-verified arrays、wrong-key/nonce 控制、分段時間／記憶體與 storage accounting；pilot/formal 使用每 run 隨機 key/nonce。 | 先做 ≤4 張 smoke，再做 dev N=20 pilot；formal N=200 留到 Week 7。 |
+| `scripts/q8_legacy_supplement.py` | 從已驗證 Q8 parent 的 anonymous float arrays 補算 P/S0/S1 legacy PNG handoff、inversion、逆變換、重構與 wrong-key；嚴格綁定 parent/source/cache hashes，不修改 parent，也不需要 S2 raw key。 | 將既有 range-preserving parent 轉成最新 mixed-storage 主部署比較，避免重跑匿名生成與 S2。 |
 | `scripts/q8_analyze.py` | CPU analyzer：驗證 Q8 run 後產生五張 Q8 表、CI-ready long table、P8 固定／中位／最差視覺格與 analysis manifest；LPIPS 缺權重時明確 deferred。 | GPU run 完成後執行，不需重跑 diffusion。 |
 | `scripts/q8_metrics.py` | Q8/P8 共用統計、NN rank、LPIPS 可用性、選圖、array evidence 與 S2 container storage 拆解定義。 | runner、analyzer 與單元測試共用；變更會改 estimand，需先凍結規格。 |
 | `reports/q8_pilot_infrastructure.md` | Q8/P8 pilot 的方法、公開視角、LPIPS clipping、key/nonce policy、cache provenance、失敗規則與執行指令。 | 執行或稽核 Q8 前先閱讀；不含科學結果。 |

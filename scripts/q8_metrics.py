@@ -269,6 +269,8 @@ STAGE_COMPONENT = {
 
 def stage_base(stage: str) -> tuple[str, str]:
     """Split a stage name into (base stage, cell): ``*_legacy`` is the legacy-PNG cell, else ``main``."""
+    if stage.endswith("_rangeattr"):
+        return stage[: -len("_rangeattr")], "range_attribution"
     if stage.endswith("_legacy"):
         return stage[: -len("_legacy")], "legacy"
     return stage, "main"

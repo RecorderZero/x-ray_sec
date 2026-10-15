@@ -16,7 +16,7 @@ import pytest
 import torch
 
 from scripts import e2_legacy_wrapper as legacy
-from scripts import q8_analyze, q8_metrics, q8_pilot_runner as runner
+from scripts import q8_analyze, q8_legacy_supplement as supplement, q8_metrics, q8_pilot_runner as runner
 from scripts.e2_anonymization_runner import legacy_png_handoff
 from scripts.q8_metrics import (
     LpipsUnavailable, container_storage_breakdown, lpips_status, nn_ranks, parse_col, select_visual_cases,
@@ -160,6 +160,58 @@ def run_synthetic(tmp_path: Path, name: str, role: str = "synthetic_selftest", l
 @pytest.fixture(scope="module")
 def synthetic_run(tmp_path_factory) -> Path:
     return run_synthetic(tmp_path_factory.mktemp("q8"), "run", extra=("--storages", "range_preserving", "legacy"))
+
+
+@pytest.fixture(scope="module")
+def deployment_pair(tmp_path_factory):
+    root = tmp_path_factory.mktemp("q8deploy")
+    parent = run_synthetic(root, "parent", extra=("--storages", "range_preserving",))
+    args = supplement.parse_args(["--parent-run", str(parent), "--warmup", "0", "--artifacts-root", str(root / "derived")])
+    loaded = q8_analyze.Run(parent, allow_synthetic=True)
+    latents, backend, source_root = supplement.build_inputs(loaded)
+    derived = supplement.execute(args, loaded, latents, backend, source_root, io.StringIO(), io.StringIO())
+    return parent, derived
+
+
+def test_legacy_supplement_is_hash_bound_and_complete(deployment_pair, synthetic_run) -> None:
+    from scripts.artifact_schema import validate_run
+    parent, derived = deployment_pair
+    assert validate_run(derived)["valid"]
+    manifest = json.loads((derived / "manifest.json").read_text())
+    assert manifest["parent_run_id"] == parent.name and manifest["q8_supplement_schema"] == 1
+    assert manifest["deployment_storage_by_method"] == {m: "legacy_png_handoff" for m in ("P", "S0", "S1")}
+    index = json.loads((derived / "array_index.json").read_text())
+    assert index["recon_m1"]["shape"] == [3, 3, 256, 256]
+    assert index["recon_wrong_key"]["shape"] == [3, 2, 256, 256]
+    derived_recon = np.load(derived / index["recon_m1"]["file"])
+    full = q8_metrics.load_verified_arrays(synthetic_run, json.loads((synthetic_run / "array_index.json").read_text()))
+    # The bounded derived path is exactly the legacy cell of a fresh complete run.
+    assert np.array_equal(derived_recon, full["recon_m1_legacy"][:, :3])
+
+
+def test_analyzer_joins_mixed_deployment_and_retains_range_attribution(deployment_pair, tmp_path: Path) -> None:
+    parent, derived = deployment_pair
+    out = tmp_path / "mixed"
+    manifest = q8_analyze.analyze(parent, out, deployment_supplement=derived, allow_synthetic=True,
+                                  metric_factory=unavailable_lpips_factory)
+    assert manifest["deployment_storage_by_method"] == q8_analyze.DEPLOYMENT_STORAGE
+    assert manifest["deployment_supplement"]["run_id"] == derived.name
+    rows = table(out, "table_fidelity.csv")
+    main = [r for r in rows if r["comparison"] == "marginal" and r["path"] == "m1_image_inversion"
+            and r["metric"] == "psnr_db" and r["reference"] == "x0"]
+    assert {r["method"]: r["storage"] for r in main} == q8_analyze.DEPLOYMENT_STORAGE
+    attribution = [r for r in rows if r["comparison"] == "attribution_marginal" and r["metric"] == "psnr_db"]
+    assert {r["method"] for r in attribution} == {"P", "S0", "S1"}
+    assert all(r["storage"] == "range_preserving_public_range_v1" for r in attribution)
+    wrong = table(out, "table_wrong_key.csv")
+    assert any(r["method"] == "S0" and r["condition"] == "wrong_key" for r in wrong)
+
+
+def test_analyzer_rejects_supplement_for_a_different_parent(deployment_pair, tmp_path: Path) -> None:
+    _, derived = deployment_pair
+    other = run_synthetic(tmp_path, "other", extra=("--storages", "range_preserving",))
+    with pytest.raises(SystemExit, match="does not identify this Q8 parent|parent hashes"):
+        q8_analyze.analyze(other, tmp_path / "badjoin", deployment_supplement=derived, allow_synthetic=True)
 
 
 def read_rows(run_dir: Path) -> list[dict[str, str]]:

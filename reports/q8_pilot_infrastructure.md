@@ -7,20 +7,22 @@
 | 檔案 | 角色 |
 |---|---|
 | `scripts/q8_pilot_runner.py` | GPU 端 runner。每張影像、每個方法（P／S0／S1／S2-fixed-norm v2）寫一列寬表 `per_sample.csv`，並寫出影像 arrays（`arrays/*.npy`、`array_index.json` 含逐 slice SHA-256）。**不算 LPIPS**。 |
+| `scripts/q8_legacy_supplement.py` | GPU derived runner。從已驗證 parent 的 `anonymous_float` 只補 P／S0／S1 的 legacy PNG→inversion→inverse→reconstruction 與 deployment wrong-key；不重跑匿名生成，也不需要／不接觸未保存的 S2 raw key。 |
 | `scripts/q8_analyze.py` | CPU 端 analyzer。驗證 run，產生 `table_fidelity/anonymity/wrong_key/runtime/storage.csv`、`fig_P8_visual_grid.png`、`P8_selection.json`、`per_sample_long.csv`、`analysis_manifest.json`。 |
 | `scripts/q8_metrics.py` | 共用定義：bootstrap／Wilson CI、pessimistic NN rank、P8 選圖規則、LPIPS 狀態、儲存位元組拆解、arrays 證據。 |
-| `tests/unit/test_q8_pilot.py` | 30 個 CPU 測試（合成後端）。 |
+| `tests/unit/test_q8_pilot.py` | 67 個 CPU 測試（合成後端；數量以目前版本為準）。 |
 
-## 凍結的語意（沿用，未更動）
+## 凍結的部署語意
 
 - S2 = `S2-fixed-norm/v2`、R=1、P off、公開固定 `C=248.261`、真實 norm 與 M1 lo/hi 在 AEAD private metadata；HMAC 先於 metadata 解密、PNG 解碼、inversion、inverse。
-- 主要 storage cell = `range_preserving`（S2 用 authenticated private-range container；P/S0/S1 用 public-range PNG）。`legacy`（前作 min-max PNG）為可選歸因 cell：`--storages range_preserving legacy`；對 S2 這是繞過 container 的反事實。
+- 最新主部署比較為 **P／S0／S1=`legacy_png_handoff`，S2=`range_preserving_png_private_range/v2`**。P 採 legacy，因為它是學長流程的無加密 baseline。這是刻意比較完整部署管線的 end-to-end 差異，不能解讀成純加密演算法效果。
+- parent 原有 P／S0／S1 public-range 結果保留為 `range_attribution`，用於分離存檔協定影響；不再當主部署結果。S2 的 legacy counterfactual 亦不取代其正式 private-range 協定。
 - 生成 `guidance_scale=-1`、inversion `null=True`、`noise_level=500`、seed 1911、batch 1。
 
 ## 各表的估計量
 
 - **Q8.1 fidelity**：路徑 `m1`（影像 inversion）、`t1`（M2 exact latent）、`transform_only`；空間 image（PSNR/SSIM/LPIPS/cosine/L∞/RMSE/uint8 相等率）與 latent（cosine/RMSE/MaxAbs/norm ratio/bit-exact/低高頻 cosine/|z| Pearson）；對 x0、對 P 輸出、對 z。另有 S2−S0、S2−S1、S2−P、S0−P、S1−P 配對差異。S2 平均 PSNR 比 S0 低超過 1 dB 時只在 `review_trigger` 欄標註「先檢查實作」，**不是 pass/fail gate**。
-- **Q8.2 anonymity**：主要 view＝`public_available`，即持有儲存物件者實際可重建的影像：P/S0/S1＝以公開 lo/hi 還原值域的 range-preserving PNG；S2＝僅 q/255（lo/hi 已 AEAD 加密）。**公開資訊在協定上刻意不對稱**（表內 `note` 欄註明）。此 view 同時算影像差異（PSNR/SSIM/LPIPS/cosine/L∞）與 NN rank，並保留 `generator_float`（診斷）與 `stored_pixels_q255`（8-bit q，診斷）。NN rank 以 gallery=同批原圖，`cosine_raw` 與 `pearson` 兩種 scorer，pessimistic ties；已驗證的 `anonymous_public_available` array 存於 run 目錄；負控制 = 種子化 cyclic-shift derangement；正控制 = P（未保護）；另附「無關影像」數值下限。
+- **Q8.2 anonymity**：主要 view＝`public_available`，即持有儲存物件者實際可見的影像：P/S0/S1＝前作逐圖 min-max legacy PNG 的 q/255；S2＝range-preserving q/255（lo/hi 已 AEAD 加密）。**公開資訊在協定上刻意不對稱**（表內 `note` 欄註明）。此 view 同時算影像差異（PSNR/SSIM/LPIPS/cosine/L∞）與 NN rank，並保留 `generator_float`、`stored_pixels_q255` 與 P/S0/S1 的 `range_attribution`。NN rank 以 gallery=同批原圖，`cosine_raw` 與 `pearson` 兩種 scorer，pessimistic ties；負控制 = 種子化 cyclic-shift derangement；正控制 = P（未保護）；另附「無關影像」數值下限。
 - **Q8.3 wrong key／nonce**：S2 的 authenticated open 以 wrong key、偽造 nonce（沿用原 tag）開啟，記錄拒絕率（Wilson）與 inverter 呼叫次數（必須 0）；另有繞過驗證的反事實（解密者仍被給予真實 range 與 norm，屬保守 oracle）之影像／latent 指標，並與正確條件、無關影像下限並列，且給 `wrong − unrelated` 配對差。S0/S1 用另一個 legacy password；P 無金鑰；P/S0/S1 無 authenticator，拒絕率標 `not_applicable`。
 - **Q8.4 runtime／memory**：stage 互不重疊：`fixed_norm_scale`、`transform_forward/inverse`、`container_seal/open_total`（含 KDF、private-metadata AEAD、HMAC、PNG codec）、`storage_encode/decode`、`diffusion_*`；`micro_*` 為同輸入的單一原語重測（KDF、MAC compute/verify、inverse transform，**與 pipeline 階段不可相加**）；`control_*` 為 wrong-key 控制，排除於部署總量；`cached_latent_to_m1`（快取 z → 變換／封裝 → 生成 → M1 編碼）與 `m1_to_reconstruction`（M1 解碼／開啟 → inversion → inverse transform → 生成）為同一樣本已量測互斥階段之和；兩者**明確排除**最初 x0→z 的 inversion（該步驟由 E2.3 cache 一次性、與金鑰無關地完成）。median 與 p95（numpy linear）。GPU 每階段 `max_memory_allocated` 峰值；CPU 行程 RSS 為 process high-water（非每階段）。S0/S1 的 transform 時間含 wrapper 每次重建 legacy 金鑰（password KDF）。
 - **Q8.5 storage**：S2 容器拆為 nonce(16)／tag(32)／manifest（canonical JSON，不含密文與 private metadata）／private metadata（AEAD 密文原始位元組）／latent payload／image payload／encoding overhead（hex/base64/JSON 框架的非負殘差），總和恆等於序列化總長；M1、M2、M2+preview 分列。P/S0/S1 無 container，僅 payload。
@@ -58,6 +60,7 @@ LPIPS 僅在 CPU analyzer 由已雜湊驗證的 arrays 計算，所以 GPU run �
 - fail closed：任何樣本例外或非有限值 → 寫 `failures.json`、exit 4、不產生 `per_sample.csv`／`summary.json`；重試用新 run ID，不更換 seed／樣本／設定。
 - S2 authenticated wrong-key／wrong-nonce 若未被拒絕（rejected≠1）或 inverter 被呼叫（calls≠0），runner 直接中止（exit 4）；analyzer 也會對不一致證據 fail closed（另檢查 patient ID 唯一、x0 hash 與 array 一致、nonce registry 計數、key_mode 與 role、cache provenance 完整）。runner 亦要求 patient ID 唯一。
 - analyzer 檢查：artifact schema、`failures.json` 不存在、manifest `failures=0`、array 檔與逐 slice hash、數值有限、sample 數與 ID、`evidence_role`；每張表含 `n_expected／n／n_failed`。
+- supplement 額外綁定 parent run ID，以及 parent manifest/config/per-sample/array-index、checkpoint、sampler、E2.3 cache 與逐 latent SHA-256；任何不一致都在模型建立前 fail closed。derived artifact 不就地修改原 validated parent。
 - `--evidence-role` 必須明示（`smoke`≤4 張、`pilot`、`formal` 僅限完整 200 張 `security_v1`、`synthetic_selftest`）。`synthetic_selftest` 用假的逐點可逆 generator，只驗證管線，analyzer 預設拒絕分析（需 `--allow-synthetic`）。
 - 輸出檔經 `output_guard`，預設拒絕覆寫。`per_sample_long.csv`、`arrays/` 屬大型 per-sample 輸出，不應提交。
 
@@ -87,7 +90,12 @@ scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id Q8_PILOT_SMOKE -
 scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id Q8_PILOT --validate-artifacts -- \
   python -m scripts.q8_pilot_runner --evidence-role pilot --task-id Q8_PILOT \
   --split splits/dev_v1.1.csv --latent-cache <E2.3 dev cache run> --checkpoint <ckpt>
+# 從既有 N=20 parent 只補 P/S0/S1 legacy deployment（含 wrong-key），預估約 21 分鐘
+scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id Q8_LEGACY_SUPPLEMENT --validate-artifacts -- \
+  python -m scripts.q8_legacy_supplement --task-id Q8_LEGACY_SUPPLEMENT \
+  --parent-run artifacts/runs/Q8_PILOT/<run_id>
 # 分析（CPU）
 scripts/run_cfg_ddim.sh python -m scripts.q8_analyze --run-dir artifacts/runs/Q8_PILOT/<run_id> \
+  --deployment-supplement artifacts/runs/Q8_LEGACY_SUPPLEMENT/<run_id> \
   --output-dir paper_assets/q8_pilot --lpips auto
 ```

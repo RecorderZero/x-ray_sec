@@ -75,9 +75,15 @@ NN_VIEWS = (("public_available", "anonymous_public_available"), ("stored_pixels_
             ("generator_float", "anonymous_float"))
 IMAGE_VIEWS = (("public_available", "anonpub"), ("generator_float", "anon"))
 PUBLIC_VIEW_NOTE = (
-    "public_available: P/S0/S1 = range-restored PNG (lo/hi public); S2 = q/255 (lo/hi encrypted) - "
-    "asymmetric public information by design"
+    "deployment public_available: P/S0/S1 = predecessor legacy min-max PNG q/255; "
+    "S2 = range-preserving q/255 with lo/hi encrypted - asymmetric public information by design"
 )
+RANGE_PARENT_PUBLIC_VIEW_NOTE = (
+    "public_available: P/S0/S1 = range-restored PNG (lo/hi public); "
+    "S2 = q/255 (lo/hi encrypted) - asymmetric public information by design"
+)
+DEPLOYMENT_STORAGE = {"P": "legacy_png_handoff", "S0": "legacy_png_handoff",
+                      "S1": "legacy_png_handoff", "S2": "range_preserving_private_range_v2"}
 GRID_CELL, GRID_LABEL = 256, 30
 
 LPIPS_COLUMNS = ["input_view", "clip_fraction_mean", "clip_fraction_max"]
@@ -177,6 +183,9 @@ class Run:
             raise SystemExit("main storage cell must come first")
         self.gpu_memory = bool(manifest.get("gpu_memory_measured"))
         self.evidence = evidence
+        self.deployment_supplement = None
+        self.deployment_storage = {method: self.storages[0] for method in METHODS}
+        self.public_view_note = RANGE_PARENT_PUBLIC_VIEW_NOTE
         self._check_consistency()
 
     def _check_consistency(self) -> None:
@@ -226,12 +235,111 @@ class Run:
     def get(self, method: str, group: str, name: str) -> np.ndarray:
         return self.data[col(method, group, name)]
 
+    def apply_deployment_supplement(self, supplement_dir: Path) -> None:
+        """Join a hash-bound P/S0/S1 legacy cell without mutating the source run."""
+        supplement_dir = Path(supplement_dir)
+        validation = validate_run(supplement_dir)
+        if not validation["valid"]:
+            raise SystemExit(f"deployment supplement invalid: {validation['errors']}")
+        manifest = json.loads((supplement_dir / "manifest.json").read_text(encoding="utf-8"))
+        if manifest.get("q8_supplement_schema") != 1 or manifest.get("parent_run_id") != self.manifest["run_id"]:
+            raise SystemExit("deployment supplement does not identify this Q8 parent")
+        actual_parent = {name: sha256_file(self.run_dir / name) for name in
+                         ("manifest.json", "config.json", "per_sample.csv", "array_index.json")}
+        if manifest.get("parent_hashes") != actual_parent:
+            raise SystemExit("deployment supplement parent hashes differ from this Q8 run")
+        if manifest.get("checkpoint_hash") != self.manifest["checkpoint_hash"] or manifest.get("source_sampler_sha256") != self.manifest["source_sampler_sha256"]:
+            raise SystemExit("deployment supplement model/source hashes differ from the parent")
+        if manifest.get("sample_ids") != self.sample_ids or manifest.get("evidence_role") != self.role:
+            raise SystemExit("deployment supplement sample order/role differs from the parent")
+        index_path = supplement_dir / manifest["array_index_file"]
+        if sha256_file(index_path) != manifest["array_index_sha256"]:
+            raise SystemExit("deployment supplement array index hash mismatch")
+        evidence = json.loads(index_path.read_text(encoding="utf-8"))
+        expected_methods = {"anonymous_public_q": ["P", "S0", "S1"],
+                            "anonymous_public_available": ["P", "S0", "S1"],
+                            "recon_m1": ["P", "S0", "S1"], "recon_wrong_key": ["S0", "S1"]}
+        if set(evidence) != set(expected_methods) or manifest.get("deployment_storage_by_method") != {
+                "P": "legacy_png_handoff", "S0": "legacy_png_handoff", "S1": "legacy_png_handoff"}:
+            raise SystemExit("deployment supplement arrays/storage map do not match the frozen schema")
+        supplemental = {}
+        for kind, entry in evidence.items():
+            path = supplement_dir / entry["file"]
+            if sha256_file(path) != entry["sha256"]:
+                raise SystemExit(f"deployment supplement array hash mismatch: {kind}")
+            array = np.load(path, mmap_mode="r")
+            if (list(array.shape) != entry["shape"] or str(array.dtype) != entry["dtype"]
+                    or entry.get("methods") != expected_methods[kind] or array.shape[0] != self.n
+                    or tuple(array.shape[2:]) != (256, 256)):
+                raise SystemExit(f"deployment supplement array schema mismatch: {kind}")
+            for i in range(array.shape[0]):
+                for j in range(array.shape[1]):
+                    digest = hashlib.sha256(np.ascontiguousarray(array[i, j]).tobytes()).hexdigest()
+                    if digest != entry["slice_sha256"][i][j]:
+                        raise SystemExit(f"deployment supplement slice hash mismatch: {kind}[{i},{j}]")
+            supplemental[kind] = array
+        with (supplement_dir / "per_sample.csv").open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle); supplement_rows = list(reader)
+        if [row["sample_id"] for row in supplement_rows] != self.sample_ids:
+            raise SystemExit("deployment supplement per-sample order differs from parent")
+
+        # Preserve the original range-preserving baseline cell as an attribution view.
+        self.arrays["recon_m1_range_attribution"] = np.asarray(self.arrays["recon_m1"]).copy()
+        self.arrays["anonymous_public_range_attribution"] = np.asarray(self.arrays["anonymous_public_available"]).copy()
+        for kind in ("anonymous_public_q", "anonymous_public_available", "recon_m1", "recon_wrong_key"):
+            self.arrays[kind] = np.asarray(self.arrays[kind]).copy()
+        for method in ("P", "S0", "S1"):
+            for group, target in (("m1", "m1range"), ("m1_vs_p", "m1range_vs_p"),
+                                  ("m1lat", "m1rangelat"), ("anonpub", "anonpubrange")):
+                for name in [p[2] for p in map(parse_col, self.data) if p and p[0] == method and p[1] == group]:
+                    self.data[col(method, target, name)] = self.data[col(method, group, name)].copy()
+            for column, values in list(self.data.items()):
+                parsed = parse_col(column)
+                if not parsed or parsed[0] != method:
+                    continue
+                _, group, name = parsed
+                if group == "runtime" and name.endswith("_seconds"):
+                    stage = name[:-len("_seconds")]
+                    self.data[col(method, "runtime", f"{stage}_rangeattr_seconds")] = values.copy()
+                elif group == "store":
+                    self.data[col(method, "storerange", name)] = values.copy()
+
+        method_positions = {method: i for i, method in enumerate(("P", "S0", "S1"))}
+        wrong_positions = {method: i for i, method in enumerate(("S0", "S1"))}
+        for method, position in method_positions.items():
+            parent_position = METHODS.index(method)
+            self.arrays["anonymous_public_q"][:, parent_position] = supplemental["anonymous_public_q"][:, position]
+            self.arrays["anonymous_public_available"][:, parent_position] = supplemental["anonymous_public_available"][:, position]
+            self.arrays["recon_m1"][:, parent_position] = supplemental["recon_m1"][:, position]
+            if method != "P":
+                self.arrays["recon_wrong_key"][:, ("S0", "S1", "S2").index(method)] = supplemental["recon_wrong_key"][:, wrong_positions[method]]
+        for column in supplement_rows[0]:
+            parsed = parse_col(column)
+            if parsed is None:
+                continue
+            method, group, _ = parsed
+            if method not in ("P", "S0", "S1"):
+                raise SystemExit(f"unexpected supplement method column: {column}")
+            values = np.asarray([float(row[column]) for row in supplement_rows], dtype=np.float64)
+            if not np.isfinite(values).all():
+                raise SystemExit(f"non-finite deployment supplement column: {column}")
+            self.data[column] = values
+        self.deployment_supplement = {"run_dir": supplement_dir, "manifest": manifest}
+        self.deployment_storage = dict(DEPLOYMENT_STORAGE)
+        self.public_view_note = PUBLIC_VIEW_NOTE
+
 
 LPIPS_PAIRS = (
     ("anon", "anonymous_float"), ("anonpub", "anonymous_public_available"), ("m1", "recon_m1"),
     ("t1", "recon_t1"), ("m1leg", "recon_m1_legacy"), ("wrongkey", "recon_wrong_key"),
     ("wrongnonce", "recon_wrong_nonce"),
 )
+
+
+def array_methods(kind: str) -> tuple[str, ...]:
+    if kind in ("recon_m1_range_attribution", "anonymous_public_range_attribution"):
+        return METHODS
+    return ARRAY_KINDS[kind][1]
 
 
 def clip_fractions(array: np.ndarray) -> tuple[float, float]:
@@ -255,9 +363,13 @@ class Lpips:
         self.clip: dict[tuple[str, str], tuple[float, float]] = {}
         x0 = run.arrays["x0"]
         self.clip[(SHARED, "ctrl_unrelated")] = clip_fractions(np.asarray(x0))
+        pairs = list(LPIPS_PAIRS)
+        if run.deployment_supplement:
+            pairs += [("anonpubrange", "anonymous_public_range_attribution"),
+                      ("m1range", "recon_m1_range_attribution")]
         for method in METHODS:
-            for group, kind in LPIPS_PAIRS:
-                methods = ARRAY_KINDS[kind][1]
+            for group, kind in pairs:
+                methods = array_methods(kind)
                 if kind in run.arrays and method in methods:
                     self.clip[(method, group)] = clip_fractions(run.arrays[kind][:, methods.index(method)])
         self.info = lpips_status() if metric_factory is None and mode != "off" else {"available": mode != "off", "reason": ""}
@@ -273,8 +385,8 @@ class Lpips:
             return
         self.state, self.reason = "computed", ""
         for method in METHODS:
-            for group, kind in LPIPS_PAIRS:
-                methods = ARRAY_KINDS[kind][1]
+            for group, kind in pairs:
+                methods = array_methods(kind)
                 if kind in run.arrays and method in methods:
                     position = methods.index(method)
                     self.values[(method, group)] = np.asarray([
@@ -336,8 +448,9 @@ def fidelity_rows(run: Run, lpips: Lpips) -> list[dict[str, Any]]:
         for method in METHODS:
             for name in metrics:
                 values, status = metric_values(run, lpips, method, group, name)
+                row_storage = run.deployment_storage.get(method, storage) if group in {"m1", "m1_vs_p", "m1lat"} else storage
                 rows.append({
-                    "method": method, "comparison": "marginal", "baseline": "", "storage": storage, "path": path,
+                    "method": method, "comparison": "marginal", "baseline": "", "storage": row_storage, "path": path,
                     "space": space, "reference": reference, "metric": name, **stats_row(run, values, status=status),
                     "review_trigger": "", **(lpips.disclosure((method, group)) if name == "lpips" else {}),
                 })
@@ -354,18 +467,37 @@ def fidelity_rows(run: Run, lpips: Lpips) -> list[dict[str, Any]]:
                         and values is not None and float(values.mean()) < -PSNR_REVIEW_DB):
                     trigger = "S2 mean PSNR is more than 1 dB below S0: inspect the implementation before interpreting (not a pass/fail gate)"
                 rows.append({
-                    "method": method, "comparison": "paired_difference", "baseline": baseline, "storage": storage,
+                    "method": method, "comparison": "paired_difference", "baseline": baseline,
+                    "storage": (f"{run.deployment_storage[method]} vs {run.deployment_storage[baseline]}"
+                                if run.deployment_supplement and group in {"m1", "m1_vs_p", "m1lat"} else storage),
                     "path": path, "space": space, "reference": reference, "metric": name,
                     **stats_row(run, values, status=status_a if status_a != "ok" else status_b), "review_trigger": trigger,
                     **(lpips.disclosure((method, group), (baseline, group)) if name == "lpips" else {}),
                 })
+    if run.deployment_supplement:
+        for group, path, space, reference, metrics in (
+            ("m1range", "m1_image_inversion_attribution", "image", "x0", IMAGE_TABLE_METRICS),
+            ("m1range_vs_p", "m1_image_inversion_attribution", "image", "p_output", VS_P_TABLE_METRICS),
+            ("m1rangelat", "m1_image_inversion_attribution", "latent", "z", LATENT_TABLE_METRICS),
+        ):
+            for method in ("P", "S0", "S1"):
+                for name in metrics:
+                    values, status = metric_values(run, lpips, method, group, name)
+                    rows.append({"method": method, "comparison": "attribution_marginal", "baseline": "",
+                                 "storage": "range_preserving_public_range_v1", "path": path, "space": space,
+                                 "reference": reference, "metric": name, **stats_row(run, values, status=status),
+                                 "review_trigger": "", **(lpips.disclosure((method, group)) if name == "lpips" else {})})
     return rows
 
 
 def anonymity_rows(run: Run, lpips: Lpips) -> list[dict[str, Any]]:
     rows = []
-    for view, view_group in IMAGE_VIEWS:
-        for method in (*METHODS, "unrelated_control"):
+    image_views = list(IMAGE_VIEWS)
+    if run.deployment_supplement:
+        image_views.append(("range_attribution", "anonpubrange"))
+    for view, view_group in image_views:
+        view_methods = ("P", "S0", "S1") if view == "range_attribution" else (*METHODS, "unrelated_control")
+        for method in view_methods:
             if method == "unrelated_control":
                 if view != "generator_float":
                     continue  # the unrelated-image floor does not depend on a storage view
@@ -381,13 +513,17 @@ def anonymity_rows(run: Run, lpips: Lpips) -> list[dict[str, Any]]:
                 rows.append({"method": method, "kind": "image_difference", "view": shown_view, "scorer": "",
                              "control": "negative_floor" if method == "unrelated_control" else "", "metric": name,
                              **stats_row(run, values, status=status), "gallery_size": "", "random_expectation": "",
-                             "note": PUBLIC_VIEW_NOTE if view == "public_available" else "",
+                             "note": run.public_view_note if view == "public_available" else "",
                              **(lpips.disclosure((source_method, group)) if name == "lpips" else {})})
     x0 = run.arrays["x0"]
-    for view, kind in NN_VIEWS:
+    nn_views = list(NN_VIEWS)
+    if run.deployment_supplement:
+        nn_views.append(("range_attribution", "anonymous_public_range_attribution"))
+    for view, kind in nn_views:
         array = run.arrays[kind]
-        for method in METHODS:
-            queries = np.asarray(array[:, ARRAY_KINDS[kind][1].index(method)], dtype=np.float64)
+        view_methods = ("P", "S0", "S1") if view == "range_attribution" else METHODS
+        for method in view_methods:
+            queries = np.asarray(array[:, array_methods(kind).index(method)], dtype=np.float64)
             if kind == "anonymous_public_q":
                 queries = queries / 255.0
             for scorer in NN_SCORERS:
@@ -412,7 +548,7 @@ def anonymity_rows(run: Run, lpips: Lpips) -> list[dict[str, Any]]:
                             "median": summary["median_rank"] if name == "median_rank" else "", "p95": "",
                             "min": "", "max": summary["max_rank"] if name == "median_rank" else "", "status": "ok",
                             "gallery_size": run.n, "random_expectation": random_expectation[name],
-                            "note": PUBLIC_VIEW_NOTE if view == "public_available" else "",
+                            "note": run.public_view_note if view == "public_available" else "",
                         })
     return rows
 
@@ -483,6 +619,10 @@ def runtime_rows(run: Run) -> list[dict[str, Any]]:
     order = {name: position for position, name in enumerate(STAGE_COMPONENT)}
     for (method, stage), column in sorted(stages.items(), key=lambda item: (METHODS.index(item[0][0]), order.get(stage_base(item[0][1])[0], 99), item[0][1])):
         base, cell = stage_base(stage)
+        if run.deployment_supplement and method in ("P", "S0", "S1") and cell == "main":
+            cell = "legacy_png_handoff"
+        elif run.deployment_supplement and method == "S2" and cell == "main":
+            cell = "range_preserving_private_range_v2"
         values = run.data[column]
         mask = np.ones(run.n, dtype=bool)
         note = ""
@@ -585,6 +725,16 @@ def storage_rows(run: Run) -> list[dict[str, Any]]:
         add(method, "M1_image_only", "total_vs_P_ratio",
             True, (run.get(method, "store", "m1_total_bytes") if has_container else preview) / base_total,
             note="per-sample ratio of this method's M1 object to P's PNG")
+    if run.deployment_supplement:
+        range_p = run.get("P", "storerange", "m1_image_payload_bytes")
+        for method in ("P", "S0", "S1"):
+            payload = run.get(method, "storerange", "m1_image_payload_bytes")
+            add(method, "M1_range_attribution", "image_payload_bytes", True, payload, float(payload.mean()),
+                note="parent public-range PNG attribution cell; not the selected deployment")
+            add(method, "M1_range_attribution", "total_bytes", True, payload, float(payload.mean()),
+                note="parent public-range PNG attribution cell; not the selected deployment")
+            add(method, "M1_range_attribution", "total_vs_P_ratio", True, payload / range_p,
+                note="parent public-range PNG attribution cell; not the selected deployment")
     add("raw_reference", "reference", "uint8_image_bytes", True, np.full(run.n, float(RAW_IMAGE_BYTES)), note="256x256x1 byte, uncompressed")
     add("raw_reference", "reference", "float32_latent_bytes", True, np.full(run.n, float(RAW_IMAGE_BYTES * 4)), note="256x256 float32")
     return rows
@@ -596,7 +746,14 @@ def long_rows(run: Run, lpips: Lpips) -> list[dict[str, Any]]:
     for column, values in run.data.items():
         method, group, name = parse_col(column)
         kind = group
-        storage = ("legacy" if group.startswith("m1leg") else run.storages[0]) if group.startswith("m1") else ""
+        if group.startswith("m1range"):
+            storage = "range_preserving_public_range_v1"
+        elif group.startswith("m1leg"):
+            storage = "legacy"
+        elif group.startswith("m1"):
+            storage = run.deployment_storage.get(method, run.storages[0])
+        else:
+            storage = ""
         for i in range(run.n):
             rows.append({"sample_id": run.sample_ids[i], "patient_id": run.patients[i], "label": run.labels[i],
                          "method": method, "group": kind, "storage": storage, "reference": "", "metric": name,
@@ -627,8 +784,10 @@ def render_grid(run: Run, cases: list[dict[str, Any]], path: Path) -> None:
     width, height = GRID_CELL * len(columns), (GRID_CELL + GRID_LABEL) * len(cases) + 34
     canvas = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(canvas)
+    storage_label = ("deployment P/S0/S1=legacy, S2=range-private" if run.deployment_supplement
+                     else f"main storage {run.storages[0]}")
     draw.text((4, 4), f"Q8/P8 {run.role} run {run.manifest['run_id']} | fixed display range [0,1] | "
-                      f"main storage {run.storages[0]} | anon columns = public_available (P/S0/S1 range-restored, S2 q/255) | "
+                      f"{storage_label} | anon columns = public_available | "
                       f"selection by {SELECTION_METRIC}", fill="black")
     for column, title in enumerate(columns):
         draw.text((column * GRID_CELL + 4, 18), title, fill="black")
@@ -671,9 +830,12 @@ def output_paths(output_dir: Path) -> dict[str, Path]:
     return {name: output_dir / name for name in names}
 
 
-def analyze(run_dir: Path, output_dir: Path, *, lpips_mode: str = "auto", allow_synthetic: bool = False,
+def analyze(run_dir: Path, output_dir: Path, *, deployment_supplement: Path | None = None,
+            lpips_mode: str = "auto", allow_synthetic: bool = False,
             force: bool = False, metric_factory: Callable[[str], Callable] | None = None) -> dict[str, Any]:
     run = Run(run_dir, allow_synthetic)
+    if deployment_supplement is not None:
+        run.apply_deployment_supplement(deployment_supplement)
     paths = output_paths(Path(output_dir))
     refuse_overwrite(paths.values(), force)
     lpips = Lpips(run, lpips_mode, metric_factory)  # may SystemExit before anything is written
@@ -698,14 +860,21 @@ def analyze(run_dir: Path, output_dir: Path, *, lpips_mode: str = "auto", allow_
         "formal": bool(run.manifest.get("formal")), "synthetic_backend": bool(run.manifest.get("synthetic_backend")),
         "n_expected": run.n_expected, "n_ok": run.n, "n_failed": run.n_expected - run.n,
         "storages": list(run.storages), "ci_method": CI_METHOD,
+        "deployment_storage_by_method": run.deployment_storage,
         "source_manifest_sha256": sha256_file(run.run_dir / "manifest.json"),
         "source_per_sample_sha256": sha256_file(run.run_dir / "per_sample.csv"),
         "source_array_index_sha256": run.manifest["array_index_sha256"],
         "source_git_commit": run.manifest["git_commit"], "source_git_dirty": run.manifest["git_dirty"],
+        "deployment_supplement": (None if run.deployment_supplement is None else {
+            "run_id": run.deployment_supplement["manifest"]["run_id"],
+            "manifest_sha256": sha256_file(run.deployment_supplement["run_dir"] / "manifest.json"),
+            "per_sample_sha256": sha256_file(run.deployment_supplement["run_dir"] / "per_sample.csv"),
+            "array_index_sha256": run.deployment_supplement["manifest"]["array_index_sha256"],
+        }),
         "script_sha256": {name: sha256_file(here / name) for name in ("q8_analyze.py", "q8_metrics.py")},
         "lpips": {"state": lpips.state, "reason": lpips.reason, "info": lpips.info,
                   "input_view": LPIPS_INPUT_VIEW, "clip_fraction_per_array": lpips.manifest_clip()},
-        "public_view_note": PUBLIC_VIEW_NOTE, "key_mode": run.manifest["key_mode"],
+        "public_view_note": run.public_view_note, "key_mode": run.manifest["key_mode"],
         "master_key_sha256": run.manifest["master_key_sha256"], "patients_unique": True,
         "latent_cache_hashes": {k: run.manifest.get(k) for k in (
             "latent_cache_run_id", "latent_cache_manifest_sha256", "latent_cache_config_sha256",
@@ -722,12 +891,14 @@ def analyze(run_dir: Path, output_dir: Path, *, lpips_mode: str = "auto", allow_
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--run-dir", type=Path, required=True)
+    parser.add_argument("--deployment-supplement", type=Path,
+                        help="validated P/S0/S1 legacy derived run; makes the mixed deployment cell primary")
     parser.add_argument("--output-dir", type=Path, default=Path("paper_assets/q8_pilot"))
     parser.add_argument("--lpips", choices=("auto", "require", "off"), default="auto")
     parser.add_argument("--allow-synthetic", action="store_true")
     add_force_flag(parser)
     args = parser.parse_args(argv)
-    manifest = analyze(args.run_dir, args.output_dir, lpips_mode=args.lpips,
+    manifest = analyze(args.run_dir, args.output_dir, deployment_supplement=args.deployment_supplement, lpips_mode=args.lpips,
                        allow_synthetic=args.allow_synthetic, force=args.force)
     print(json.dumps({"output_dir": str(args.output_dir), "lpips": manifest["lpips"]["state"],
                       "table_rows": manifest["table_rows"]}, indent=2))

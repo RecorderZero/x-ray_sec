@@ -68,7 +68,7 @@
 | M1 image-only | public anonymous PNG（不公開 lo/hi）＋nonce＋tag＋AEAD private norm/lo/hi | 最接近前作，受 inversion error 影響 |
 | M2 latent payload | authenticated fixed-norm z_ano＋AEAD private original norm＋anonymous preview | 可逆性上限與部署對照 |
 
-前作的 per-image min-max uint8 PNG（`legacy_png_handoff`，不保存值域）是 P/S0/S1「前作重現」的主路徑；本專案的 M1 協定是 `range_preserving_png`，結果表以「legacy PNG」與「range-preserving PNG」分欄報告（AF-024、AUD-20261010-05）。`[決定]`（使用者 2026-10-10）P/S0/S1/S2a/S2 **兩欄都跑**：range-preserving PNG 是對外宣稱的主結果；legacy PNG 欄作為與前作相同基準的對照與歸因（{S0/S1, S2} × {legacy, range-preserving} 2×2，分離加密與存檔的效果），放附表；R／permutation 等設定的選擇只依 range-preserving 欄，legacy 欄受每把金鑰生成的值域影響大，不作選擇依據。S2 與 S2a 的匿名影像相同（MAC 不改像素），legacy 欄只需算一次。
+前作的 per-image min-max uint8 PNG（`legacy_png_handoff`，不保存值域）是 P/S0/S1「前作重現」的主路徑；S2 v2 的 M1 協定是 `range_preserving_png_private_range/v2`。`[最新決定]`（使用者 2026-10-15，取代 2026-10-10 對 Q8/P8 主欄的舊決定）：Q8/P8 的端到端主部署比較固定為 **P/S0/S1 使用 legacy PNG，S2 使用 authenticated private-range preserving PNG**；P 是學長流程的無加密 identity baseline，因此也使用 legacy handoff。這個 mixed-storage 主欄回答的是「舊方案對新方案的完整部署差異」，不可解讀為純加密演算法效果。P/S0/S1 的 range-preserving 結果保留為 storage-controlled attribution；必要時另列 2×2 storage 消融，以分離加密與存檔影響，不覆寫既有結果。
 
 ### 1.4 優先級
 
