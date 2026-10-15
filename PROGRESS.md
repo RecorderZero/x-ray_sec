@@ -1681,3 +1681,34 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 由稽核方複驗 supplement 的 parent/source/cache hash binding、P/S0/S1 legacy bit-exact 路徑、mixed table storage labels、S2 不變性、range attribution 與 P8 panel 來源。
 * 稽核通過後凍結 Week 7 formal 設定；N=200 預估仍超過 30 分鐘，啟動前另向使用者報告正式 parent/supplement GPU 預估與 CPU/smaller alternative，取得明確裁決。
+
+## 2026-10-15 · W6 · Q8／P8 週摘要與論文 appendix
+
+### 1. 當前目標 (Objective)
+* 依最新 mixed-deployment 結果與 AUD-20261015-04／-05 稽核結論，完成 `PROGRESS_summary.md` Week 6 八段式摘要，並建立所有數字可追溯的 `appendix/week6/`。
+
+### 2. 執行動作 (Actions Taken)
+* 在 `scripts/build_weekly_appendix.py` 登記 Week 6 素材：1 張 P8 fixed visual grid、Q8 fidelity／anonymity／wrong-key／runtime／storage 五張原始 aggregate 表，以及由 `P8_selection.json` 確定性產生的 selection CSV。
+* 由已提交的 `paper_assets/q8_pilot_deployment/` 建立 `appendix/week6/`；以相同命令連續重建兩次並比較 MANIFEST、圖與表的 SHA-256。
+* 在 `PROGRESS_summary.md` 追加 6.1–6.8，明確分開 mixed deployment 主比較與全 range-preserving attribution，並更新根目錄 `README.md` 的檔案索引。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] Week 6 appendix 共 1 張圖、6 張表；每項含來源 hash、run ID、caption、claim scope 與輸出 hash，兩次重建逐位元相同。
+* [事實] 摘要記錄 Q8／P8 N=20 pilot 的 fidelity、public-view linkage、authenticated rejection、runtime、storage 與 deterministic selection；所有數值均回指 W6-F1 或 W6-T1～T6。
+* [事實] AUD-20261015-04 與 AUD-20261015-05 均為 PASS、新 finding 0；摘要未把 N=20 pilot 寫成 formal 結論，也未把 S2−S0 `+7.808 dB` 誤歸因為加密演算法單獨效果。
+* [事實] 本輪只做 CPU 文件／素材建置；沒有啟動 GPU 或背景程序，目前沒有需監控的 PID/run。
+
+### 4. 達標判定 (Assessment)
+* [x] Week 6 固定八段式摘要已完成並附論文素材索引。
+* [x] mixed deployment、storage attribution、pilot/formal 邊界與稽核狀態均明確揭露。
+* [x] appendix builder 可重現，且沒有納入 per-sample long output、dataset、checkpoint、cache、secret 或 auditor-owned 檔案。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* Week 6 最重要的寫作風險是把部署差異當成 cipher 消融；摘要用 W6-T1 同列 mixed 與 range-attribution，將主要品質改善歸因到值域保存。
+* Week 7 formal 可沿用同一素材 schema，待 N=200 結果提交後另建 `appendix/week7/`，不得以 Week 6 表格覆寫正式結果。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。Week 6 完成的是 Q8／P8 pilot；formal N=200、paired inference 與 claim matrix 仍按 WORKFLOW 留在 Week 7。
+
+### 7. 下一步
+* 啟動 Week 7 formal 前，先提出 parent／legacy supplement 的 GPU 用途、預估時間及小型替代方案供使用者裁決；獲准後執行 N=200 並建立 Week 7 appendix。

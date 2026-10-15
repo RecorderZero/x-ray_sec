@@ -655,3 +655,101 @@
 * Q8.3：正確／錯誤 key 與 nonce 並列，保留定量結果與固定案例圖。
 * Q8.4–Q8.5：分解 transform、KDF、AEAD／MAC、diffusion 的 median／p95 runtime 與各類 storage overhead。
 * P8.1：依預先固定、median、worst 三類病例建立 visual grid；先完成 pilot 並凍結設定，再進 Week 7 formal run。
+
+---
+
+## Week 6（2026-11-09～11-15；於 10-15 提前完成）｜重構品質、匿名性、錯誤金鑰、成本與固定選圖（Q8、P8）
+
+### 6.1 範圍與狀態
+
+| 子任務 | 內容 | 稽核判定 | 主要 commit |
+|---|---|---|---|
+| Q8.1 | P／S0／S1／S2 reconstruction fidelity 與 paired CI | Achieved（pilot；AUD-20261015-04、-05） | `e0723aa`、`74e495e`、`d791290`、`8d9e0b3` |
+| Q8.2 | public-view 影像差異與 cosine nearest-neighbor | Achieved（pilot；AUD-20261015-04、-05） | `74e495e`、`8d9e0b3` |
+| Q8.3 | S2 wrong-key／wrong-nonce 與 fail-closed 順序 | Achieved（pilot；AUD-20261015-04、-05） | `74e495e`、`8d9e0b3` |
+| Q8.4 | transform、storage、diffusion、container runtime | Achieved（pilot；AUD-20261015-04、-05） | `74e495e`、`8d9e0b3` |
+| Q8.5 | M1／M2 storage 分項 | Achieved（pilot；AUD-20261015-04、-05） | `74e495e`、`8d9e0b3` |
+| P8.1 | fixed-label／lower-median／worst visual grid | Achieved（pilot；AUD-20261015-04、-05） | `74e495e`、`8d9e0b3` |
+
+* Week 6 的工程與 N=20 dev pilot 已完成，且最新 mixed-deployment 版本通過獨立稽核；正式樣本數仍為 N=200，留在 Week 7，故本週不宣告 formal 統計結論。
+* 最終主比較固定為 **P／S0／S1 使用前作 `legacy_png_handoff`，S2 使用 `range_preserving_private_range_v2`**；舊四方法全 range-preserving 結果保留為 storage-controlled attribution，不覆寫。
+
+### 6.2 本週重點
+
+1. `[事實]` **mixed-deployment 清楚呈現舊、新完整部署的重構差異。** M1 重構對 x0 的平均 PSNR 為 P=`37.708`、S0=`31.467`、S1=`31.305`、S2=`39.275 dB`；S2−S0 為 `+7.808 dB`，95% patient-bootstrap CI `[+6.980,+8.658]`（W6-T1）。
+2. `[事實]` **+7.808 dB 不是 S2 加密本身的效果。** 在全 range-preserving attribution 中，P／S0／S1 為 `37.809／38.439／39.168 dB`；相對各自 range cell，legacy 使 P／S0／S1 約下降 `0.10／6.97／7.86 dB`，指出主要差異來自保存值域（W6-T1）。
+3. `[事實]` **N=20 public-view linkage 只足以辨識 P 明顯未匿名化。** cosine NN Top-1／Top-5 為 P=`1.00/1.00`、S0=`0.05/0.25`、S1=`0.10/0.45`、S2=`0.00/0.15`；random expectation 為 `0.05/0.25`，不可由此宣稱 S0、S1、S2 彼此有顯著差異（W6-T2）。
+4. `[事實]` **S2 的錯誤憑證路徑 fail closed。** wrong key 與 wrong nonce 都是 20/20 拒絕，Wilson 95% CI 下界 `0.839`，且驗證失敗時 inverter 呼叫數為 0（W6-T3）。
+5. `[事實]` **四方法 runtime 接近是 diffusion 支配，而非密碼操作完全沒有成本。** cached latent→M1 median 約 `7.80 s`，M1→reconstruction 約 `15.52–15.67 s`；S2 seal/open median 僅 `7.96/3.78 ms`（W6-T4）。
+6. `[事實]` **S2 以較大的容器換取認證與私有值域 metadata。** M1 平均總量 P／S0／S1／S2 為 `32,728／53,248／54,083／74,625 bytes`，S2 約為 P 的 `2.29×`（W6-T5）。
+
+### 6.3 實驗結果與分析
+
+#### (a) Q8.1：合法重構品質與 storage attribution
+
+* `[事實]` mixed 主欄的 PSNR／SSIM／LPIPS／L∞ 分別為：P=`37.708/0.97486/0.06227/0.23219`、S0=`31.467/0.92721/0.11697/0.55780`、S1=`31.305/0.89795/0.16593/0.41613`、S2=`39.275/0.97271/0.06233/0.15722`（W6-T1）。LPIPS 使用官方 AlexNet backbone 並對輸入 clip 至 [0,1]；其餘指標使用未裁切 float，兩者不能誤稱看見完全相同的像素。
+* `[事實]` S2−S0 paired 差異為 PSNR `+7.808 dB`、SSIM `+0.04550`、LPIPS `−0.05464`、L∞ `−0.40059`（W6-T1）。這回答「舊 S0 部署換成新 S2 部署」的端到端差異，但同時改變 cipher、fixed-norm metadata 與 storage。
+* `[事實]` storage-controlled attribution 的 S0／S1 range PSNR 為 `38.439／39.168 dB`，比各自 legacy 主欄高 `6.972／7.863 dB`（W6-T1）。因此論文應把 mixed 主比較與 attribution 並列，不能把約 8 dB 寫成 SOT 或 AEAD 的單獨貢獻。
+
+#### (b) Q8.2–Q8.3：public-view 匿名性與錯誤憑證
+
+* `[事實]` public-view P 的 NN Top-1 為 1.00，顯示 identity baseline 可被逐張鏈結；S0／S1／S2 的 Top-1 為 0.05／0.10／0.00（W6-T2）。由於 gallery 只有 20 張，單一命中即改變 0.05，正式比較必須等待 N=200。
+* `[事實]` `public_available` 有刻意的部署資訊差異：P／S0／S1 是前作 legacy q/255，S2 只有 range-preserving q/255，所需 lo/hi 已加密（W6-T2）。因此此欄代表實際公開面，不是所有方法共享同一像素域的純演算法消融。
+* `[事實]` bypass-auth 反事實診斷顯示錯誤條件會產生失真輸出；真正部署路徑在 inversion 前即拒絕 wrong key／nonce，20/20 rejected 且 inverter calls=0（W6-T3）。安全結論應引用 fail-closed 結果，不把未驗證旁路當實際功能。
+
+#### (c) Q8.4–Q8.5：runtime 與 storage
+
+* `[事實]` deployment cached latent→M1 median 為 P／S0／S1／S2=`7.797／7.796／7.807／7.802 s`，M1→reconstruction=`15.645／15.671／15.670／15.518 s`（W6-T4）。四方法都執行相同數量的 DDIM 階段，所以 GPU diffusion 的秒級成本掩蓋 transform、codec 與 authentication 的毫秒級差異。
+* `[事實]` S2 M1 的 `74,625 bytes` 包含 image payload、nonce、tag、manifest、加密 private metadata 與編碼 overhead；P 的 `32,728 bytes` 只有 image payload，兩者並非同功能容器（W6-T5）。M2 的 raw latent 與 S2 authenticated container 也應分開報告，不能只比較單一總檔案大小。
+
+#### (d) P8.1：固定規則定性展示
+
+![W6-F1](appendix/week6/figures/W6-F1_q8_p8_visual_grid.png)
+
+* `[事實]` fixed label-0／label-1 病例為 `dev_v1.1_000`／`dev_v1.1_010`；S2 M1 PSNR 的 lower-median 為 `_018`（rank 10，`39.373 dB`），worst 為 `_007`（rank 1，`38.390 dB`）（W6-T6）。重複角色不另換樣本，完整規則已寫入表中。
+* `[事實]` 圖中 P／S0／S1 panel 已換成 legacy public view 與 legacy reconstruction，S2 panel 維持 private-range 結果；選樣 JSON 在修改前後逐位元相同，故 storage 補跑沒有重新挑選較有利病例（W6-F1、W6-T6）。
+
+### 6.4 論文可用素材（`appendix/week6/`）
+
+| 編號 | 內容 | 建議用途 | 建議章節 |
+|---|---|---|---|
+| W6-F1 | mixed-deployment 四病例原圖／公開匿名圖／合法重構圖 | 正文 | Results／end-to-end comparison |
+| W6-T1 | fidelity、paired CI 與 range attribution | 正文主表 | Results／fidelity |
+| W6-T2 | public-view 影像差異與 NN linkage | 正文 | Results／anonymity |
+| W6-T3 | wrong-key／wrong-nonce 與 fail-closed | 正文 | Results／authentication |
+| W6-T4 | runtime／GPU memory 分項 | 正文 | Results／runtime |
+| W6-T5 | M1／M2 storage 分項 | 正文 | Results／storage |
+| W6-T6 | P8 deterministic selection protocol | 附錄 | Results／qualitative selection |
+
+完整 caption、來源 SHA-256、run ID 與輸出 SHA-256 見 `appendix/week6/MANIFEST.csv`；連續重建兩次逐位元相同。
+
+### 6.5 決策紀錄
+
+| 日期 | 決定 | 出處 |
+|---|---|---|
+| 10-15 | `[決定]` Week 6 先以 dev N=20 跑通；formal 樣本數仍為 N=200 | 使用者裁決、WORKFLOW Week 6–7 |
+| 10-15 | `[決定]` Q8／P8 主欄改為 P／S0／S1 legacy、S2 private-range preserving | 使用者裁決、WORKFLOW §2.3、W6-T1 |
+| 10-15 | `[決定]` 舊全 range 結果保留為 attribution，不刪除、不冒充主部署比較 | AUD-20261015-05、W6-T1 |
+| 10-15 | `[決定]` P8 採 fixed label、lower-median、worst 的固定規則，不人工挑最佳案例 | WORKFLOW P8.1、W6-T6 |
+
+### 6.6 稽核狀態
+
+* AUD-20261015-04：原 N=20 Q8.1–Q8.5／P8.1 pilot **PASS**，新 finding 0；獨立重算 fidelity、linkage、storage、LPIPS provenance 與 P8 selection。
+* AUD-20261015-05：mixed-deployment supplement 與合併分析 **PASS**，新 finding 0；獨立確認 parent hash binding、P／S0／S1 legacy 數值、S2 arrays 不變、range attribution 與 P8 panel 來源。
+* Week 6 pilot 已完成稽核；目前沒有因本週工作新增的未關閉 MAJOR／MINOR finding。正式 N=200 結果尚未產生，不能引用 pilot 稽核作 formal 結論。
+
+### 6.7 限制與未解問題
+
+* 所有主要統計來自 dev_v1.1 N=20、`formal=false`；CI 能描述 pilot 波動，但不取代 Week 7 的 security_v1 N=200 formal analysis（W6-T1～W6-T5）。
+* mixed 主欄是實際舊／新部署比較，不是單因子實驗；S2 相對 S0 的 +7.81 dB 大部分由 storage protocol 改善，不可宣稱為加密演算法單獨提升（W6-T1）。
+* cosine nearest-neighbor 只量測指定 gallery linkage；低命中率不等於不可辨識、臨床隱私充分或一般密碼學安全（W6-T2）。
+* 匿名圖是否保留積水辨識、分類或定位效用不在 Q8／P8 的測項內；低 PSNR、高影像差異與視覺格都不能替代臨床效用實驗（W6-F1、W6-T2）。
+* runtime 來自共用 GPU 的單輪 pilot，適合解釋成本量級與組成，不宜當成跨硬體 benchmark；Week 7 仍須保留 median／p95 與環境記錄（W6-T4）。
+* S2 storage 較大是功能組合的結果；若要回答各元件增量，必須引用 nonce、tag、manifest、metadata、payload 等分項，而非只報總比值（W6-T5）。
+
+### 6.8 下週計畫（Week 7）
+
+* 以 frozen mixed-deployment 設定對 security_v1 N=200 執行 formal parent／legacy supplement，保留 parent hash binding 與 S2 arrays 不重算原則。
+* 完成 paired test、effect size、bootstrap CI、multiple-comparison 規則與 claim→evidence matrix；正式結論只引用 formal artifact。
+* 補齊 M1／M2 與 AEAD-reference 的誤差、runtime、storage 歸因，並把「部署比較」和「storage-controlled attribution」分開呈現。
+* 正式 GPU 任務預估超過 30 分鐘；啟動前依專案規則另報目的、預估時間與小型替代方案，取得使用者明確裁決。

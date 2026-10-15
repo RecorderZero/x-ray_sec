@@ -485,6 +485,21 @@ def fig_w5_norm_remediation(out: Path, src: list[Path]) -> None:
     plt.close(fig)
 
 
+# ---------------------------------------------------------------- week 6 tables
+def tab_w6_selection(out: Path, src: list[Path]) -> None:
+    data = json.loads(src[0].read_text(encoding="utf-8"))
+    _write_csv(out, [{
+        "role": case["role"],
+        "sample_id": case["sample_id"],
+        "label": case["label"],
+        "selection_metric": case["selection_metric"],
+        "selection_score": case["selection_score"],
+        "rank_ascending": case["rank_ascending"],
+        "n": case["n"],
+        "rule": data["rule"],
+    } for case in data["cases"]])
+
+
 # ---------------------------------------------------------------- registry
 WEEKS: dict[int, list[Item]] = {
     1: [
@@ -751,6 +766,49 @@ WEEKS: dict[int, list[Item]] = {
              "P7.1 defense package 的 10 條 claim→evidence 索引，含 headline、來源 SHA-256 與適用範圍。",
              "D7 與 AF-025 的對外宣稱均可追溯至已提交的正式結果",
              ["paper_assets/defense_package/claims.csv", "paper_assets/defense_package/index.md"], []),
+    ],
+    6: [
+        Item("W6-F1", "figure", "W6-F1_q8_p8_visual_grid.png", "正文", "Results／end-to-end comparison",
+             "Q8／P8 mixed-deployment pilot 的固定規則選圖（dev_v1.1，N=20）：原圖、P／S0／S1／S2 公開匿名視圖、合法重構與 S2 誤差圖。P／S0／S1 採前作 legacy PNG，S2 採 private range-preserving storage；四個病例由固定 label、S2 PSNR lower-median 與 worst 規則決定，非人工挑圖。",
+             "mixed-deployment 的定性端到端比較；選圖由預先定義規則產生，不以視覺效果手挑",
+             ["paper_assets/q8_pilot_deployment/fig_P8_visual_grid.png",
+              "paper_assets/q8_pilot_deployment/P8_selection.json"],
+             ["Q8_PILOT_20261015T044834956998Z_a03d6951",
+              "Q8_LEGACY_SUPPLEMENT_20261015T083637049107Z_cf941408"]),
+        Item("W6-T1", "table", "W6-T1_fidelity.csv", "正文主表", "Results／fidelity",
+             "Q8.1 mixed-deployment fidelity pilot（dev_v1.1，N=20）：P／S0／S1 legacy 與 S2 private-range 的 M1 合法重構，含 PSNR、SSIM、LPIPS、cosine、L∞、RMSE、像素相等率及 paired bootstrap 95% CI；同表保留全 range-preserving attribution 列。",
+             "S2 對 legacy S0 的 PSNR 差為 +7.81 dB，但此端到端差異同時包含存檔協定；range-attribution 列用來分離主要的值域保存效應",
+             ["paper_assets/q8_pilot_deployment/table_fidelity.csv"],
+             ["Q8_PILOT_20261015T044834956998Z_a03d6951",
+              "Q8_LEGACY_SUPPLEMENT_20261015T083637049107Z_cf941408"]),
+        Item("W6-T2", "table", "W6-T2_anonymity.csv", "正文", "Results／anonymity",
+             "Q8.2 public-available 匿名性 pilot（dev_v1.1，N=20）：影像差異、cosine nearest-neighbor Top-k／rank／mAP 與負控制。P／S0／S1 公開視圖為 legacy q/255；S2 公開視圖不含加密的 lo/hi。",
+             "P 的 public-view Top-1 為 1.00；S0／S1／S2 為 0.05／0.10／0.00，但 N=20 下不可宣稱三者有顯著差異",
+             ["paper_assets/q8_pilot_deployment/table_anonymity.csv"],
+             ["Q8_PILOT_20261015T044834956998Z_a03d6951",
+              "Q8_LEGACY_SUPPLEMENT_20261015T083637049107Z_cf941408"]),
+        Item("W6-T3", "table", "W6-T3_wrong_key.csv", "正文", "Results／authentication",
+             "Q8.3 S2 wrong-key／wrong-nonce pilot（dev_v1.1，N=20）：未驗證旁路的失真診斷，以及正式 authenticated open 的拒絕率、Wilson 95% CI 與 inverter 呼叫次數。",
+             "S2 對 wrong key 與 wrong nonce 均 20/20 fail closed，且驗證失敗時 inverter 零呼叫",
+             ["paper_assets/q8_pilot_deployment/table_wrong_key.csv"],
+             ["Q8_PILOT_20261015T044834956998Z_a03d6951"]),
+        Item("W6-T4", "table", "W6-T4_runtime.csv", "正文", "Results／runtime",
+             "Q8.4 mixed-deployment runtime pilot（dev_v1.1，N=20）：transform、storage、cached latent→M1、M1→reconstruction 與 S2 container seal/open，含 median、p95、mean、range 與 GPU peak。",
+             "四方法的端到端時間接近，因約 7.8 秒與 15.5–15.7 秒的 diffusion 階段支配毫秒級 transform／storage／authentication 成本",
+             ["paper_assets/q8_pilot_deployment/table_runtime.csv"],
+             ["Q8_PILOT_20261015T044834956998Z_a03d6951",
+              "Q8_LEGACY_SUPPLEMENT_20261015T083637049107Z_cf941408"]),
+        Item("W6-T5", "table", "W6-T5_storage.csv", "正文", "Results／storage",
+             "Q8.5 mixed-deployment storage pilot（dev_v1.1，N=20）：M1／M2 的 image、latent、nonce、tag、manifest、private metadata 與 encoding overhead 分項。",
+             "M1 平均總量 P／S0／S1／S2 為 32,728／53,248／54,083／74,625 bytes；S2 增量主要來自完整容器與 private-range metadata",
+             ["paper_assets/q8_pilot_deployment/table_storage.csv"],
+             ["Q8_PILOT_20261015T044834956998Z_a03d6951",
+              "Q8_LEGACY_SUPPLEMENT_20261015T083637049107Z_cf941408"]),
+        Item("W6-T6", "table", "W6-T6_p8_selection.csv", "附錄", "Results／qualitative selection",
+             "P8.1 四病例的可重現選圖紀錄：固定 label 0／1、S2 M1 PSNR lower-median 與 worst，列出 sample ID、label、score、rank、N 與完整選擇規則。",
+             "定性圖的病例選擇是 deterministic protocol，不是結果導向手挑",
+             ["paper_assets/q8_pilot_deployment/P8_selection.json"],
+             ["Q8_PILOT_20261015T044834956998Z_a03d6951"], tab_w6_selection),
     ],
 }
 

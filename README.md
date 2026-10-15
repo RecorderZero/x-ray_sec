@@ -41,6 +41,7 @@
 | `appendix/week3/` | Week 3 D5 防禦素材：key pipeline、nonce registry 與 authenticated-container tamper matrix 共 3 張表及 `MANIFEST.csv`。 |
 | `appendix/week4/` | Week 4 D6 防禦素材：SOT 正確性／分布／R-P 消融／結構診斷、S2 dev integration 與五方法比較，共 3 張圖、8 張表及 `MANIFEST.csv`。 |
 | `appendix/week5/` | Week 5 D7／P7／AF-025 素材：T1／T2-WB linkage、cross-nonce、geometry、probe、repeat、tamper、defense package 與 fixed-norm v2 補驗，共 2 張圖、13 張表及 `MANIFEST.csv`。 |
+| `appendix/week6/` | Week 6 Q8／P8 mixed-deployment pilot 素材：fidelity、匿名性、錯誤金鑰、runtime、storage 與固定規則選圖，共 1 張圖、6 張表及 `MANIFEST.csv`。 |
 | `audit/README.md` | 稽核程式與輸出索引；由稽核方維護。 |
 
 ## E0/E1 可重現程式
