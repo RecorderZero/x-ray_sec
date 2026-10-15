@@ -9,6 +9,7 @@
 - A3／A4／P3.1／P4.1 已完成且 G1 PASS；D7/G4 PASS。AF-025 的 fixed-norm S2 v2 與 N=200 補驗已由 AUD-20261015-01 獨立複驗通過並 CLOSED；目前無未關閉的 MAJOR／MINOR finding。
 - Q8.1–Q8.5／P8.1 pilot 基礎設施已完成 CPU 驗證：P/S0/S1/S2-fixed-norm v2 的品質、匿名性、wrong-key/nonce、runtime、storage 與固定選圖共用同一套可追溯 runner/analyzer；真實 GPU smoke／pilot 結果另由 managed run 產生，不把 synthetic self-test 當科學證據。
 - Q8 真實 N=2 GPU smoke `Q8_PILOT_SMOKE_20261015T030330332601Z_955298c1` 已成功且 artifacts valid；本地 `paper_assets/q8_pilot_smoke/` 只作工程檢查、不入 Git。N=20 dev pilot 尚待超過 30 分鐘的 GPU 裁決。
+- LPIPS 已使用官方 torchvision AlexNet backbone（SHA-256 `7be5be79…cdee02`）在上述 smoke arrays 上以 `--lpips require` 計算成功；不需安裝額外 `lpips` 套件。
 - E2.3 latent cache 已凍結（`security_v1` 200 張、`dev_v1.1` 20 張，batch 1，抽樣重算全部 bit-exact）；E2.4 指標語意報告與 E2.5 dev round-trip 已完成，G0 的子任務全部有交付物。
 - T2-WB `Inconclusive` 規則依使用者 2026-10-10 裁決：攻擊成功照實報告；未成功時才看各方案專屬的正控制（`reports/t2wb_protocol.md` §4）。
 - 目標 checkpoint 可 strict load，missing/unexpected keys 均為 0。

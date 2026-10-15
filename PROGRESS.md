@@ -1568,3 +1568,36 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * N=20 dev pilot 預估 GPU 45–50 分鐘，超過 30 分鐘門檻，需使用者明確裁決後才啟動；CPU 替代只能重跑 synthetic plumbing，不能驗證 diffusion 科學結果。
 * 若獲准，啟動 managed run、低頻監控至完成，再執行 analyzer；若暫不跑，可先只保留本次 N=2 smoke 作工程驗證。
+
+## 2026-10-15 · W6 · LPIPS 本機權重啟用與測試去環境相依
+
+### 1. 當前目標 (Objective)
+* 補齊 Q8 所需的真實 LPIPS(alex) backbone，確認既有 smoke arrays 可用 `--lpips require` 計算，並維持測試在有／無本機權重時皆可重現。
+
+### 2. 執行動作 (Actions Taken)
+* 透過 `CFG_DDIM` 的 torchvision 官方 weights API 下載 `alexnet-owt-7be5be79.pth` 到本機 torch hub cache；未安裝額外 `lpips` 套件。
+* 執行 `q8_metrics.lpips_status()` 驗證 torchmetrics 線性權重與 AlexNet backbone SHA-256。
+* 對既有 N=2 run 以 `q8_analyze --lpips require --force` 重建本地 `paper_assets/q8_pilot_smoke/`，不重跑 GPU。
+* 權重出現後，兩個原先依賴「本機必定缺權重」的測試失敗；將 deferred-path fixture 改為顯式注入 `LpipsUnavailable`，computed path 仍由獨立 injected-metric 測試覆蓋。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `lpips_status.available=true`；官方 backbone SHA-256=`7be5be791159472b1fbf3c69796f7cb30dca7ad8466c2df70058c37116cdee02`，torchmetrics LPIPS 線性權重 SHA-256=`df73285e35b22355a2df87cdb6b70b343713b667eddbda73e1977e0c860835c0`。
+* [事實] smoke analysis manifest 的 `lpips.state=computed`；M1 mean LPIPS（N=2 工程診斷）為 P=`0.04893`、S0=`0.05701`、S1=`0.04921`、S2=`0.05851`。
+* [事實] 修正後 `tests/unit/test_q8_pilot.py` 為 64 passed、1 個既有 Pillow deprecation warning；有權重與無權重路徑不再依賴開發主機狀態。
+* [事實] 沒有啟動 GPU 或背景程序；本次只下載公開模型權重並以 CPU 重算 LPIPS。
+
+### 4. 達標判定 (Assessment)
+* [x] Q8/P8 的 LPIPS 真實計算路徑已啟用並由 `--lpips require` 驗證。
+* [x] 缺權重時的 fail-closed/deferred 與有權重時的 computed 兩種路徑都有環境獨立測試。
+* [x] Week 7 formal 可要求 LPIPS，不需重新執行 diffusion；只要保留 hash-verified arrays 即可重算。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 原本的失敗不是 Python module 缺少，而是 torchvision backbone cache 缺檔；額外安裝 standalone `lpips` 反而會增加相依衝突。
+* 測試不得用開發機 cache 狀態作固定前提；deferred/computed 必須由注入或隔離 cache 明確控制。
+* LPIPS 會將影像 clip 至 [0,1]，PSNR 等指標仍使用未裁切 float；表格與 manifest 已揭露 clipping fraction，不混稱同一輸入。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。LPIPS 已補齊，且 N=2 數值仍只標 smoke 診斷，不作 formal claim。
+
+### 7. 下一步
+* 依使用者最新明確授權，以 clean commit 啟動 N=20 dev GPU pilot（預估 45–50 分鐘），使用 subagent 低頻監控；完成後以 `--lpips require` 產生完整 Q8/P8 pilot 結果。

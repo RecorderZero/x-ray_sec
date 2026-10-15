@@ -32,13 +32,13 @@ LPIPS（torchmetrics `normalize=True`）要求輸入在 [0,1]，所以被比較�
 
 ## LPIPS（不得替代）
 
-本環境沒有 `lpips` 套件；`torchmetrics` 內含 LPIPS 線性層權重，但需要 torch hub cache 內已存在的 torchvision AlexNet 權重（`alexnet-owt-7be5be79.pth`），且本工具**絕不下載**。`q8_metrics.lpips_status()` 檢查並記錄權重 SHA-256。
+本專案不需要額外的 `lpips` 套件；使用 `torchmetrics` 的 LPIPS 線性層權重與 torchvision AlexNet backbone。2026-10-15 已將官方 `alexnet-owt-7be5be79.pth` 下載到本機 torch hub cache，SHA-256=`7be5be791159472b1fbf3c69796f7cb30dca7ad8466c2df70058c37116cdee02`，並以 Q8 smoke 的 `--lpips require` 實際計算成功。工具本身仍**絕不自動下載**；`q8_metrics.lpips_status()` 會檢查並記錄權重 SHA-256，其他主機缺檔時仍 fail closed／deferred。
 
 - `q8_analyze --lpips auto`（預設）：不可用時所有 LPIPS 列的數值欄留空，`status` 明寫 `lpips deferred: <原因>`，`analysis_manifest.json` 記錄 `lpips.state=deferred`；
 - `--lpips require`：不可用時在寫出任何檔案前中止（Week 7 formal 建議使用）；
 - `--lpips off`：標 `not_requested`。
 
-LPIPS 僅在 CPU analyzer 由已雜湊驗證的 arrays 計算，所以 GPU run 不依賴它；日後補齊權重後，對同一個 run 重跑 analyzer 即可，不必重跑 GPU。真實 LPIPS 路徑在本機**未能執行驗證**（缺權重）；測試以注入的假 metric 驗證接線，以及缺權重／錯誤 hash 的 fail-closed 行為。
+LPIPS 僅在 CPU analyzer 由已雜湊驗證的 arrays 計算，所以 GPU run 不依賴它；補齊權重後，對同一個 run 重跑 analyzer 即可，不必重跑 GPU。真實 LPIPS 路徑已用 N=2 Q8 smoke 驗證；測試另以注入 metric 驗證接線，並以隔離的空／錯誤 cache 驗證缺權重與錯誤 hash 的 fail-closed 行為。
 
 ## 金鑰／nonce 政策（依 evidence role）
 

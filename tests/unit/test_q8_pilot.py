@@ -28,6 +28,11 @@ from src.crypto.s2_fixed_norm import seal_anonymous_image, seal_latent
 KEY = bytes(range(32))
 
 
+def unavailable_lpips_factory(_device):
+    """Deterministic deferred-path stub, independent of the host model cache."""
+    raise LpipsUnavailable("test fixture: no weights")
+
+
 # ----------------------------------------------------------------- metric helpers
 def test_bootstrap_is_deterministic_and_clusters_by_patient() -> None:
     values = [1.0, 2.0, 3.0, 10.0]
@@ -260,7 +265,12 @@ def test_formal_and_smoke_roles_are_bounded(tmp_path: Path) -> None:
 @pytest.fixture(scope="module")
 def analysis(synthetic_run, tmp_path_factory):
     out = tmp_path_factory.mktemp("q8out") / "a"
-    manifest = q8_analyze.analyze(synthetic_run, out, allow_synthetic=True)
+    # Keep the deferred-path fixture deterministic whether the developer host
+    # has downloaded the optional AlexNet backbone or not.  The computed path
+    # is covered separately with an injected metric below.
+    manifest = q8_analyze.analyze(
+        synthetic_run, out, allow_synthetic=True, metric_factory=unavailable_lpips_factory,
+    )
     return out, manifest
 
 
@@ -373,7 +383,9 @@ def test_selection_is_preregistered_and_grid_is_deterministic(analysis, syntheti
     assert roles["worst"] == ranking[0][0] and roles["median"] == ranking[(len(ranking) - 1) // 2][0]
     assert selection["metric"] == q8_metrics.SELECTION_METRIC and selection["rule"] == q8_metrics.SELECTION_RULE
     again = tmp_path / "again"
-    second = q8_analyze.analyze(synthetic_run, again, allow_synthetic=True)
+    second = q8_analyze.analyze(
+        synthetic_run, again, allow_synthetic=True, metric_factory=unavailable_lpips_factory,
+    )
     assert second["outputs_sha256"] == manifest["outputs_sha256"]  # byte-identical tables, grid, long rows
 
 
