@@ -146,7 +146,7 @@ def execute(args, parent: Run, latents, backend, source_root: Path, stdout_captu
     try:
         with torch.inference_mode():
             for _ in range(args.warmup):
-                first = torch.from_numpy(np.asarray(parent.arrays["anonymous_float"][0, 0])).to(device)[None, None]
+                first = torch.from_numpy(np.asarray(parent.arrays["anonymous_float"][0, 0]).copy()).to(device)[None, None]
                 backend.generate(backend.invert(first))
             for i, sample_id in enumerate(parent.sample_ids):
                 row: dict[str, Any] = {"schema_version": SUPPLEMENT_SCHEMA, "sample_id": sample_id,
