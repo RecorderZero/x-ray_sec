@@ -1,0 +1,236 @@
+{
+  "ci_method": "percentile bootstrap, seed 1911, 10000 resamples, cluster=patient",
+  "deployment_storage_by_method": {
+    "P": "legacy_png_handoff",
+    "S0": "legacy_png_handoff",
+    "S1": "legacy_png_handoff",
+    "S2": "range_preserving_private_range_v2"
+  },
+  "deployment_supplement": {
+    "array_index_sha256": "c847adf00189ca1b59923f81dd25c2bf0c2dbf4f0142d9f3694d392ab5d212bf",
+    "manifest_sha256": "22fb899d5c29ee3a14d54547cd32ee6b17b407fcd8647afeaae3b604341cfbb5",
+    "per_sample_sha256": "6a72628472f0a8cbb5b22a1f4d3596d8b78fd3fb4dd4839257bf17c37341cfc7",
+    "run_id": "Q8_LEGACY_SUPPLEMENT_20261016T064241Z_964cb3e0"
+  },
+  "evidence_role": "formal",
+  "formal": true,
+  "interpretation_guard": "pilot infrastructure output; scientific values are reported, never used as pass/fail gates",
+  "key_mode": "random",
+  "latent_cache_hashes": {
+    "latent_cache_config_sha256": "7e7a7f1e0cf1de4bed92eb4620e35940d08ee91d81bf859f7f898f2e78e23309",
+    "latent_cache_index_sha256": "daca94b8ee150c965918e34f53f659d4a18da34ddd78dc845e8270dae51d68c8",
+    "latent_cache_manifest_sha256": "f503cd71097a7618c0411d9caed35b3424dd46a44c75da214ec2f2971845269f",
+    "latent_cache_run_id": "E2.3_20261009T183736363217Z_84cf642a",
+    "latent_cache_sha256": "195c20b3124af54c5dd40c644bae78af3144ae176204982c4c2f7b5effd69190",
+    "latent_cache_x0_verified": 200
+  },
+  "lpips": {
+    "clip_fraction_per_array": {
+      "ALL:ctrl_unrelated": {
+        "max": 0.0,
+        "mean": 0.0
+      },
+      "P:anon": {
+        "max": 0.161163330078125,
+        "mean": 0.002373199462890625
+      },
+      "P:anonpub": {
+        "max": 0.0,
+        "mean": 0.0
+      },
+      "P:anonpubrange": {
+        "max": 0.1181488037109375,
+        "mean": 0.00238372802734375
+      },
+      "P:m1": {
+        "max": 0.0121612548828125,
+        "mean": 0.0003968048095703125
+      },
+      "P:m1range": {
+        "max": 0.1497802734375,
+        "mean": 0.0026116943359375
+      },
+      "P:t1": {
+        "max": 0.161163330078125,
+        "mean": 0.002373199462890625
+      },
+      "S0:anon": {
+        "max": 0.4753570556640625,
+        "mean": 0.39628143310546876
+      },
+      "S0:anonpub": {
+        "max": 0.0,
+        "mean": 0.0
+      },
+      "S0:anonpubrange": {
+        "max": 0.472747802734375,
+        "mean": 0.3962261199951172
+      },
+      "S0:m1": {
+        "max": 0.1354217529296875,
+        "mean": 0.006227645874023437
+      },
+      "S0:m1range": {
+        "max": 0.151824951171875,
+        "mean": 0.0020243072509765624
+      },
+      "S0:t1": {
+        "max": 0.161163330078125,
+        "mean": 0.002373199462890625
+      },
+      "S0:wrongkey": {
+        "max": 0.467376708984375,
+        "mean": 0.39693695068359375
+      },
+      "S1:anon": {
+        "max": 0.4684600830078125,
+        "mean": 0.39401100158691404
+      },
+      "S1:anonpub": {
+        "max": 0.0,
+        "mean": 0.0
+      },
+      "S1:anonpubrange": {
+        "max": 0.47186279296875,
+        "mean": 0.39417716979980466
+      },
+      "S1:m1": {
+        "max": 0.0391998291015625,
+        "mean": 0.0052239990234375
+      },
+      "S1:m1range": {
+        "max": 0.167755126953125,
+        "mean": 0.00251983642578125
+      },
+      "S1:t1": {
+        "max": 0.161163330078125,
+        "mean": 0.002373199462890625
+      },
+      "S1:wrongkey": {
+        "max": 0.471099853515625,
+        "mean": 0.3988758850097656
+      },
+      "S2:anon": {
+        "max": 0.4675750732421875,
+        "mean": 0.3981903076171875
+      },
+      "S2:anonpub": {
+        "max": 0.0,
+        "mean": 0.0
+      },
+      "S2:m1": {
+        "max": 0.174102783203125,
+        "mean": 0.002531890869140625
+      },
+      "S2:t1": {
+        "max": 0.161163330078125,
+        "mean": 0.0023738861083984373
+      },
+      "S2:wrongkey": {
+        "max": 0.477264404296875,
+        "mean": 0.3959812164306641
+      },
+      "S2:wrongnonce": {
+        "max": 0.47955322265625,
+        "mean": 0.3947615051269531
+      }
+    },
+    "info": {
+      "available": true,
+      "backbone_weights": "alexnet-owt-7be5be79.pth",
+      "backbone_weights_sha256": "7be5be791159472b1fbf3c69796f7cb30dca7ad8466c2df70058c37116cdee02",
+      "backend": "torchmetrics",
+      "linear_weights_sha256": "df73285e35b22355a2df87cdb6b70b343713b667eddbda73e1977e0c860835c0",
+      "metric": "LPIPS",
+      "net": "alex",
+      "reason": "",
+      "torchmetrics_version": "1.9.0"
+    },
+    "input_view": "LPIPS(alex) inputs clipped to [0,1] then replicated to 3 channels; PSNR/SSIM/cosine/L-inf use the UNCLIPPED floats (SSIM data_range=1), so LPIPS and PSNR do not see identical pixels where clip_fraction>0",
+    "reason": "",
+    "state": "computed"
+  },
+  "master_key_sha256": "1b7d4ee591d8a99ce9442572000c98a0666d4b1ad68e324b94d2799abf9ab683",
+  "n_expected": 200,
+  "n_failed": 0,
+  "n_ok": 200,
+  "outputs_sha256": {
+    "P8_selection.json": "6cc042fbfc08f82f32c44841201dd158da6a4e0ae17e45486d817d22c3fd96cf",
+    "fig_P8_visual_grid.png": "dd090dcf6ea1d87b73ccf73474cffa95dfd578d6e4a0ed419d06374a9e668ebd",
+    "per_sample_long.csv": "c9aaeb18d275d14176bf96d5d050728775bbba3bfdfa1ef547732d5271b1e08c",
+    "table_anonymity.csv": "0a4077d68be48c5233132bb235c21212118985afae91000845abeab71260a165",
+    "table_fidelity.csv": "b9fcf38adb4e828fa89f8476b3c2913d158bcacfe1c76a011dd21866fbc03546",
+    "table_runtime.csv": "9dae459099a96ed3f5aba614d0fd489b3f962c4b1ff17b53b941b0bb52e5dab0",
+    "table_storage.csv": "a4d1665ec3a6af003ac69305fba392e3eaee5f738405ccae375eb373977c1f38",
+    "table_wrong_key.csv": "8021d8901c10ca654f8bfd89dd25a09e343d51cd8c50416ce008ce2981421bc8"
+  },
+  "patients_unique": true,
+  "public_view_note": "deployment public_available: P/S0/S1 = predecessor legacy min-max PNG q/255; S2 = range-preserving q/255 with lo/hi encrypted - asymmetric public information by design",
+  "schema_version": 1,
+  "script_sha256": {
+    "q8_analyze.py": "553e55c7488486a5d78d44ed0260eb00cf7f8459821d98f8663893b2a5a04896",
+    "q8_metrics.py": "57b1c4b8353d77f9702a650cb5e53d7fdda04b9f9cacc07b45b7caa5e8a27530"
+  },
+  "selection": {
+    "cases": [
+      {
+        "label": "0",
+        "n": 200,
+        "rank_ascending": 94,
+        "role": "fixed_label0",
+        "sample_id": "security_v1_0000",
+        "selection_metric": "S2__m1__psnr_db",
+        "selection_score": 38.76050693492437
+      },
+      {
+        "label": "1",
+        "n": 200,
+        "rank_ascending": 144,
+        "role": "fixed_label1",
+        "sample_id": "security_v1_0100",
+        "selection_metric": "S2__m1__psnr_db",
+        "selection_score": 39.359003342276885
+      },
+      {
+        "label": "0",
+        "n": 200,
+        "rank_ascending": 100,
+        "role": "median",
+        "sample_id": "security_v1_0046",
+        "selection_metric": "S2__m1__psnr_db",
+        "selection_score": 38.855570850709015
+      },
+      {
+        "label": "1",
+        "n": 200,
+        "rank_ascending": 1,
+        "role": "worst",
+        "sample_id": "security_v1_0112",
+        "selection_metric": "S2__m1__psnr_db",
+        "selection_score": 35.016557252163565
+      }
+    ],
+    "rule": "fixed = first no_finding (label 0) and first label-1 sample in split order; median = lower-median of ascending S2__m1__psnr_db (ties by sample_id); worst = minimum S2__m1__psnr_db (ties by sample_id); a sample selected twice is shown twice, never substituted"
+  },
+  "source_array_index_sha256": "69095373b7bb11f52b6ea8b9aad520d95a50db6368eae5e229cd8f31331e3fa5",
+  "source_git_commit": "7eeb0a47462682c189e7aacc0f96a90b689120ca",
+  "source_git_dirty": false,
+  "source_manifest_sha256": "8f7daf4e5e962f8c7dde4e78136ac7c772841329583e5106d22ddd4050c1dbb3",
+  "source_parent_storages": [
+    "range_preserving"
+  ],
+  "source_per_sample_sha256": "3f8229ecddff849301cb97e3d52d14232db3a8a8292bc8ba97f54be6bfa10605",
+  "source_run_id": "Q8_FORMAL_20261015T173907560215Z_7e4c3368",
+  "storages": [
+    "legacy_png_handoff",
+    "range_preserving_private_range_v2"
+  ],
+  "synthetic_backend": false,
+  "table_rows": {
+    "table_anonymity.csv": 360,
+    "table_fidelity.csv": 285,
+    "table_runtime.csv": 93,
+    "table_storage.csv": 115,
+    "table_wrong_key.csv": 98
+  }
+}

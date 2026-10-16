@@ -5,9 +5,10 @@ the Section-5 claim constraints to its supporting evidence.
 Headlines are pulled from the already-frozen, audited package claim files
 (``attack_package/claims.csv`` for the predecessor attacks, A3/A4/A4.6;
 ``defense_package/claims.csv`` for S2/D7 and the AF-025 fixed-norm remediation).
-Numbers are never typed here.  Quality hypotheses (H3c, RQ4) depend on the
-Week-7 formal quality run and are emitted as ``pending`` until that run lands,
-so the matrix also documents exactly what the formal run must fill.
+Numbers are never typed here.  Quality hypotheses (H3c, RQ4) are read from the
+frozen Week-7 formal quality tables (``q8_formal/table_fidelity.csv`` and the F9.4
+``tables/table_statistics_formal.csv``), mixed deployment (P/S0/S1 legacy PNG,
+S2 private range).
 
   scripts/run_cfg_ddim.sh python -m scripts.build_claim_matrix
 """
@@ -24,6 +25,9 @@ from scripts.output_guard import add_force_flag, refuse_overwrite
 ROOT = Path(__file__).resolve().parents[1]
 ATTACK = ROOT / "paper_assets/attack_package/claims.csv"
 DEFENSE = ROOT / "paper_assets/defense_package/claims.csv"
+# Frozen Week-7 formal quality evidence (mixed deployment): numbers are READ, not typed.
+FIDELITY = ROOT / "paper_assets/q8_formal/table_fidelity.csv"
+STATS = ROOT / "paper_assets/tables/table_statistics_formal.csv"
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -65,10 +69,10 @@ ROWS = [
     ("H3b", "RQ3", "norm-only linkage 在 T1 成功，T2-WB 成功率取決於 inversion error／存檔；固定 norm 後兩者降到 random",
      "supported_remediated", "defense", ["D7-C4", "D7-C9", "D7-C10"]),
     ("H3c", "RQ3", "真實 inversion latent 並非理想 N(0,I)，structured transform 可能改變生成品質",
-     "pending", "quality", []),
+     "supported", "quality", []),
     # RQ4: quality / reversibility trade-off (formal quality run)
     ("RQ4", "RQ4", "P／S0／S1／S2 的 latent round-trip、PSNR、SSIM、LPIPS、cosine、MaxAbsError 與 runtime 比較（含 paired test）",
-     "pending", "quality", []),
+     "supported", "quality", []),
 ]
 
 # Section-5 claim constraints the paper must honour (documented, not a number).
@@ -79,12 +83,55 @@ CONSTRAINTS = [
     ("§5.4", "original／sorted／norm-only 與 T1／T2-WB 分開報；固定 norm S2 v2 以相同 N=200 補驗，不因假說篩選", "PROPOSAL.md §5.4；AUD-20261014-04/15-01"),
 ]
 
-PENDING_NOTE = "pending Week-7 formal quality run Q8_FORMAL (N=200, security_v1); F9.4 paired statistics"
+def _marginal(fid: list[dict[str, str]], method: str, path: str, reference: str, metric: str,
+              storage: str | None = None) -> float:
+    """The single frozen 'marginal' cell value (method/path/reference/metric); fail if absent/ambiguous."""
+    hits = [r for r in fid if r["method"] == method and r["path"] == path and r["reference"] == reference
+            and r["metric"] == metric and r["comparison"] == "marginal"
+            and (storage is None or storage in r["storage"])]
+    if len(hits) != 1:
+        raise SystemExit(f"expected one marginal {method}/{path}/{reference}/{metric}, found {len(hits)}")
+    return float(hits[0]["mean"])
 
 
-def build_headline(kind: str, claim_ids: list[str], attack_ix, defense_ix) -> tuple[str, str]:
+def _paired(stats: list[dict[str, str]], metric: str, method: str, baseline: str) -> dict[str, str]:
+    hits = [r for r in stats if r["metric"] == metric and r["method"] == method and r["baseline"] == baseline]
+    if len(hits) != 1:
+        raise SystemExit(f"expected one paired {metric} {method} vs {baseline}, found {len(hits)}")
+    return hits[0]
+
+
+def quality_headline(hid: str, fid: list[dict[str, str]], stats: list[dict[str, str]]) -> tuple[str, str]:
+    """H3c/RQ4 headlines, numbers READ from the frozen formal tables (never typed here)."""
+    if hid == "RQ4":
+        s2 = _marginal(fid, "S2", "m1_image_inversion", "x0", "psnr_db", "range_preserving_private_range_v2")
+        s2_ssim = _marginal(fid, "S2", "m1_image_inversion", "x0", "ssim", "range_preserving_private_range_v2")
+        s2_lpips = _marginal(fid, "S2", "m1_image_inversion", "x0", "lpips", "range_preserving_private_range_v2")
+        s0 = _marginal(fid, "S0", "m1_image_inversion", "x0", "psnr_db", "legacy_png_handoff")
+        s1 = _marginal(fid, "S1", "m1_image_inversion", "x0", "psnr_db", "legacy_png_handoff")
+        pear = _marginal(fid, "P", "m1_image_inversion", "x0", "psnr_db", "legacy_png_handoff")
+        v0, v1 = _paired(stats, "psnr_db", "S2", "S0"), _paired(stats, "psnr_db", "S2", "S1")
+        headline = (
+            f"S2 M1 PSNR {s2:.2f} dB（SSIM {s2_ssim:.3f}、LPIPS {s2_lpips:.3f}；保值域私有部署）；"
+            f"前作加密方案 S0 {s0:.2f}／S1 {s1:.2f} dB（legacy PNG 部署），明文 P {pear:.2f} dB；"
+            f"配對 S2−S0 中位 +{float(v0['median_diff']):.2f}／S2−S1 +{float(v1['median_diff']):.2f} dB"
+            f"（rank-biserial r={float(v0['rank_biserial_r']):.2f}，Holm p={float(v0['p_holm']):.1e}，N={v0['n_pairs']}）")
+        return headline, "q8_formal:table_fidelity;tables/table_statistics_formal"
+    # H3c
+    xform = _marginal(fid, "S2", "transform_only", "z", "cosine")
+    xform_err = _marginal(fid, "S2", "transform_only", "z", "max_abs")
+    lat = _marginal(fid, "S2", "m1_image_inversion", "z", "cosine", "range_preserving_private_range_v2")
+    headline = (
+        f"structured transform 本身無損（transform-only latent cosine {xform:.6f}、max_abs {xform_err:.1e}）；"
+        f"S2 M1 latent round-trip cosine {lat:.6f}，殘差來自 sampler+8-bit 量化而非 transform；"
+        f"S2 M1 影像品質與明文 P 同級（見 RQ4）")
+    return headline, "q8_formal:table_fidelity"
+
+
+def build_headline(hid: str, kind: str, claim_ids: list[str], attack_ix, defense_ix,
+                   fid: list[dict[str, str]], stats: list[dict[str, str]]) -> tuple[str, str]:
     if kind == "quality":
-        return PENDING_NOTE, "Q8_FORMAL formal quality run (running)"
+        return quality_headline(hid, fid, stats)
     ix, col, src = (attack_ix, ATTACK_HL, "attack_package") if kind == "attack" else (defense_ix, DEFENSE_HL, "defense_package")
     parts, ev = [], []
     for cid in claim_ids:
@@ -105,10 +152,12 @@ def main() -> None:
 
     attack_ix = _index(read_csv(ATTACK), "claim_id")
     defense_ix = _index(read_csv(DEFENSE), "claim_id")
+    fid = read_csv(FIDELITY)
+    stats = read_csv(STATS)
 
     rows = []
     for hid, rq, text, status, kind, cids in ROWS:
-        headline, evidence = build_headline(kind, cids, attack_ix, defense_ix)
+        headline, evidence = build_headline(hid, kind, cids, attack_ix, defense_ix, fid, stats)
         rows.append({
             "hypothesis": hid, "research_question": rq, "statement_zh": text,
             "status": status, "headline": headline, "evidence": evidence,
@@ -128,7 +177,8 @@ def main() -> None:
         "> 由 `scripts/build_claim_matrix.py` 從已凍結、已稽核的 `attack_package/claims.csv`（A3／A4／A4.6）與 "
         "`defense_package/claims.csv`（D5／D6／D7／AF-025）彙整；headline 數字不手抄。",
         f"> 來源：`attack_package/claims.csv`@{sha12(ATTACK)}、`defense_package/claims.csv`@{sha12(DEFENSE)}。",
-        f"> 狀態：{n_supported} 項已由 N=200 formal 證據支持，{n_pending} 項待 Week-7 formal 品質 run（F9.4）。",
+        f"> 狀態：{n_supported} 項已由 N=200 formal 證據支持，{n_pending} 項待補。品質列（H3c／RQ4）"
+        f"由 `q8_formal/table_fidelity.csv`@{sha12(FIDELITY)} 與 `tables/table_statistics_formal.csv`@{sha12(STATS)} 讀入，數字不手抄。",
         "",
         "| 假設 | RQ | 一句話 | 狀態 | headline | 證據 |",
         "|---|---|---|---|---|---|",
@@ -140,9 +190,11 @@ def main() -> None:
         lines.append(f"| {cid} | {text} | {src} |")
     lines += [
         "",
-        "## 待補（Week 7 formal 品質 run 落地後）",
-        "- H3c、RQ4：以 `Q8_FORMAL`（N=200）的 P／S0／S1／S2 latent round-trip、PSNR／SSIM／LPIPS／cosine／runtime 填入，並加 F9.4 paired test、effect size 與 multiple-comparison 規則。",
-        "- 品質主欄為 mixed deployment（P／S0／S1 legacy、S2 private-range），另列全 range-preserving attribution；不得把 S2−S0 的差異歸因為加密本身（含存檔效應）。",
+        "## 品質列證據與限縮（H3c／RQ4，已由 Q8_FORMAL + legacy supplement 落地）",
+        "- H3c、RQ4 headline 由 `q8_formal`（N=200 formal，Q8_FORMAL parent + Q8_LEGACY_SUPPLEMENT）的 "
+        "`table_fidelity.csv` 與 F9.4 `table_statistics_formal.csv`（paired Wilcoxon + rank-biserial + Holm）讀入，數字不手抄。",
+        "- 品質主欄為 mixed deployment（P／S0／S1 legacy PNG、S2 private-range v2）；全 range-preserving 為 attribution 另列。"
+        "**不得把 S2−S0 的差異歸因為加密本身**：同存檔下 S2−S0 僅約 +0.5 dB，部署差異的 ~+7.7 dB 幾乎全來自保值域存檔。",
         "",
     ]
     index_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

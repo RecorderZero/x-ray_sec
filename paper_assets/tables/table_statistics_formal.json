@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "task_id": "F9.4",
+  "evidence_role": "formal",
+  "source_long_csv_sha256": "c9aaeb18d275d14176bf96d5d050728775bbba3bfdfa1ef547732d5271b1e08c",
+  "n_samples": null,
+  "test": "two-sided Wilcoxon signed-rank (paired by sample_id, zero_method=wilcox)",
+  "effect_size": "matched-pairs rank-biserial correlation",
+  "multiple_comparison": "Holm-Bonferroni across all 35 (metric x comparison) tests, alpha=0.05",
+  "family_size": 35,
+  "comparisons": [
+    "S2-S0",
+    "S2-S1",
+    "S2-P",
+    "S0-P",
+    "S1-P"
+  ],
+  "metrics": [
+    "psnr_db",
+    "ssim",
+    "lpips",
+    "linf",
+    "cosine",
+    "rmse",
+    "max_abs"
+  ],
+  "note": "pilot N=20 validates the method; Week-7 formal N=200 replaces it. Mixed deployment: P/S0/S1 legacy, S2 private-range; do not attribute S2-S0 to the cipher alone (storage effect included)."
+}

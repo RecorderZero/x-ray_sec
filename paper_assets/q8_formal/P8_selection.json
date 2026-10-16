@@ -1,0 +1,844 @@
+{
+  "cases": [
+    {
+      "label": "0",
+      "n": 200,
+      "rank_ascending": 94,
+      "role": "fixed_label0",
+      "sample_id": "security_v1_0000",
+      "selection_metric": "S2__m1__psnr_db",
+      "selection_score": 38.76050693492437
+    },
+    {
+      "label": "1",
+      "n": 200,
+      "rank_ascending": 144,
+      "role": "fixed_label1",
+      "sample_id": "security_v1_0100",
+      "selection_metric": "S2__m1__psnr_db",
+      "selection_score": 39.359003342276885
+    },
+    {
+      "label": "0",
+      "n": 200,
+      "rank_ascending": 100,
+      "role": "median",
+      "sample_id": "security_v1_0046",
+      "selection_metric": "S2__m1__psnr_db",
+      "selection_score": 38.855570850709015
+    },
+    {
+      "label": "1",
+      "n": 200,
+      "rank_ascending": 1,
+      "role": "worst",
+      "sample_id": "security_v1_0112",
+      "selection_metric": "S2__m1__psnr_db",
+      "selection_score": 35.016557252163565
+    }
+  ],
+  "metric": "S2__m1__psnr_db",
+  "ranking_ascending": [
+    {
+      "sample_id": "security_v1_0112",
+      "score": 35.016557252163565
+    },
+    {
+      "sample_id": "security_v1_0064",
+      "score": 36.006843306463374
+    },
+    {
+      "sample_id": "security_v1_0127",
+      "score": 36.28026445468337
+    },
+    {
+      "sample_id": "security_v1_0001",
+      "score": 36.30098593773222
+    },
+    {
+      "sample_id": "security_v1_0115",
+      "score": 36.72196194264262
+    },
+    {
+      "sample_id": "security_v1_0043",
+      "score": 36.9407582303453
+    },
+    {
+      "sample_id": "security_v1_0195",
+      "score": 37.09385065243108
+    },
+    {
+      "sample_id": "security_v1_0199",
+      "score": 37.17835175144486
+    },
+    {
+      "sample_id": "security_v1_0105",
+      "score": 37.21337832461816
+    },
+    {
+      "sample_id": "security_v1_0149",
+      "score": 37.23878365339178
+    },
+    {
+      "sample_id": "security_v1_0053",
+      "score": 37.267517654056775
+    },
+    {
+      "sample_id": "security_v1_0058",
+      "score": 37.340422508771084
+    },
+    {
+      "sample_id": "security_v1_0174",
+      "score": 37.3753897282368
+    },
+    {
+      "sample_id": "security_v1_0130",
+      "score": 37.50821407906943
+    },
+    {
+      "sample_id": "security_v1_0108",
+      "score": 37.52164984033375
+    },
+    {
+      "sample_id": "security_v1_0088",
+      "score": 37.67513747886135
+    },
+    {
+      "sample_id": "security_v1_0193",
+      "score": 37.72164700913338
+    },
+    {
+      "sample_id": "security_v1_0197",
+      "score": 37.72898955548413
+    },
+    {
+      "sample_id": "security_v1_0119",
+      "score": 37.78406486292474
+    },
+    {
+      "sample_id": "security_v1_0161",
+      "score": 37.79971569441517
+    },
+    {
+      "sample_id": "security_v1_0026",
+      "score": 37.882766153798386
+    },
+    {
+      "sample_id": "security_v1_0198",
+      "score": 37.909324104082046
+    },
+    {
+      "sample_id": "security_v1_0132",
+      "score": 37.939495135518555
+    },
+    {
+      "sample_id": "security_v1_0041",
+      "score": 37.94414686270227
+    },
+    {
+      "sample_id": "security_v1_0140",
+      "score": 37.973893317073085
+    },
+    {
+      "sample_id": "security_v1_0035",
+      "score": 37.98694773189257
+    },
+    {
+      "sample_id": "security_v1_0151",
+      "score": 37.99117741044752
+    },
+    {
+      "sample_id": "security_v1_0124",
+      "score": 37.994325095864504
+    },
+    {
+      "sample_id": "security_v1_0116",
+      "score": 38.0290508697016
+    },
+    {
+      "sample_id": "security_v1_0133",
+      "score": 38.04646443068848
+    },
+    {
+      "sample_id": "security_v1_0136",
+      "score": 38.05228826838292
+    },
+    {
+      "sample_id": "security_v1_0184",
+      "score": 38.05389644235989
+    },
+    {
+      "sample_id": "security_v1_0016",
+      "score": 38.12613592639124
+    },
+    {
+      "sample_id": "security_v1_0147",
+      "score": 38.151053887932626
+    },
+    {
+      "sample_id": "security_v1_0145",
+      "score": 38.17210778039896
+    },
+    {
+      "sample_id": "security_v1_0090",
+      "score": 38.17752732844522
+    },
+    {
+      "sample_id": "security_v1_0111",
+      "score": 38.182008802225795
+    },
+    {
+      "sample_id": "security_v1_0089",
+      "score": 38.21933683104233
+    },
+    {
+      "sample_id": "security_v1_0181",
+      "score": 38.227660012153834
+    },
+    {
+      "sample_id": "security_v1_0103",
+      "score": 38.227753300653276
+    },
+    {
+      "sample_id": "security_v1_0056",
+      "score": 38.24065606487804
+    },
+    {
+      "sample_id": "security_v1_0104",
+      "score": 38.254032711957265
+    },
+    {
+      "sample_id": "security_v1_0162",
+      "score": 38.26503070359257
+    },
+    {
+      "sample_id": "security_v1_0155",
+      "score": 38.26541853950725
+    },
+    {
+      "sample_id": "security_v1_0006",
+      "score": 38.28274410068478
+    },
+    {
+      "sample_id": "security_v1_0061",
+      "score": 38.286166668194255
+    },
+    {
+      "sample_id": "security_v1_0117",
+      "score": 38.290233487625834
+    },
+    {
+      "sample_id": "security_v1_0138",
+      "score": 38.2960279508091
+    },
+    {
+      "sample_id": "security_v1_0166",
+      "score": 38.29607149293321
+    },
+    {
+      "sample_id": "security_v1_0159",
+      "score": 38.301331774853466
+    },
+    {
+      "sample_id": "security_v1_0167",
+      "score": 38.30335300687719
+    },
+    {
+      "sample_id": "security_v1_0173",
+      "score": 38.317228600245166
+    },
+    {
+      "sample_id": "security_v1_0068",
+      "score": 38.33324539686862
+    },
+    {
+      "sample_id": "security_v1_0128",
+      "score": 38.33508770343231
+    },
+    {
+      "sample_id": "security_v1_0020",
+      "score": 38.336350811059376
+    },
+    {
+      "sample_id": "security_v1_0148",
+      "score": 38.35329564200495
+    },
+    {
+      "sample_id": "security_v1_0030",
+      "score": 38.35735093949237
+    },
+    {
+      "sample_id": "security_v1_0054",
+      "score": 38.36112142127888
+    },
+    {
+      "sample_id": "security_v1_0170",
+      "score": 38.36284987668411
+    },
+    {
+      "sample_id": "security_v1_0137",
+      "score": 38.396398095378636
+    },
+    {
+      "sample_id": "security_v1_0169",
+      "score": 38.42857964859906
+    },
+    {
+      "sample_id": "security_v1_0062",
+      "score": 38.462903205553246
+    },
+    {
+      "sample_id": "security_v1_0072",
+      "score": 38.47228889629538
+    },
+    {
+      "sample_id": "security_v1_0154",
+      "score": 38.47699091670249
+    },
+    {
+      "sample_id": "security_v1_0019",
+      "score": 38.48576804924254
+    },
+    {
+      "sample_id": "security_v1_0094",
+      "score": 38.486755929704074
+    },
+    {
+      "sample_id": "security_v1_0121",
+      "score": 38.4955059100709
+    },
+    {
+      "sample_id": "security_v1_0079",
+      "score": 38.50340973988737
+    },
+    {
+      "sample_id": "security_v1_0081",
+      "score": 38.508676800852065
+    },
+    {
+      "sample_id": "security_v1_0069",
+      "score": 38.51873671822951
+    },
+    {
+      "sample_id": "security_v1_0084",
+      "score": 38.51959774507956
+    },
+    {
+      "sample_id": "security_v1_0028",
+      "score": 38.54992365346129
+    },
+    {
+      "sample_id": "security_v1_0031",
+      "score": 38.551337748376945
+    },
+    {
+      "sample_id": "security_v1_0146",
+      "score": 38.57306823163163
+    },
+    {
+      "sample_id": "security_v1_0066",
+      "score": 38.59921738035082
+    },
+    {
+      "sample_id": "security_v1_0196",
+      "score": 38.60053085721022
+    },
+    {
+      "sample_id": "security_v1_0004",
+      "score": 38.606481500150366
+    },
+    {
+      "sample_id": "security_v1_0113",
+      "score": 38.61339772761808
+    },
+    {
+      "sample_id": "security_v1_0192",
+      "score": 38.623218291480654
+    },
+    {
+      "sample_id": "security_v1_0129",
+      "score": 38.64540627053799
+    },
+    {
+      "sample_id": "security_v1_0123",
+      "score": 38.650129174395595
+    },
+    {
+      "sample_id": "security_v1_0157",
+      "score": 38.65766599194913
+    },
+    {
+      "sample_id": "security_v1_0027",
+      "score": 38.66919652122147
+    },
+    {
+      "sample_id": "security_v1_0078",
+      "score": 38.671906594177806
+    },
+    {
+      "sample_id": "security_v1_0179",
+      "score": 38.69819074338555
+    },
+    {
+      "sample_id": "security_v1_0082",
+      "score": 38.70565388255716
+    },
+    {
+      "sample_id": "security_v1_0070",
+      "score": 38.70775785793983
+    },
+    {
+      "sample_id": "security_v1_0047",
+      "score": 38.71026058832439
+    },
+    {
+      "sample_id": "security_v1_0063",
+      "score": 38.713781217101676
+    },
+    {
+      "sample_id": "security_v1_0172",
+      "score": 38.73179869768165
+    },
+    {
+      "sample_id": "security_v1_0059",
+      "score": 38.74932827286709
+    },
+    {
+      "sample_id": "security_v1_0158",
+      "score": 38.74976944597739
+    },
+    {
+      "sample_id": "security_v1_0168",
+      "score": 38.751312719728844
+    },
+    {
+      "sample_id": "security_v1_0000",
+      "score": 38.76050693492437
+    },
+    {
+      "sample_id": "security_v1_0096",
+      "score": 38.7618644144046
+    },
+    {
+      "sample_id": "security_v1_0156",
+      "score": 38.77983285369517
+    },
+    {
+      "sample_id": "security_v1_0144",
+      "score": 38.82177081678954
+    },
+    {
+      "sample_id": "security_v1_0074",
+      "score": 38.83706986583253
+    },
+    {
+      "sample_id": "security_v1_0191",
+      "score": 38.84846388063374
+    },
+    {
+      "sample_id": "security_v1_0046",
+      "score": 38.855570850709015
+    },
+    {
+      "sample_id": "security_v1_0073",
+      "score": 38.872278278530715
+    },
+    {
+      "sample_id": "security_v1_0102",
+      "score": 38.87335129401085
+    },
+    {
+      "sample_id": "security_v1_0045",
+      "score": 38.87381207488482
+    },
+    {
+      "sample_id": "security_v1_0180",
+      "score": 38.874186586783566
+    },
+    {
+      "sample_id": "security_v1_0076",
+      "score": 38.89111964521803
+    },
+    {
+      "sample_id": "security_v1_0176",
+      "score": 38.90488666177273
+    },
+    {
+      "sample_id": "security_v1_0024",
+      "score": 38.91068729679209
+    },
+    {
+      "sample_id": "security_v1_0083",
+      "score": 38.920009691316174
+    },
+    {
+      "sample_id": "security_v1_0139",
+      "score": 38.922534748730115
+    },
+    {
+      "sample_id": "security_v1_0175",
+      "score": 38.92328288537789
+    },
+    {
+      "sample_id": "security_v1_0042",
+      "score": 38.93473998659755
+    },
+    {
+      "sample_id": "security_v1_0131",
+      "score": 38.94363005380224
+    },
+    {
+      "sample_id": "security_v1_0189",
+      "score": 38.952327330082824
+    },
+    {
+      "sample_id": "security_v1_0067",
+      "score": 38.98770061784737
+    },
+    {
+      "sample_id": "security_v1_0075",
+      "score": 39.006726774981445
+    },
+    {
+      "sample_id": "security_v1_0101",
+      "score": 39.01728135756481
+    },
+    {
+      "sample_id": "security_v1_0150",
+      "score": 39.02516354356375
+    },
+    {
+      "sample_id": "security_v1_0118",
+      "score": 39.02559072516931
+    },
+    {
+      "sample_id": "security_v1_0032",
+      "score": 39.0577222237478
+    },
+    {
+      "sample_id": "security_v1_0165",
+      "score": 39.062821039036564
+    },
+    {
+      "sample_id": "security_v1_0012",
+      "score": 39.08301131159142
+    },
+    {
+      "sample_id": "security_v1_0142",
+      "score": 39.10772131933875
+    },
+    {
+      "sample_id": "security_v1_0183",
+      "score": 39.112331051050624
+    },
+    {
+      "sample_id": "security_v1_0034",
+      "score": 39.11866176129475
+    },
+    {
+      "sample_id": "security_v1_0171",
+      "score": 39.14504183667537
+    },
+    {
+      "sample_id": "security_v1_0160",
+      "score": 39.149907794515514
+    },
+    {
+      "sample_id": "security_v1_0044",
+      "score": 39.167374159933836
+    },
+    {
+      "sample_id": "security_v1_0060",
+      "score": 39.16765224841286
+    },
+    {
+      "sample_id": "security_v1_0015",
+      "score": 39.19446690488383
+    },
+    {
+      "sample_id": "security_v1_0085",
+      "score": 39.20993174213846
+    },
+    {
+      "sample_id": "security_v1_0086",
+      "score": 39.22342324428214
+    },
+    {
+      "sample_id": "security_v1_0182",
+      "score": 39.22484276888114
+    },
+    {
+      "sample_id": "security_v1_0010",
+      "score": 39.23125636455124
+    },
+    {
+      "sample_id": "security_v1_0009",
+      "score": 39.250744570789855
+    },
+    {
+      "sample_id": "security_v1_0014",
+      "score": 39.25199403670437
+    },
+    {
+      "sample_id": "security_v1_0164",
+      "score": 39.26785233194927
+    },
+    {
+      "sample_id": "security_v1_0080",
+      "score": 39.26958850685981
+    },
+    {
+      "sample_id": "security_v1_0048",
+      "score": 39.275950084227574
+    },
+    {
+      "sample_id": "security_v1_0188",
+      "score": 39.279095024515684
+    },
+    {
+      "sample_id": "security_v1_0021",
+      "score": 39.288011102708644
+    },
+    {
+      "sample_id": "security_v1_0022",
+      "score": 39.334545390108005
+    },
+    {
+      "sample_id": "security_v1_0120",
+      "score": 39.34223298637085
+    },
+    {
+      "sample_id": "security_v1_0109",
+      "score": 39.34629092877491
+    },
+    {
+      "sample_id": "security_v1_0100",
+      "score": 39.359003342276885
+    },
+    {
+      "sample_id": "security_v1_0057",
+      "score": 39.36598065712498
+    },
+    {
+      "sample_id": "security_v1_0002",
+      "score": 39.3681417173225
+    },
+    {
+      "sample_id": "security_v1_0122",
+      "score": 39.36844553190923
+    },
+    {
+      "sample_id": "security_v1_0186",
+      "score": 39.371674054869814
+    },
+    {
+      "sample_id": "security_v1_0143",
+      "score": 39.37522787602302
+    },
+    {
+      "sample_id": "security_v1_0135",
+      "score": 39.388199959456806
+    },
+    {
+      "sample_id": "security_v1_0163",
+      "score": 39.39114931462963
+    },
+    {
+      "sample_id": "security_v1_0050",
+      "score": 39.4273832809814
+    },
+    {
+      "sample_id": "security_v1_0017",
+      "score": 39.433268454750696
+    },
+    {
+      "sample_id": "security_v1_0185",
+      "score": 39.43390470291568
+    },
+    {
+      "sample_id": "security_v1_0106",
+      "score": 39.44867190406281
+    },
+    {
+      "sample_id": "security_v1_0153",
+      "score": 39.45517773190902
+    },
+    {
+      "sample_id": "security_v1_0029",
+      "score": 39.45662405235726
+    },
+    {
+      "sample_id": "security_v1_0097",
+      "score": 39.47665435590382
+    },
+    {
+      "sample_id": "security_v1_0194",
+      "score": 39.491959168623055
+    },
+    {
+      "sample_id": "security_v1_0134",
+      "score": 39.50795683333908
+    },
+    {
+      "sample_id": "security_v1_0013",
+      "score": 39.5766771010548
+    },
+    {
+      "sample_id": "security_v1_0141",
+      "score": 39.578777272818606
+    },
+    {
+      "sample_id": "security_v1_0007",
+      "score": 39.595025737757496
+    },
+    {
+      "sample_id": "security_v1_0125",
+      "score": 39.60374735008313
+    },
+    {
+      "sample_id": "security_v1_0051",
+      "score": 39.61129477077178
+    },
+    {
+      "sample_id": "security_v1_0095",
+      "score": 39.63883269184456
+    },
+    {
+      "sample_id": "security_v1_0126",
+      "score": 39.64304341635587
+    },
+    {
+      "sample_id": "security_v1_0190",
+      "score": 39.64566605415451
+    },
+    {
+      "sample_id": "security_v1_0003",
+      "score": 39.64596312231175
+    },
+    {
+      "sample_id": "security_v1_0049",
+      "score": 39.65526259409623
+    },
+    {
+      "sample_id": "security_v1_0152",
+      "score": 39.67475407127582
+    },
+    {
+      "sample_id": "security_v1_0098",
+      "score": 39.67600940117152
+    },
+    {
+      "sample_id": "security_v1_0077",
+      "score": 39.68146804311721
+    },
+    {
+      "sample_id": "security_v1_0110",
+      "score": 39.69830206115602
+    },
+    {
+      "sample_id": "security_v1_0008",
+      "score": 39.73619399669303
+    },
+    {
+      "sample_id": "security_v1_0093",
+      "score": 39.74463435315433
+    },
+    {
+      "sample_id": "security_v1_0087",
+      "score": 39.76890960719934
+    },
+    {
+      "sample_id": "security_v1_0038",
+      "score": 39.82743524024969
+    },
+    {
+      "sample_id": "security_v1_0037",
+      "score": 39.83529341697407
+    },
+    {
+      "sample_id": "security_v1_0099",
+      "score": 39.84126989085596
+    },
+    {
+      "sample_id": "security_v1_0052",
+      "score": 39.85629836226672
+    },
+    {
+      "sample_id": "security_v1_0040",
+      "score": 39.90960985557059
+    },
+    {
+      "sample_id": "security_v1_0092",
+      "score": 39.923170224420545
+    },
+    {
+      "sample_id": "security_v1_0036",
+      "score": 39.92789318200299
+    },
+    {
+      "sample_id": "security_v1_0011",
+      "score": 39.92990941882651
+    },
+    {
+      "sample_id": "security_v1_0018",
+      "score": 39.95151657507339
+    },
+    {
+      "sample_id": "security_v1_0023",
+      "score": 40.01338713332171
+    },
+    {
+      "sample_id": "security_v1_0005",
+      "score": 40.056492232283915
+    },
+    {
+      "sample_id": "security_v1_0114",
+      "score": 40.05766886215209
+    },
+    {
+      "sample_id": "security_v1_0107",
+      "score": 40.065893997448406
+    },
+    {
+      "sample_id": "security_v1_0178",
+      "score": 40.10027488767739
+    },
+    {
+      "sample_id": "security_v1_0177",
+      "score": 40.10397615963263
+    },
+    {
+      "sample_id": "security_v1_0033",
+      "score": 40.12204961166658
+    },
+    {
+      "sample_id": "security_v1_0055",
+      "score": 40.153309890376015
+    },
+    {
+      "sample_id": "security_v1_0025",
+      "score": 40.22789720034929
+    },
+    {
+      "sample_id": "security_v1_0091",
+      "score": 40.453959654396165
+    },
+    {
+      "sample_id": "security_v1_0187",
+      "score": 40.500766110705584
+    },
+    {
+      "sample_id": "security_v1_0071",
+      "score": 40.56905519569103
+    },
+    {
+      "sample_id": "security_v1_0039",
+      "score": 41.09571932862331
+    },
+    {
+      "sample_id": "security_v1_0065",
+      "score": 41.17696179522337
+    }
+  ],
+  "rule": "fixed = first no_finding (label 0) and first label-1 sample in split order; median = lower-median of ascending S2__m1__psnr_db (ties by sample_id); worst = minimum S2__m1__psnr_db (ties by sample_id); a sample selected twice is shown twice, never substituted"
+}
