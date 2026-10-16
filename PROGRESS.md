@@ -1748,3 +1748,37 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 等 `Q8_FORMAL` parent 完成（通知後）→ 向使用者報告 parent 結果與 supplement 的 ~3.5h GPU 估計，取得同意後再跑 legacy supplement。
 * supplement 完成後：跑 `q8_analyze`（mixed deployment）產生 formal fidelity/anonymity/wrong-key/runtime/storage 與 bootstrap CI（F9.2），再跑 `f9_statistics` 產生正式 `table_statistics.csv`（F9.4），更新 claim matrix 的品質列（F9.5），建立 `appendix/week7/`。
+
+## 2026-10-16 · W7 · Track F9+附錄 · Q8_FORMAL 完成、啟動 legacy supplement、規劃 BDIA 2×2 安全+品質附錄
+
+### 1. 當前目標 (Objective)
+* `WORKFLOW.md` 子任務：F9（收尾 formal 主結果）＋規劃附錄 BDIA ablation（含安全背書）。
+
+### 2. 執行動作 (Actions Taken)
+* 確認 `Q8_FORMAL` parent 完成：`artifacts/runs/Q8_FORMAL/Q8_FORMAL_20261015T173907560215Z_7e4c3368`，state=succeeded、exit 0、artifact_validation valid、sample_count=200，耗時約 7h19m（17:39Z→00:58Z）。
+* [使用者同意] 啟動 A＝legacy supplement（formal）：`scripts/run_cfg_ddim.sh python -m scripts.q8_legacy_supplement --task-id Q8_LEGACY_SUPPLEMENT --parent-run artifacts/runs/Q8_FORMAL/Q8_FORMAL_20261015T173907560215Z_7e4c3368`，背景、~3.5h；run dir `Q8_LEGACY_SUPPLEMENT_20261016T064241Z_964cb3e0`（已通過 parent/checkpoint/sampler/E2.3-cache/逐 latent hash 閘門）。
+* BDIA P/S0/S1 smoke（n=4 dev、legacy 不保值域）：`/tmp/.../scratchpad/bdia_pss_nolabel_smoke.py`，比 DDIM 原設定 vs BDIA+對稱null 的 PSNR/SSIM/L∞（scratchpad，未 commit）。
+* 規劃附錄 BDIA 2×2（S2-only）＋安全背書，設計文件：`/tmp/.../scratchpad/bdia_2x2_appendix_design.md`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] Q8_FORMAL（N=200，全 private-range＝range-attribution 臂）M1 重構 PSNR：P 37.58／S0 38.28／S1 38.77／S2 **38.82** dB；latent round-trip cosine 皆 ≈0.9998（`xform` 加解密不經擴散 cosine=1.0、max_abs 8.3e-7，證明缺口全來自 sampler+8-bit 量化，非密碼）。**同存檔下 S2−S0 僅 +0.54 dB**，坐實 pilot mixed +7.8 dB 幾乎全來自存檔差異而非加密。
+* [事實] S2 認證控制（N=200）：錯金鑰拒絕 200/200、錯 nonce 拒絕 200/200，inverter_calls=0；錯金鑰/錯 nonce latent cosine≈0。摘要 `summary.json`。
+* [事實] BDIA smoke（n=4 dev，Δ=BDIA對稱null−DDIM原設定）：P **+4.10 dB**、S0 +0.28、S1 +0.14。→ **BDIA+對稱null 的品質增益集中在 P（恆等），對有加密的 S0/S1（legacy 不保值域）幾乎無效**，因 legacy 8-bit min-max 量化（丟值域）才是 S0/S1 主誤差源。增益只在「保值域、sampler 成瓶頸」時顯現（即 S2）。[注意] 此對比綁了 sampler+條件兩變更；稽核方 S2 both-null 診斷顯示 BDIA 本身僅約 +0.5 dB，其餘來自對稱條件。
+
+### 4. 達標判定 (Assessment)
+* [x] Q8_FORMAL parent 完成並驗證。
+* [ ] A（legacy supplement）背景執行中，完成後解鎖 F9.2/F9.4 formal 表與 F9.5 品質列。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* A 跑完即可收尾 F9：`q8_analyze`（mixed）→ fidelity/anonymity/wrong-key/runtime/storage + bootstrap CI（F9.2）；`f9_statistics` on formal mixed long → `table_statistics.csv`（F9.4）；更新 claim_matrix H3c/RQ4（F9.5）；F9.1 複用 AF025/D7/A4.2 既有 N=200 證據做組裝（無新 GPU）；建 `appendix/week7/` + PROGRESS_summary W7 段。BDIA 附錄**不屬** F9/G5 凍結範圍。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。
+
+### 7. 下一步 ── [待辦] BDIA 2×2 附錄 GPU run 的參考資訊（有時間才跑）
+* [決定/使用者 2026-10-16] 附錄要**同時宣稱品質更好與安全性相同**，背書 ③與④ 兩格；主表仍 DDIM+非對稱（scheme of record）不動。採用為正式方法屬改研究設計，依 skill §9 需回 Cowork 拍板；驗證實驗本身可實作方執行（GPU 需 gate）。
+* 2×2 格：① DDIM+非對稱（=Q8_FORMAL S2，**重用不跑**）／② DDIM+對稱null／③ BDIA+非對稱（關鍵格）／④ BDIA+對稱null。「對稱」=兩邊都 null（無條件）。拆因：①→③ 純 BDIA（語義不變、論文主張用此）；①→② 純對稱條件；②④/③④ 交互。
+* 反演快取：四格反演條件皆 null，**只隨 sampler 變**→ ①②用現有 E2.3 `E2.3_20261009T183736363217Z_84cf642a`（DDIM-null）；③④ 需**新增一份 BDIA-null 反演快取**（同 200 張 security_v1、seed 1911、新 run_id、hash 登錄）。
+* 安全臂分類（以選定 cell 的 S2-BDIA 重驗）：**僅 T2-WB（重反演再識別）+ norm scorer + dev 校正隨 sampler 變**，須各 cell（③、④ 匿名影像不同）各做一次（~0.5h/cell，重用品質 run 的匿名影像）；T1/norm/geometry(QᵀQ=I)/cross-nonce/structured-probe/repeat/tamper(HMAC) 皆 latent/容器層、與 generate 條件無關，③④ 共用、**只算一次**（免擴散，分鐘級）。fixed-norm 已強制 ‖·‖=C，預期 T1/T2-WB 在 BDIA 下仍 random，重跑為實證坐實「同樣安全」。
+* GPU 盤點（N=200，③④ 都背書安全，可分三段獨立跑）：BDIA-null 快取 ~0.5h → 品質 2×2 跑 ②③④（①重用）~3.8h → T2-WB×2 + dev 校正 + latent 臂 ~1h；**合計 ≈ 5.5–6h**。加 ④ 相對只背書③ 的增量 ≈ +40 min。**不需重跑**：E2.3 DDIM 快取、Q8_FORMAL ①、整個 D7/AF-025 DDIM 安全電池、F9 主表。
+* CPU 腳手架（開發中、不佔 GPU、不 commit 結果）：`scripts/bdia_backend.py`（γ=1 BDIA generate/invert + NFE 計數 + both-null 可逆性單測）、`scripts/bdia_2x2_runner.py`（重用 Q8 S2 封裝，`--cells/--sampler/--conditioning`）、`scripts/bdia_security_verify.py`（T2-WB 重反演 + latent 臂重驗，重用品質 run 匿名影像）；分析沿用 `q8_analyze.py`＋`f9_statistics.py`。BDIA 參考實作見稽核方唯讀 `audit/bdia_vs_ddim_s2fix.py`（AUD-20261015-02，γ=1）。
