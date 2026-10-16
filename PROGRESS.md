@@ -1889,3 +1889,40 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 等稽核複驗 AF-039 是否可轉 CLOSED。
 * 週末/G5 其餘步驟（build_weekly_appendix --week 7、PROGRESS_summary W7 段）與 BDIA 附錄 GPU run 維持原狀，未受本輪影響。
 * 使用者手動 push 本地 commits。
+
+## 2026-10-17 · W7 · Track Q10 · 誤差歸因、數值精度、AEAD-ref 與 M1/M2 對照（Q10.1–Q10.4）
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md` Q10（誤差歸因、M1/M2 對照與緩衝）。大目標：正確解讀前作 0.9989，不把 pixel bit-exact 當 structured transform 的必要條件。本輪完成 Q10.1–Q10.4（全 CPU，由已凍結 q8_formal 陣列 + 確定性 crypto 組裝，無新 GPU）。Q10.5（optional partial-key）暫略。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/q10_numeric_precision.py`（Q10.2）：transform-only round-trip 精度掃描，d∈{4096,65536}×dtype∈{float32,float64}×rounds∈{1,2,4}×perm∈{F,T}=24 組，每組 16 樣本；指標 MaxAbs/RMSE/cosine_min/bit-exact/forward_norm_dev。用 `d7_cpu_security.FIXTURE_KEY`/`nonce_for`（公開重現 fixture，非金鑰材料）、seed 1911；僅寫 aggregate 指標，不寫金鑰。→ `paper_assets/tables/table_numeric_precision.csv`(+json)。
+* 新增 `scripts/q10_aead_reference.py`（Q10.4）：以**部署同原語** ChaCha20-Poly1305（HKDF 子金鑰 `PRIVATE_METADATA_LABEL`）對 6 種 raw payload（random 32/4096 B、latent d4096/d65536 × float32/float64）做 round-trip + 5 類竄改（ciphertext/tag/nonce/key/aad）。→ `table_aead_reference.csv`(+json)。
+* 新增 `scripts/q10_error_attribution.py`（Q10.1）：**從凍結 `q8_formal/table_fidelity.csv` 讀**（不手抄）組裝誤差階梯：stage1 crypto_transform_only → stage2 m2_exact_latent → stage3 m1_sampler_range → stage4 m1_deploy_legacy → stage5 conditioning（deferred_gpu，交叉引用 BDIA 附錄，不杜撰）。→ `table_error_attribution.csv`(+json)。
+* 新增 `reports/deployment_modes.md`（Q10.3）：M1 image-only vs M2 latent-payload 的 fidelity/security/storage 對照，數字引自 q8_formal `table_fidelity`/`table_storage` + Q10.4。
+* 三個 CPU 腳本的最後 print 加 `_rel()`（out 路徑在 repo 外時不崩潰，檔案本已先寫出）。
+* 指令（絕對路徑）：`scripts/run_cfg_ddim.sh python -m scripts.q10_numeric_precision|q10_aead_reference|q10_error_attribution --out <table> --json-out <json> --force`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] Q10.2：transform-only round-trip float32 worst max_abs=1.55e-6、float64=3.05e-15、cosine_min 全 1.000000000、forward_norm_dev≤8e-7（正交 ‖Qz‖=‖z‖）。bit-exact rate ~0.09–0.20 為浮點捨入、非缺陷。→ **結構變換到浮點精度無損**，0.9989 不是 transform 性質。
+* [事實] Q10.4：6 payload 全 100% byte-exact 往返；5 類竄改（ciphertext/tag/nonce/key/aad）對每個 payload 全部 fail-closed。→ M2 latent-payload 的 bit-exact 可逆 + 竄改拒絕下限。
+* [事實] Q10.1 誤差階梯（PSNR vs x0）：crypto 無損（latent cosine 1.0）；M2 精確 latent 天花板 41.87 dB（全方法相同，殘差=VAE+8bit）；sampler 反轉 drop S0 −3.59／S1 −3.10／S2 −3.05 dB（honest 主殘差，latent cosine ~0.9998）；legacy 存檔 drop S0 −7.14／S1 −7.35 dB（純存檔損失），S2 保值域 not_applicable。
+* [事實] Q10.3 儲存：M1 total S2 74,526 B（2.26× P）；M2 total S2 350,565 B（含 private_metadata 65＋tag 32＋nonce 16 B）。M1≈M2 的 1/4.7。
+* [事實] 三腳本重跑 bit-identical（scratchpad 比對 np/aead/ea 全 IDENTICAL）→ 確定性通過。
+
+### 4. 達標判定 (Assessment)
+* [x] Q10.1 table_error_attribution.csv、[x] Q10.2 table_numeric_precision.csv、[x] Q10.3 deployment_modes.md、[x] Q10.4 table_aead_reference.csv 皆完成並確定性驗證。
+* [ ] Q10.5 optional partial-key（derived-key Hamming / ciphertext correlation）：WORKFLOW 標「有餘裕才跑」，本輪暫略。
+* [限制] 所有 magnitude/precision/AEAD 結果為指定量測，非通用安全證明；conditioning 列為 deferred（GPU BDIA 附錄）。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* Q10 核心結論（可直接入論文）：**加密層（transform+AEAD）可逆性是精確的（float 精度 / bit-exact）；M1 影像可逆缺口全來自 sampler 反轉 + 8-bit 量化，大部署差則來自 legacy 存檔**。前作 0.9989 屬影像空間殘差，不可寫成 latent 一致性 / 零失真 / 無損（呼應 `reports/metric_semantics.md`）。
+* conditioning 軸（y=0 條件 vs 無條件 null）對 M1 保真的影響，若使用者對 BDIA 附錄下 GPU go 再補正式數字並回填 stage5。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。WORKFLOW §Q10「不加入新 sampler 或新資料集」已遵守；「宣稱原始 bytes bit-exact 只能引用 AEAD-ref」已於 deployment_modes.md 落實。
+
+### 7. 下一步
+* 稽核方可 spec-first 複驗：Q10.2 自寫 transform round-trip、Q10.4 自寫 AEAD、Q10.1 從 table_fidelity 重算階梯、Q10.3 核對引用。
+* Q10.5 視餘裕再做；conditioning 正式數字待 BDIA 附錄 GPU go。
+* 使用者手動 push 本地 commits。

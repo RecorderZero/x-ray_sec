@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "task_id": "Q10.1",
+  "source_fidelity_sha256": "b9fcf38adb4e828fa89f8476b3c2913d158bcacfe1c76a011dd21866fbc03546",
+  "stages": [
+    "crypto_transform_only",
+    "m2_exact_latent",
+    "m1_sampler_range",
+    "m1_deploy_legacy",
+    "conditioning_null_vs_cond"
+  ],
+  "s0_sampler_drop_db": -3.587,
+  "s0_legacy_storage_drop_db": -7.135,
+  "s2_sampler_drop_db": -3.0505,
+  "note": "Numbers read from the frozen q8_formal fidelity table. Crypto transform is lossless (stage 1). The honest M1 residual is the sampler invert/regen error (stage 2->3). The large P/S0/S1 deployment drop (stage 3->4) is legacy min-max STORAGE loss, not the cipher; S2 avoids it by deploying range-preserving. The conditioning axis is deferred to the GPU BDIA appendix (not fabricated here)."
+}

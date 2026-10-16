@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "task_id": "Q10.4",
+  "seed": 1911,
+  "primitive": "ChaCha20-Poly1305 (same as S2 v2 private-metadata AEAD), HKDF subkey via PRIVATE_METADATA_LABEL",
+  "fixture": "d7_cpu_security.FIXTURE_KEY (public reproducibility fixture; not key material)",
+  "aad": "cxr-s2/Q10/aead-reference/v1",
+  "n_payloads": 6,
+  "all_roundtrip_byte_exact": true,
+  "all_tamper_rejected": true,
+  "tamper_cases": [
+    "ciphertext",
+    "tag",
+    "nonce",
+    "key",
+    "aad"
+  ],
+  "note": "AEAD security floor: raw bytes round-trip at 100% byte equality and every tamper fails closed. This is the M2 (latent-payload) bit-exact guarantee. M1 (image-only) cannot be byte-exact because the image traverses sampler + uint8 PNG; its reversibility is the fidelity numbers (Q8/RQ4), not this floor. The deployed S2 container end-to-end tamper matrix is table_tamper.csv (D7-C8)."
+}

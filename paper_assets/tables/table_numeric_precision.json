@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "task_id": "Q10.2",
+  "seed": 1911,
+  "fixture": "d7_cpu_security.FIXTURE_KEY (public reproducibility fixture; not key material)",
+  "n_configs": 24,
+  "n_samples_each": 16,
+  "dimensions": [
+    4096,
+    65536
+  ],
+  "dtypes": [
+    "float32",
+    "float64"
+  ],
+  "rounds": [
+    1,
+    2,
+    4
+  ],
+  "permutation": [
+    false,
+    true
+  ],
+  "float32_roundtrip_max_abs_worst": 1.5497207641601562e-06,
+  "float64_roundtrip_max_abs_worst": 3.0531133177191805e-15,
+  "float32_cosine_min_worst": 0.9999999999999346,
+  "note": "Transform-only round-trip. float32 max_abs is ~1e-4 at d=65536 (orthonormal FWHT accumulation), float64 ~1e-12; cosine >= 1-1e-9 throughout. The transform is lossless to floating-point precision -- bit-exact < 1 reflects float rounding, NOT a transform defect. The predecessor 0.9989 cosine / 0.714 MaxAbsError is an image-space sampler+8-bit-quantization residual (reports/metric_semantics.md), not a transform property."
+}
