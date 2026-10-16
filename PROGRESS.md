@@ -1926,3 +1926,34 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 稽核方可 spec-first 複驗：Q10.2 自寫 transform round-trip、Q10.4 自寫 AEAD、Q10.1 從 table_fidelity 重算階梯、Q10.3 核對引用。
 * Q10.5 視餘裕再做；conditioning 正式數字待 BDIA 附錄 GPU go。
 * 使用者手動 push 本地 commits。
+
+## 2026-10-17 · W7 · Track Q10 · Q10.5 金鑰雪崩診斷（optional partial-key）
+
+### 1. 當前目標 (Objective)
+* 補 `WORKFLOW.md` Q10.5（optional partial-key）：derived-key Hamming distance 與 ciphertext correlation。使用者 2026-10-17 指示補上。全 CPU、不載入 checkpoint、確定性。定位為 KDF 擴散的**診斷**，非通用安全證明，不以金鑰空間作安全論證（skill §8）。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/q10_partial_key.py`：翻轉 32-byte master key 的每一個 bit（256 次），量測 (a) 衍生 sign-subkey 的 bit Hamming fraction、sign-pre/post flip fraction、permutation change fraction；(b) 固定 latent（d=65536、rounds=1、use_permutation=True、N=8、seed 1911）在原金鑰 vs 翻 1-bit 金鑰下的 ciphertext |cosine|。含同金鑰正控制。用 `d7_cpu_security.FIXTURE_KEY`/`nonce_for`（公開 fixture，非金鑰材料）；僅寫 Hamming/correlation aggregate，不寫金鑰 bytes。
+* 指令：`scripts/run_cfg_ddim.sh python -m scripts.q10_partial_key --out paper_assets/tables/table_partial_key.csv --json-out paper_assets/tables/table_partial_key.json --figure image/Q10.5_partial_key_avalanche.png --force`。
+* 產物：`paper_assets/tables/table_partial_key.csv`(+json)、`image/Q10.5_partial_key_avalanche.png`（兩直方圖：Hamming、ciphertext |cos|）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 單 bit 金鑰翻轉的雪崩：derived sign-subkey Hamming mean **0.505**（min 0.426/max 0.613，理想 0.5）；sign-pre flip mean **0.50001**、sign-post **0.50001**；permutation change mean **~1.0000**（幾乎全位置改變）。
+* [事實] ciphertext |cosine|（原金鑰 vs 翻 1-bit）mean **3.12e-3**、max over flips **1.36e-2**（趨近 0，近乎無相關）。同金鑰正控制 cosine **1.0**（sanity 通過）。
+* [事實] 執行時間 2m39s wall（CPU，≤30 分）。
+* [限制] 此為 KDF 擴散診斷，非通用安全證明；只刻畫 S2/S2a 的金鑰排程。
+
+### 4. 達標判定 (Assessment)
+* [x] Q10.5 完成（table_partial_key.csv + figure）。至此 Q10.1–Q10.5 全部完成。
+* 確定性：重跑 CSV 比對（scratchpad）—見下一步/commit 說明。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 結論：KDF（HKDF→ChaCha20 sign/perm）對 master key 具良好雪崩，單 bit 改動即約 50% sign bit 翻轉、密文近乎無相關。支持「金鑰材料與影像無關且良好擴散」的構造論述（與 D5 per-image nonce、CSPRNG 金鑰一致），但不作通用安全宣稱。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。Q10.5 原為 optional，依使用者指示補上。
+
+### 7. 下一步
+* 稽核可 spec-first 複驗（自寫 bit-flip Hamming 與 ciphertext cosine）。
+* conditioning 正式數字仍待 BDIA 附錄 GPU go。
+* 使用者手動 push 本地 commits。

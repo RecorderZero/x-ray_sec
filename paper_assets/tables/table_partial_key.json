@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "task_id": "Q10.5",
+  "seed": 1911,
+  "fixture": "d7_cpu_security.FIXTURE_KEY (public reproducibility fixture; not key material)",
+  "dimension": 65536,
+  "rounds": 1,
+  "permutation": true,
+  "n_bit_flips": 256,
+  "n_latents": 8,
+  "subkey_hamming_fraction": {
+    "mean": 0.5048828125,
+    "min": 0.42578125,
+    "max": 0.61328125
+  },
+  "sign_pre_flip_fraction": {
+    "mean": 0.5000075101852417,
+    "min": 0.4953155517578125,
+    "max": 0.5068359375
+  },
+  "sign_post_flip_fraction": {
+    "mean": 0.5000051259994507,
+    "min": 0.49456787109375,
+    "max": 0.5050201416015625
+  },
+  "perm_change_fraction": {
+    "mean": 0.9999861121177673,
+    "min": 0.99993896484375,
+    "max": 1.0
+  },
+  "ciphertext_cosine_abs": {
+    "mean": 0.0031171680936566484,
+    "max_over_flips": 0.013640171510773466
+  },
+  "positive_control_same_key_cosine_min": 0.9999999999999812,
+  "note": "DIAGNOSTIC of KDF diffusion, NOT a security proof; key-space size is not a security argument (skill sec. 8). A one-bit key change flips ~50% of the sign subkey bits and yields near-zero ciphertext correlation; the permutation changes at almost every position. Same-key positive control gives cosine 1.0."
+}
