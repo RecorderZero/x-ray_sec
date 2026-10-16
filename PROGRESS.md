@@ -1850,3 +1850,42 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 週末/G5：建 `appendix/week7/`（加 WEEKS[7] registry）+ PROGRESS_summary Week 7 段 → G5 凍結主表數字。
 * 待使用者對 BDIA 附錄 GPU run 下 go（指令模板見前一條目 §5）。
 * 使用者手動 push 本地 commits。
+
+## 2026-10-17 · W7 · Track F9 · 處理 AF-039（formal 統計表加存檔欄 + 同存檔 family）
+
+### 1. 當前目標 (Objective)
+* 回應稽核 `AUD-20261017-01` 新開的 `AF-039`（MINOR/EVIDENCE/OPEN）：`table_statistics_formal.csv` 僅含 mixed deployment 配對檢定且無存檔欄，單看會把「S2−S0 +7.68 dB」誤讀成加密增益；且「加密本身成本（同存檔 S2−S0 ≈+0.5 dB）」缺配對顯著性背書。全部用已凍結資料處理，不重跑 GPU。
+
+### 2. 執行動作 (Actions Taken)
+* 改 `scripts/f9_statistics.py`：
+  - 每列新增 `method_storage`／`baseline_storage`（自 long 表 `storage` 欄讀出，不手填）、`family`／`comparison_kind`／`holm_family_size` 欄，使每列自我說明。
+  - 新增第二個 family `same_storage`（comparison_kind=`encryption_only`）：S2 取私有保值域臂（group `m1`/`m1lat`，`range_preserving_private_range_v2`），P/S0/S1 取全 range 臂（group `m1range`/`m1rangelat`，`range_preserving_public_range_v1`），兩者皆保值域 → 隔離加密本身成本。新增 `group_for()`／`storage_for()`，`paired_values()` 改成可分別指定 method/baseline 的 group。
+  - **兩 family 各自獨立 Holm 校正，絕不合併**（依 AF-039 §修正建議）。`same_storage` 需全 range 臂（`m1range`/`m1rangelat`）存在才產生，否則 skip 並於 summary 記 `families_skipped`。summary schema→v2，note 說明兩 family 用途。
+* 改 `scripts/build_claim_matrix.py`：`_paired()` 加 `family` 參數（因同一 metric/method/baseline 現有兩列）；RQ4 headline 同時引【部署對照，含存檔差異】與【加密-only，同為保值域】兩個 S2−S0，並明寫 +7.7 dB 幾乎全來自存檔協定；index.md 說明段補兩 family 定義與存檔欄。
+* 指令（絕對路徑避開 relative_to bug）：
+  - `scripts/run_cfg_ddim.sh python -m scripts.f9_statistics --long-csv /data2/paper/paper_assets/q8_formal/per_sample_long.csv --manifest /data2/paper/paper_assets/q8_formal/analysis_manifest.json --out /data2/paper/paper_assets/tables/table_statistics_formal.csv --json-out /data2/paper/paper_assets/tables/table_statistics_formal.json --force`
+  - `scripts/run_cfg_ddim.sh python -m scripts.build_claim_matrix --force`
+
+### 3. 執行結果 (Results & Observations)
+* [事實] `table_statistics_formal.csv` 現 70 列：`mixed_deployment`=35、`same_storage`=35，每 family 獨立 Holm。role=formal。
+* [事實] `mixed_deployment`（S2 private-range vs P/S0/S1 **legacy**）主數字不變：S2−S0 psnr 中位 +7.682、S2−S1 +7.734 dB，r=1.0、Holm p≈5e-33（與凍結前一致，向後相容）。
+* [事實] `same_storage`（全保值域，加密-only）：psnr S2−S0 中位 **+0.301**（mean +0.536）dB、r=0.742、Holm p=1.4e-18（顯著但小效果）；**S2−S1 中位 +0.035 dB、p_holm=0.296 不顯著**（加密下 S2≈S1 品質）；S2−P 中位 +1.08 dB。SSIM/LPIPS/L∞ 多為 honest null（p_holm→1），即加密本身對這些指標幾乎無成本。來源同表。
+* [事實] 稽核自算同存檔 S2−S0 mean=+0.536 dB，與本輪一致。
+* [事實] claim matrix RQ4 headline 已區分：「【部署對照，含存檔差異】S2−S0 +7.68 dB」vs「【加密-only，同為保值域】S2−S0 +0.30 dB」，10 假設仍全 supported、0 pending。
+
+### 4. 達標判定 (Assessment)
+* AF-039 三項驗收條件全達成：(1) 統計表每列標存檔 ✓；(2) 同存檔配對檢定存在且 Holm 另成 family ✓；(3) claim matrix RQ4 區分「部署對照(含存檔)」與「加密-only」✓。
+* [事實] 本修正僅用已凍結 `q8_formal/per_sample_long.csv`（hash 已釘於 analysis_manifest.json），未動 GPU、未改任何 run artifact；mixed 主數字逐格不變。
+* [回覆稽核] AF-039 的 EVIDENCE 補強已完成，請稽核方複驗 `table_statistics_formal.csv` 兩 family 與 claim matrix RQ4；本輪不碰 BDIA 附錄。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 根因是 F9.4 原設計只輸出部署對照一個 family，雖 PROGRESS/index 有文字限縮，但統計表自身不自我說明。加存檔欄 + 同存檔 family 後，「加密幾乎不損品質」有了配對統計背書，審稿人不易誤讀。
+* [注意] same_storage 的 S2 臂為 `private_range_v2`、基準為 `public_range_v1`，差別僅在 lo/hi 是否加密入 AEAD metadata；兩者皆保值域，故此對照隔離的是「結構變換+容器」成本，非存檔。此點已寫入 f9_statistics docstring 與 note。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。AF-039 為論文定稿前 EVIDENCE 補強，稽核明示不阻擋 G5；本輪依其修正建議以已凍結資料完成。
+
+### 7. 下一步
+* 等稽核複驗 AF-039 是否可轉 CLOSED。
+* 週末/G5 其餘步驟（build_weekly_appendix --week 7、PROGRESS_summary W7 段）與 BDIA 附錄 GPU run 維持原狀，未受本輪影響。
+* 使用者手動 push 本地 commits。

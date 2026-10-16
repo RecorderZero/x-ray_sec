@@ -1,13 +1,23 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "task_id": "F9.4",
   "evidence_role": "formal",
   "source_long_csv_sha256": "c9aaeb18d275d14176bf96d5d050728775bbba3bfdfa1ef547732d5271b1e08c",
   "n_samples": null,
   "test": "two-sided Wilcoxon signed-rank (paired by sample_id, zero_method=wilcox)",
   "effect_size": "matched-pairs rank-biserial correlation",
-  "multiple_comparison": "Holm-Bonferroni across all 35 (metric x comparison) tests, alpha=0.05",
-  "family_size": 35,
+  "multiple_comparison": "Holm-Bonferroni PER FAMILY (never pooled), alpha=0.05",
+  "families": {
+    "mixed_deployment": {
+      "comparison_kind": "deployment_incl_storage",
+      "family_size": 35
+    },
+    "same_storage": {
+      "comparison_kind": "encryption_only",
+      "family_size": 35
+    }
+  },
+  "families_skipped": [],
   "comparisons": [
     "S2-S0",
     "S2-S1",
@@ -24,5 +34,5 @@
     "rmse",
     "max_abs"
   ],
-  "note": "pilot N=20 validates the method; Week-7 formal N=200 replaces it. Mixed deployment: P/S0/S1 legacy, S2 private-range; do not attribute S2-S0 to the cipher alone (storage effect included)."
+  "note": "Two separately-corrected families. mixed_deployment: S2 private-range vs P/S0/S1 legacy -- the S2-S0/S1 gap is dominated by STORAGE (legacy min-max loss), NOT the cipher. same_storage (encryption_only): all methods range-preserving -- isolates the cipher cost (~+0.5 dB S2 vs S0). Cite same_storage for 'encryption barely costs quality'; cite mixed_deployment for the real predecessor-vs-S2 deployment contrast."
 }

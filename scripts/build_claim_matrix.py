@@ -94,10 +94,14 @@ def _marginal(fid: list[dict[str, str]], method: str, path: str, reference: str,
     return float(hits[0]["mean"])
 
 
-def _paired(stats: list[dict[str, str]], metric: str, method: str, baseline: str) -> dict[str, str]:
-    hits = [r for r in stats if r["metric"] == metric and r["method"] == method and r["baseline"] == baseline]
+def _paired(stats: list[dict[str, str]], metric: str, method: str, baseline: str,
+            family: str = "mixed_deployment") -> dict[str, str]:
+    """One paired-test row. ``family`` disambiguates the two Holm families
+    (mixed_deployment = deployment incl. storage; same_storage = encryption-only)."""
+    hits = [r for r in stats if r["metric"] == metric and r["method"] == method
+            and r["baseline"] == baseline and r.get("family", "mixed_deployment") == family]
     if len(hits) != 1:
-        raise SystemExit(f"expected one paired {metric} {method} vs {baseline}, found {len(hits)}")
+        raise SystemExit(f"expected one paired {metric} {method} vs {baseline} in family {family}, found {len(hits)}")
     return hits[0]
 
 
@@ -110,12 +114,18 @@ def quality_headline(hid: str, fid: list[dict[str, str]], stats: list[dict[str, 
         s0 = _marginal(fid, "S0", "m1_image_inversion", "x0", "psnr_db", "legacy_png_handoff")
         s1 = _marginal(fid, "S1", "m1_image_inversion", "x0", "psnr_db", "legacy_png_handoff")
         pear = _marginal(fid, "P", "m1_image_inversion", "x0", "psnr_db", "legacy_png_handoff")
-        v0, v1 = _paired(stats, "psnr_db", "S2", "S0"), _paired(stats, "psnr_db", "S2", "S1")
+        # Deployment contrast (storage INCLUDED) vs encryption-only (same storage). AF-039.
+        d0 = _paired(stats, "psnr_db", "S2", "S0", "mixed_deployment")
+        d1 = _paired(stats, "psnr_db", "S2", "S1", "mixed_deployment")
+        e0 = _paired(stats, "psnr_db", "S2", "S0", "same_storage")
         headline = (
             f"S2 M1 PSNR {s2:.2f} dB（SSIM {s2_ssim:.3f}、LPIPS {s2_lpips:.3f}；保值域私有部署）；"
-            f"前作加密方案 S0 {s0:.2f}／S1 {s1:.2f} dB（legacy PNG 部署），明文 P {pear:.2f} dB；"
-            f"配對 S2−S0 中位 +{float(v0['median_diff']):.2f}／S2−S1 +{float(v1['median_diff']):.2f} dB"
-            f"（rank-biserial r={float(v0['rank_biserial_r']):.2f}，Holm p={float(v0['p_holm']):.1e}，N={v0['n_pairs']}）")
+            f"前作加密方案 S0 {s0:.2f}／S1 {s1:.2f} dB（legacy PNG 部署），明文 P {pear:.2f} dB｜"
+            f"【部署對照，含存檔差異】配對 S2−S0 中位 +{float(d0['median_diff']):.2f}／S2−S1 +{float(d1['median_diff']):.2f} dB"
+            f"（r={float(d0['rank_biserial_r']):.2f}，Holm p={float(d0['p_holm']):.1e}，N={d0['n_pairs']}）｜"
+            f"【加密-only，同為保值域】配對 S2−S0 中位 +{float(e0['median_diff']):.2f} dB"
+            f"（r={float(e0['rank_biserial_r']):.2f}，Holm p={float(e0['p_holm']):.1e}）——"
+            f"加密本身成本僅此量級，部署對照的 +{float(d0['median_diff']):.1f} dB 幾乎全來自存檔協定（legacy min-max 丟值域）")
         return headline, "q8_formal:table_fidelity;tables/table_statistics_formal"
     # H3c
     xform = _marginal(fid, "S2", "transform_only", "z", "cosine")
@@ -193,8 +203,12 @@ def main() -> None:
         "## 品質列證據與限縮（H3c／RQ4，已由 Q8_FORMAL + legacy supplement 落地）",
         "- H3c、RQ4 headline 由 `q8_formal`（N=200 formal，Q8_FORMAL parent + Q8_LEGACY_SUPPLEMENT）的 "
         "`table_fidelity.csv` 與 F9.4 `table_statistics_formal.csv`（paired Wilcoxon + rank-biserial + Holm）讀入，數字不手抄。",
+        "- `table_statistics_formal.csv` 含兩個**各自獨立 Holm 校正**的 family（AF-039）：`mixed_deployment`"
+        "（comparison_kind=deployment_incl_storage，S2 private-range vs P／S0／S1 **legacy**，含存檔差異）與 `same_storage`"
+        "（comparison_kind=encryption_only，全 range-preserving，隔離加密本身成本）；每列並標 `method_storage`／`baseline_storage`。",
         "- 品質主欄為 mixed deployment（P／S0／S1 legacy PNG、S2 private-range v2）；全 range-preserving 為 attribution 另列。"
-        "**不得把 S2−S0 的差異歸因為加密本身**：同存檔下 S2−S0 僅約 +0.5 dB，部署差異的 ~+7.7 dB 幾乎全來自保值域存檔。",
+        "**不得把 S2−S0 的差異歸因為加密本身**：同存檔（same_storage family）下 S2−S0 中位僅約 +0.3 dB（mean +0.5 dB），"
+        "部署對照（mixed_deployment family）的 ~+7.7 dB 幾乎全來自保值域存檔（legacy min-max 丟值域）。",
         "",
     ]
     index_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
