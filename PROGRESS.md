@@ -1782,3 +1782,37 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 安全臂分類（以選定 cell 的 S2-BDIA 重驗）：**僅 T2-WB（重反演再識別）+ norm scorer + dev 校正隨 sampler 變**，須各 cell（③、④ 匿名影像不同）各做一次（~0.5h/cell，重用品質 run 的匿名影像）；T1/norm/geometry(QᵀQ=I)/cross-nonce/structured-probe/repeat/tamper(HMAC) 皆 latent/容器層、與 generate 條件無關，③④ 共用、**只算一次**（免擴散，分鐘級）。fixed-norm 已強制 ‖·‖=C，預期 T1/T2-WB 在 BDIA 下仍 random，重跑為實證坐實「同樣安全」。
 * GPU 盤點（N=200，③④ 都背書安全，可分三段獨立跑）：BDIA-null 快取 ~0.5h → 品質 2×2 跑 ②③④（①重用）~3.8h → T2-WB×2 + dev 校正 + latent 臂 ~1h；**合計 ≈ 5.5–6h**。加 ④ 相對只背書③ 的增量 ≈ +40 min。**不需重跑**：E2.3 DDIM 快取、Q8_FORMAL ①、整個 D7/AF-025 DDIM 安全電池、F9 主表。
 * CPU 腳手架（開發中、不佔 GPU、不 commit 結果）：`scripts/bdia_backend.py`（γ=1 BDIA generate/invert + NFE 計數 + both-null 可逆性單測）、`scripts/bdia_2x2_runner.py`（重用 Q8 S2 封裝，`--cells/--sampler/--conditioning`）、`scripts/bdia_security_verify.py`（T2-WB 重反演 + latent 臂重驗，重用品質 run 匿名影像）；分析沿用 `q8_analyze.py`＋`f9_statistics.py`。BDIA 參考實作見稽核方唯讀 `audit/bdia_vs_ddim_s2fix.py`（AUD-20261015-02，γ=1）。
+
+## 2026-10-16 · W7 · 附錄 · BDIA CPU 腳手架完成並 smoke 驗證（A 仍背景執行中）
+
+### 1. 當前目標 (Objective)
+* [使用者同意 2026-10-16] 在 A（GPU）背景執行期間，完成 BDIA 附錄的 CPU 腳手架與 smoke test（不佔 GPU、不 commit 結果）。
+
+### 2. 執行動作 (Actions Taken)
+* `scripts/bdia_2x2_runner.py`（commit `b4100ef`）：2×2 品質 ablation runner。重用 `q8_pilot_runner` 的 S2 crypto（`normalize_to_fixed_norm`+`transform`+`seal/open_anonymous_image`）與量測助手（`image_columns`/`latent_columns`/`Meter`）；每 cell 換 sampler+generate 條件，fixed-norm/SOT/HMAC/AEAD 與凍結 S2 一致（ROUNDS=1、USE_PERMUTATION=False、private range）。managed run、fail-closed、per-slice-hash 陣列（x0/anon/public/recon_m1）。方法 token 固定 `S2`，另加 `cell/sampler/conditioning/base_sample_id` 識別欄；`sample_id` 以 `<id>__cell<N>` 保唯一（過 artifact validator）。
+* `scripts/bdia_security_verify.py`（commit `fca5ccd`）：單 cell 的 T2-WB 安全重驗。= `af025_fixed_norm_t2wb` 把 generate/invert 換成該 cell 的 sampler（`bdia_2x2_runner.build_backend`），**FIXTURE_KEY／nonce／E2.3 latents／fixed-norm／SOT／容器全部與 AF-025 相同，只差 sampler**；輸出 AF-025 同 schema 的 per_sample + `query_latents.npy`，沿用 `af025_fixed_norm_analyze`/`d7_t2wb_analyze` 評分。
+* 兩者皆加 `--synthetic-selftest`（CPU、無模型、SyntheticBackend）走完整 crypto+量測+artifact 線。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 2×2 runner CPU smoke：`--synthetic-selftest --cells 2 3 4 --limit 3 --warmup 0`，9 列（3 cell×3 樣本）、sample_id 唯一、欄位含 anon/anonpub/m1/m1lat/runtime/nfe，managed run artifact_validation 通過。輸出於 scratchpad（未 commit）。
+* [事實] security verify CPU smoke（cell 3）：`--synthetic-selftest --cell 3 --limit 4`，per_sample + query_latents.npy 存檔並逐筆 hash 驗證、run 驗證通過；legit_cos≈0.99998（synthetic 近無損）。表頭與 AF-025 一致（method/storage/metric/n/mean/ci95/...）。
+* [事實] `build_backend` 逐 cell 構造正確：② DDIM generate_null=True；③ BDIA invert_null=True/gen_null=False（純非對稱）；④ BDIA 兩邊 null。invert 恆 null（DDIM `ddim_anonymization_forward` 強制；BDIA invert_kwargs 帶 null=True）。
+* [事實] DDIM-null 生成路徑＝`ddim_anonymization_backward(model_kwargs{...,null:True}, guidance_scale=-1)`（guidance=-1→無 CFG 混合、單次無條件 model call）；BDIA 非對稱生成＝`_gr` 不帶 null（y=0 條件、guidance=-1 單次），與學長語義一致。
+
+### 4. 達標判定 (Assessment)
+* [x] 三件 CPU 腳手架（`bdia_backend` 4296965、`bdia_2x2_runner` b4100ef、`bdia_security_verify` fca5ccd）皆 smoke 通過、原子 commit、無結果檔入庫。
+* [ ] 真實 GPU run 待使用者 go（「有時間才會跑」）；A（Q8_LEGACY_SUPPLEMENT）仍背景執行中，完成後優先收尾 F9。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* [待辦] GPU run 指令模板（使用者 go 後；>30min 需 gate）：
+  * 品質 2×2（②③④，①重用 Q8_FORMAL）：`scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id BDIA2X2 --validate-artifacts -- python -m scripts.bdia_2x2_runner --evidence-role formal --cells 2 3 4 --split splits/security_v1.csv --checkpoint <ckpt> --ddim-latent-cache artifacts/runs/E2.3/E2.3_20261009T183736363217Z_84cf642a`（cell 2 用 E2.3；③④ 線上 BDIA-null 反演）。
+  * 安全重驗（每 cell 一次）：`... python -m scripts.bdia_security_verify --cell 3 --split splits/security_v1.csv --latent-cache <E2.3> --checkpoint <ckpt>`（③、④ 各跑；dev 校正用 `--limit`）。
+  * 分析：`q8_analyze`（品質，bootstrap CI）＋ `f9_statistics`（paired ①→③、①→④，另開 family 不混主表 Holm）＋ `af025_fixed_norm_analyze`/`d7_t2wb_analyze`（T2-WB 再識別）。
+* [決定] 主表仍 DDIM+非對稱；BDIA 升為正式方法＝改研究設計，需回 Cowork（skill §9）。附錄只背書「品質更好＋安全相同」。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。附錄非 WORKFLOW 指定交付物，為 F9 外的選配附錄（使用者「有時間才會跑」）。
+
+### 7. 下一步
+* 等 A（`Q8_LEGACY_SUPPLEMENT_20261016T064241Z_964cb3e0`）完成通知 → 驗 run dir/validation → 收尾 F9（F9.2 `q8_analyze` mixed、F9.4 `f9_statistics`、F9.5 claim matrix、F9.1 組裝、`appendix/week7/` + PROGRESS_summary W7）。
+* BDIA 附錄 GPU run 待使用者另行 go。
