@@ -1816,3 +1816,37 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 等 A（`Q8_LEGACY_SUPPLEMENT_20261016T064241Z_964cb3e0`）完成通知 → 驗 run dir/validation → 收尾 F9（F9.2 `q8_analyze` mixed、F9.4 `f9_statistics`、F9.5 claim matrix、F9.1 組裝、`appendix/week7/` + PROGRESS_summary W7）。
 * BDIA 附錄 GPU run 待使用者另行 go。
+
+## 2026-10-16 · W7 · Track F9 收尾 · legacy supplement 完成 + formal mixed 主結果凍結
+
+### 1. 當前目標 (Objective)
+* A（`Q8_LEGACY_SUPPLEMENT`）完成後收尾 F9：產生 formal mixed-deployment 品質主表、paired 統計、填滿 claim matrix；確認 F9.1 formal security 證據就位。
+
+### 2. 執行動作 (Actions Taken)
+* 驗 A：`artifacts/runs/Q8_LEGACY_SUPPLEMENT/Q8_LEGACY_SUPPLEMENT_20261016T064241Z_964cb3e0`，exit 0、evidence_role=formal、expected_samples=200、parent_run_id=Q8_FORMAL_...7e4c3368、failures=0、summary sample_count=200、artifact validation 通過。
+* F9.2：`scripts/run_cfg_ddim.sh python -m scripts.q8_analyze --run-dir <Q8_FORMAL parent> --deployment-supplement <上述 supplement> --output-dir paper_assets/q8_formal --lpips auto`（LPIPS computed）→ table_fidelity/anonymity/wrong_key/runtime/storage（285/360/98/93/115 列）+ patient-cluster bootstrap CI。
+* F9.4：`python -m scripts.f9_statistics --long-csv /data2/paper/paper_assets/q8_formal/per_sample_long.csv --manifest .../analysis_manifest.json --out /data2/paper/paper_assets/tables/table_statistics_formal.csv --json-out ....json --force`（絕對路徑避開 relative_to bug）→ 35 檢定、Holm 後 35 全顯著、role=formal。
+* F9.5：改 `scripts/build_claim_matrix.py` 讓 H3c/RQ4 headline **從凍結表讀入**（`q8_formal/table_fidelity.csv` + `tables/table_statistics_formal.csv`，數字不手抄），status→supported；`python -m scripts.build_claim_matrix --force`。
+* F9.1：確認 formal security（N=200）證據已凍結且 git-tracked：`paper_assets/tables/table_AF025_fixed_norm_{T1,T2WB_inversion,norm_leakage,probe,repeat}.csv`、`table_D7_T2WB_inversion.csv`、cross_nonce/geometry/tamper/A4.6 等，並由 `paper_assets/defense_package/claims.csv`（已稽核）彙整；claim matrix 經 defense_package 指向。無需新 GPU。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] formal mixed deployment（P/S0/S1=legacy PNG、S2=保值域私有 v2）M1 recon vs x0：P PSNR 37.46/SSIM 0.973/LPIPS 0.067；S0 31.15/0.918/0.134；S1 31.42/0.895/0.167；**S2 38.82/0.970/0.067**。來源 `paper_assets/q8_formal/table_fidelity.csv`（comparison=marginal）。
+* [事實] 配對（formal，N=200，Wilcoxon+rank-biserial+Holm）：S2−S0 中位 +7.68 dB、S2−S1 +7.73 dB（r=1.0、p_holm≈5e-33）；S2−P 中位 +1.18 dB（r=0.988，S2 微贏明文 P，因保值域容器避開 PNG min-max 損失）。來源 `table_statistics_formal.csv`。
+* [事實] S2 latent：transform-only cosine=1.000000、max_abs 8.3e-7（結構變換本身無損）；M1 latent round-trip cosine 0.999794、max_abs 0.089；t1 精確 latent cosine 1.0。→ 影像殘差來自 sampler+8-bit 量化，非 transform（H3c）。
+* [事實] claim matrix：10 假設全 supported、0 pending。
+* [注意] **部署差 ~+7.7 dB 幾乎全來自保值域存檔，非加密**；同存檔下 S2−S0 僅約 +0.5 dB（Q8_FORMAL range-attribution 臂）。index.md 已明載此限縮，不得歸因為加密本身。
+
+### 4. 達標判定 (Assessment)
+* [x] F9.1（frozen security N=200 就位）、F9.2（formal 五表+CI）、F9.3（adaptive limitation note，先前 ed99ce6）、F9.4（table_statistics_formal）、F9.5（claim matrix 全 supported）皆完成。commit `0ab73a0`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* F9 數值收尾完成。**剩餘屬週末/G5 的步驟**（本輪未做，避免週中提早定稿）：`scripts/build_weekly_appendix.py --week 7`（需先在 WEEKS registry 加 week7 條目，納入 q8_formal 五表 + table_statistics_formal + claim_matrix）＋ `PROGRESS_summary.md` Week 7 段；之後進 G5 凍結主表。
+* BDIA 2×2 安全+品質附錄 GPU run 仍待使用者 go（「有時間才會跑」），與 F9/G5 無相依。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* WORKFLOW 排程 Week 7＝11/16–11/22、G5＝11/22，但實際執行日為 2026-10-16（既有行程差，非本輪造成）；F9 交付物內容與規則均依 WORKFLOW §F9 達成。
+
+### 7. 下一步
+* 週末/G5：建 `appendix/week7/`（加 WEEKS[7] registry）+ PROGRESS_summary Week 7 段 → G5 凍結主表數字。
+* 待使用者對 BDIA 附錄 GPU run 下 go（指令模板見前一條目 §5）。
+* 使用者手動 push 本地 commits。
