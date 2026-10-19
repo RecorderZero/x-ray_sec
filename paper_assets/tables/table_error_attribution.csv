@@ -1,20 +1,20 @@
 method,stage_order,stage,image_psnr_db_vs_x0,delta_psnr_from_prev,latent_cosine_vs_z,latent_max_abs_vs_z,float32_bit_exact_rate,uint8_pixel_equality_rate,attribution,source,status
-P,1,crypto_transform_only,,,1.000000001,0.0,1.0,,cipher round-trip lossless (max_abs~8e-7); corroborated by Q10.2,q8_formal/table_fidelity:transform_only,measured
+P,1,crypto_transform_only,,,1.000000001,0.0,1.0,,"cipher round-trip bit-exact (max_abs=0.0, pure sign/perm); corroborated by Q10.2",q8_formal/table_fidelity:transform_only,measured
 P,2,m2_exact_latent,41.8695,,1.000000001,,1.0,0.21798370361328126,"M2 ceiling: exact latent -> image; residual = VAE decode + 8-bit, not cipher",q8_formal/table_fidelity:t1_exact_latent_m2,measured
 P,3,m1_sampler_range,37.5793,-4.2902,0.373816327,7.552171784639358,,,drop from M2 = DDIM invert/regen latent error (dominant honest residual),q8_formal/table_fidelity:m1_image_inversion_attribution@range_preserving_public_range_v1,measured
 P,4,m1_deploy_legacy,37.4571,-0.1222,,,,,"drop from range = legacy min-max storage loss (STORAGE, not cipher)",q8_formal/table_fidelity:m1_image_inversion@legacy_png_handoff,measured
 P,5,conditioning_null_vs_cond,,,,,,,"y=0 cond vs unconditional null: sampler change; see GPU BDIA 2x2 appendix (AUD-20261015-02/03, n=3 diagnostic ~+0.3-0.5 dB, not yet formal)",appendix/bdia (deferred),deferred_gpu
-S0,1,crypto_transform_only,,,1.000000001,0.0,1.0,,cipher round-trip lossless (max_abs~8e-7); corroborated by Q10.2,q8_formal/table_fidelity:transform_only,measured
+S0,1,crypto_transform_only,,,1.000000001,0.0,1.0,,"cipher round-trip bit-exact (max_abs=0.0, pure sign/perm); corroborated by Q10.2",q8_formal/table_fidelity:transform_only,measured
 S0,2,m2_exact_latent,41.8695,,1.000000001,,1.0,0.21798370361328126,"M2 ceiling: exact latent -> image; residual = VAE decode + 8-bit, not cipher",q8_formal/table_fidelity:t1_exact_latent_m2,measured
 S0,3,m1_sampler_range,38.2825,-3.587,0.999745118,0.2138107019662857,,,drop from M2 = DDIM invert/regen latent error (dominant honest residual),q8_formal/table_fidelity:m1_image_inversion_attribution@range_preserving_public_range_v1,measured
 S0,4,m1_deploy_legacy,31.1475,-7.135,,,,,"drop from range = legacy min-max storage loss (STORAGE, not cipher)",q8_formal/table_fidelity:m1_image_inversion@legacy_png_handoff,measured
 S0,5,conditioning_null_vs_cond,,,,,,,"y=0 cond vs unconditional null: sampler change; see GPU BDIA 2x2 appendix (AUD-20261015-02/03, n=3 diagnostic ~+0.3-0.5 dB, not yet formal)",appendix/bdia (deferred),deferred_gpu
-S1,1,crypto_transform_only,,,1.000000001,0.0,1.0,,cipher round-trip lossless (max_abs~8e-7); corroborated by Q10.2,q8_formal/table_fidelity:transform_only,measured
+S1,1,crypto_transform_only,,,1.000000001,0.0,1.0,,"cipher round-trip bit-exact (max_abs=0.0, pure sign/perm); corroborated by Q10.2",q8_formal/table_fidelity:transform_only,measured
 S1,2,m2_exact_latent,41.8695,,1.000000001,,1.0,0.21798370361328126,"M2 ceiling: exact latent -> image; residual = VAE decode + 8-bit, not cipher",q8_formal/table_fidelity:t1_exact_latent_m2,measured
 S1,3,m1_sampler_range,38.7711,-3.0985,0.99976749,0.1562674015760422,,,drop from M2 = DDIM invert/regen latent error (dominant honest residual),q8_formal/table_fidelity:m1_image_inversion_attribution@range_preserving_public_range_v1,measured
 S1,4,m1_deploy_legacy,31.4211,-7.35,,,,,"drop from range = legacy min-max storage loss (STORAGE, not cipher)",q8_formal/table_fidelity:m1_image_inversion@legacy_png_handoff,measured
 S1,5,conditioning_null_vs_cond,,,,,,,"y=0 cond vs unconditional null: sampler change; see GPU BDIA 2x2 appendix (AUD-20261015-02/03, n=3 diagnostic ~+0.3-0.5 dB, not yet formal)",appendix/bdia (deferred),deferred_gpu
-S2,1,crypto_transform_only,,,1.000000006,8.293986320495605e-07,0.15596954345703126,,cipher round-trip lossless (max_abs~8e-7); corroborated by Q10.2,q8_formal/table_fidelity:transform_only,measured
+S2,1,crypto_transform_only,,,1.000000006,8.293986320495605e-07,0.15596954345703126,,"cipher round-trip lossless (max_abs~8.3e-07, WHT core); corroborated by Q10.2",q8_formal/table_fidelity:transform_only,measured
 S2,2,m2_exact_latent,41.8695,,0.999999996,,0.15586563110351562,0.2179869842529297,"M2 ceiling: exact latent -> image; residual = VAE decode + 8-bit, not cipher",q8_formal/table_fidelity:t1_exact_latent_m2,measured
 S2,3,m1_sampler_range,38.819,-3.0505,0.999794399,0.08873742435127496,,,drop from M2 = DDIM invert/regen latent error (dominant honest residual),q8_formal/table_fidelity:m1_image_inversion@range_preserving_private_range_v2,measured
 S2,4,m1_deploy_legacy,38.819,0.0,,,,,S2 deploys range-preserving -> NO legacy min-max loss (its advantage),q8_formal/table_fidelity:m1_image_inversion@range_preserving_private_range_v2,not_applicable

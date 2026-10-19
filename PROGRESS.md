@@ -1995,3 +1995,34 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 待使用者裁決是否 commit（`contribution.md` + `scripts/q11_localization_parity.py` + `paper_assets/tables/table_localization_parity.*` + `image/localization_parity_grid.png` + 本 PROGRESS 條目；per-image PNG 目錄體積較大，commit 前以 `scripts/check_staged_files.sh` 檢視是否納入）。
 * conditioning 正式數字仍待 BDIA 附錄 GPU go。
 * 使用者手動 push 本地 commits。
+
+## 2026-10-19 · W8 · Track Q · 回應 AUD-20261019-01：AF-040 精度註記更正
+
+### 1. 當前目標 (Objective)
+* 回應稽核：AUD-20261019-01 的 AF-040（MINOR／REPRO／Q10.2）。
+* 核心問題：`table_numeric_precision.json` 的 `note` 把 transform-only round-trip 誤差寫成 float32「~1e-4」、float64「~1e-12」，與同檔計算欄位及 CSV（float32 1.55e-6、float64 3.05e-15）矛盾，誇大約 60–1000×。順帶修稽核方指出（非 finding）的 `table_error_attribution` stage-1 註記：P/S0/S1 實為 bit-exact（max_abs=0.0，純 sign/perm），只有 S2（WHT）為 ~8.3e-7。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-040] 已修正｜修改 `scripts/q10_numeric_precision.py::main`：`note` 改為由計算出的 `f32_worst`／`f64_worst` 以 f-string 格式化（`~{:.1e}`／`~{:.0e}`），prose 不再能與資料漂移；並明載「這些值與上方 roundtrip_max_abs_worst 欄位一致」。
+* 順帶精確化（非 finding，稽核方 §AF-040 建議）：`scripts/q10_error_attribution.py::ladder` stage-1 attribution 依該列實際 `t_max` 分流——`==0.0` → 「bit-exact (max_abs=0.0, pure sign/perm)」；否則 → 「lossless (max_abs~8.3e-07, WHT core)」；docstring 第 1 階說明同步精確化。
+* 以 `scripts/run_cfg_ddim.sh python -m scripts.q10_numeric_precision --force` 與 `... scripts.q10_error_attribution --force` 重新產生 `paper_assets/tables/table_numeric_precision.{csv,json}`、`table_error_attribution.csv`（均經 `output_guard` 覆寫保護）。
+
+### 3. 執行結果 (Results & Observations)
+* `table_numeric_precision.json` note 現為「float32 max_abs worst ~1.5e-06（d=65536, rounds=4）、float64 ~3e-15」，與計算欄位 `float32_roundtrip_max_abs_worst=1.5497e-06`、`float64_roundtrip_max_abs_worst=3.0531e-15` 一致；稽核方獨立重算 1.45e-6／2.90e-15（GPU 浮點容差內一致）。
+* `table_error_attribution.csv` stage-1：P/S0/S1 → 「cipher round-trip bit-exact (max_abs=0.0, pure sign/perm)」（`latent_max_abs_vs_z=0.0`、`bit_exact_rate=1.0`）；S2 → 「lossless (max_abs~8.3e-07, WHT core)」（`latent_max_abs_vs_z=8.29e-07`）。無任何 CSV 數字或下游結論改變。
+* 殘留 grep `~8e-7／~1e-4／~1e-12`：僅剩 CSV S2 列的正確值 8.3e-07。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標 (Achieved)**：JSON note 與自身計算欄位、CSV 一致；attribution 文字逐列精確。純註記／文字更正，不影響任何量化結論。
+  - 下一步：原子 commit（`fix:` + `Refs: AF-040`），納入兩支 generator 腳本與其重生的 artifact。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* （已達標，略）根因：note 為早期手寫經驗值、未隨實測值更新。改為從計算值格式化後不會再漂移。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。未修改 `past/SourceCode/`、`AUDIT.md`；PROGRESS 只增不改。
+
+### 7. 下一步
+* 待稽核方下一輪複驗 AF-040（驗收：note 數量級與 CSV 一致）後關閉。
+* conditioning 正式數字仍待 BDIA 附錄 GPU go。
+* 使用者手動 push 本地 commits。

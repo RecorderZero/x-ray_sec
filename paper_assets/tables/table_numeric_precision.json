@@ -25,5 +25,5 @@
   "float32_roundtrip_max_abs_worst": 1.5497207641601562e-06,
   "float64_roundtrip_max_abs_worst": 3.0531133177191805e-15,
   "float32_cosine_min_worst": 0.9999999999999346,
-  "note": "Transform-only round-trip. float32 max_abs is ~1e-4 at d=65536 (orthonormal FWHT accumulation), float64 ~1e-12; cosine >= 1-1e-9 throughout. The transform is lossless to floating-point precision -- bit-exact < 1 reflects float rounding, NOT a transform defect. The predecessor 0.9989 cosine / 0.714 MaxAbsError is an image-space sampler+8-bit-quantization residual (reports/metric_semantics.md), not a transform property."
+  "note": "Transform-only round-trip. float32 max_abs worst is ~1.5e-06 (d=65536, rounds=4; orthonormal FWHT accumulation), float64 ~3e-15; these match the float32/float64_roundtrip_max_abs_worst fields above. cosine >= 1-1e-9 throughout. The transform is lossless to floating-point precision -- bit-exact < 1 reflects float rounding, NOT a transform defect. The predecessor 0.9989 cosine / 0.714 MaxAbsError is an image-space sampler+8-bit-quantization residual (reports/metric_semantics.md), not a transform property."
 }

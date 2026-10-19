@@ -119,20 +119,25 @@ def main() -> None:
     # float64 is near machine epsilon. The transform is lossless to float precision.
     f32 = [r for r in records if r["dtype"] == "float32"]
     f64 = [r for r in records if r["dtype"] == "float64"]
+    f32_worst = max(r["roundtrip_max_abs"] for r in f32)
+    f64_worst = max(r["roundtrip_max_abs"] for r in f64)
     summary = {
         "schema_version": 1, "task_id": "Q10.2", "seed": SEED,
         "fixture": "d7_cpu_security.FIXTURE_KEY (public reproducibility fixture; not key material)",
         "n_configs": len(records), "n_samples_each": N_SAMPLES,
         "dimensions": DIMENSIONS, "dtypes": DTYPES, "rounds": ROUNDS, "permutation": PERMUTATION,
-        "float32_roundtrip_max_abs_worst": max(r["roundtrip_max_abs"] for r in f32),
-        "float64_roundtrip_max_abs_worst": max(r["roundtrip_max_abs"] for r in f64),
+        "float32_roundtrip_max_abs_worst": f32_worst,
+        "float64_roundtrip_max_abs_worst": f64_worst,
         "float32_cosine_min_worst": min(r["roundtrip_cosine_min"] for r in f32),
+        # note derived from the computed worst values so prose cannot drift from data (AF-040).
         "note": (
-            "Transform-only round-trip. float32 max_abs is ~1e-4 at d=65536 (orthonormal "
-            "FWHT accumulation), float64 ~1e-12; cosine >= 1-1e-9 throughout. The transform "
-            "is lossless to floating-point precision -- bit-exact < 1 reflects float rounding, "
-            "NOT a transform defect. The predecessor 0.9989 cosine / 0.714 MaxAbsError is an "
-            "image-space sampler+8-bit-quantization residual (reports/metric_semantics.md), "
+            f"Transform-only round-trip. float32 max_abs worst is ~{f32_worst:.1e} "
+            f"(d=65536, rounds=4; orthonormal FWHT accumulation), float64 ~{f64_worst:.0e}; "
+            "these match the float32/float64_roundtrip_max_abs_worst fields above. "
+            "cosine >= 1-1e-9 throughout. The transform is lossless to floating-point "
+            "precision -- bit-exact < 1 reflects float rounding, NOT a transform defect. "
+            "The predecessor 0.9989 cosine / 0.714 MaxAbsError is an image-space "
+            "sampler+8-bit-quantization residual (reports/metric_semantics.md), "
             "not a transform property."
         ),
     }

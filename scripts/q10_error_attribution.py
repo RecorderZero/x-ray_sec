@@ -6,7 +6,8 @@ The ladder answers "where does the 0.9989-style residual come from?".  Stages,
 from the cipher outward (image PSNR vs x0, latent cosine vs z):
 
   1. crypto_transform_only : structured transform round-trip, no diffusion, no
-     storage. Latent cosine ~1.0, max_abs ~8e-7 -> the cipher is lossless
+     storage. Latent cosine ~1.0; max_abs = 0.0 for P/S0/S1 (pure sign/perm,
+     bit-exact) and ~8.3e-7 for S2 (WHT core) -> the cipher is lossless
      (corroborated across dim/dtype/rounds by Q10.2 table_numeric_precision).
   2. m2_exact_latent       : M2 deployment -- exact latent payload decoded to an
      image, NO sampler inversion. The image ceiling (~41.9 dB); residual is VAE
@@ -87,8 +88,15 @@ def ladder(fid, method: str) -> list[dict]:
     t_cos = cell(fid, method, "transform_only", "marginal", "latent", "z", "cosine")
     t_max = cell(fid, method, "transform_only", "marginal", "latent", "z", "max_abs")
     t_be = cell(fid, method, "transform_only", "marginal", "latent", "z", "float32_bit_exact_rate")
+    # Per-method note: P/S0/S1 are pure sign/perm -> bit-exact (max_abs=0.0);
+    # only S2 (WHT core) has float accumulation ~8.3e-7 (AF-040 precision fix).
+    if t_max == 0.0:
+        t_attr = "cipher round-trip bit-exact (max_abs=0.0, pure sign/perm); corroborated by Q10.2"
+    else:
+        t_attr = (f"cipher round-trip lossless (max_abs~{t_max:.1e}, WHT core); "
+                  "corroborated by Q10.2")
     rows.append(_row(method, 1, "crypto_transform_only", None, t_cos, t_max, t_be, None,
-                     None, "cipher round-trip lossless (max_abs~8e-7); corroborated by Q10.2",
+                     None, t_attr,
                      "q8_formal/table_fidelity:transform_only"))
     # Stage 2: M2 exact-latent image ceiling (no sampler inversion).
     m2_psnr = cell(fid, method, "t1_exact_latent_m2", "marginal", "image", "x0", "psnr_db")
