@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task_id": "Q11",
+  "seed": 1911,
+  "n_images": 10,
+  "noise_level": 500,
+  "guidance_scale": 4.0,
+  "dim": 65536,
+  "C_norm": 248.261,
+  "fixture": "d7_cpu_security.FIXTURE_KEY (public reproducibility fixture; not key material)",
+  "parity_restored_S2_vs_S0": {
+    "n": 20,
+    "psnr_min": 27.61,
+    "psnr_mean": 48.876,
+    "n_inf": 0
+  },
+  "parity_healthy_S2_vs_S0": {
+    "n": 20,
+    "psnr_min": 24.216,
+    "psnr_mean": 47.145,
+    "n_inf": 0
+  },
+  "note": "Parity demo (NOT a localization-accuracy benchmark; no ground-truth masks). All three ciphers share a fixed-norm + range-preserving envelope; only the orthogonal core differs. High cross-method PSNR on restored/healthy/heatmap => swapping the encryption layer is transparent to the downstream localization stage."
+}

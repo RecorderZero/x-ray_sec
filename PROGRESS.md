@@ -1957,3 +1957,41 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 稽核可 spec-first 複驗（自寫 bit-flip Hamming 與 ciphertext cosine）。
 * conditioning 正式數字仍待 BDIA 附錄 GPU go。
 * 使用者手動 push 本地 commits。
+
+## 2026-10-19 · W7 · Track Q11 · 下游病灶定位 parity demo（S0/S1/S2 換密碼透明性）+ contribution.md
+
+### 1. 當前目標 (Objective)
+* 使用者 2026-10-19 指示：(a) 將「by-construction 下游定位保留」與本專案全部貢獻整理成 `paper_assets/contribution.md`；(b) 跑 GPU 實驗，在 CheXpert 影像上讓 S0/S1/S2（均 fixed-norm + range-preserving）各跑完整像素空間 M1 流程（加密→解密→CFG-DDIM 偽健康→heatmap），比較三者還原圖/偽健康圖/heatmap 差異，驗證「更換加密流程不影響下游病灶定位」。
+* 背景：前作 11 張醫師標註外部測試集（台北關渡醫院 Dr. Wei-Hsin Yuan 提供，pleural effusion + 專家 bbox）原始影像與座標不在 repo（僅論文縮圖 `figures/experiments/external_test_set_preview_with_mask.png`），醫師合作已結束 → 無法重跑量化定位 benchmark；且前作定位評估本身為質化 diff map（`05_experiments.tex` §5.4）。故改以 by-construction 論證 + parity demo。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `paper_assets/contribution.md`：整合 A（證偽 0.9989=無損 / 雙空間報告）、B（T1–T4 系統化密碼分析）、C（S2/S2a 有原則修補）、D（誠實分層統計，分離 cipher 與存檔增益）、E（下游定位 by-construction 保留）。E 段依使用者釐清修正：CFG 接「還原影像」非還原 latent（pixel-space diffusion、`ddim_sample_loop_anomaly_detection_with_deanonymization` Step 2 `ddim_sample_loop_known(img=(x_rec,))`）；M2 恆等、M1 等價到 sampler 殘差（不宣稱逐 byte 相同）。
+* 新增 `scripts/q11_localization_parity.py`：唯讀 import 前作 `guided_diffusion`（`create_model_and_diffusion` + checkpoint `modelchexpert050000.pt`，114M params），用兩個 helper `ddim_anonymization_forward`/`ddim_anonymization_backward`（noise_level=500、CFG gs=4.0、eta=0）自建 M1 全流程，在 x_T（65536=2^16）注入密碼。三密碼共用 fixed-norm(C=248.261，私存 per-image norm 無損還原)+range-preserving(in-memory float，不做 legacy min-max) 包絡，唯一變因為正交核心：S0 sign、S1 signed-perm、S2 `src.crypto.sot`（Hadamard-Rademacher, rounds=1, perm）。輸入對上模型 `visualize()` 的 **[0,1]** 範圍（非 [-1,1]）。密碼鑰由 `d7_cpu_security.FIXTURE_KEY`/`nonce_for`（公開 fixture）；只寫影像 metric 與渲染圖，不寫金鑰 bytes。
+* 選圖：`train_visualCheXbert.csv` 篩 Frontal + Pleural Effusion==1，跨 4 個 batch 資料夾解析實體路徑，取前 10 張。
+* 指令：smoke `scripts/run_cfg_ddim.sh python -m scripts.q11_localization_parity --n 1`；正式 `... --n 10 --force`。產物：`paper_assets/localization_parity/<img>/`（original/encrypted/restored/healthy/heatmap PNG）、`paper_assets/tables/table_localization_parity.csv`(+json)、`image/localization_parity_grid.png`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] smoke（1 張）163s；正式 N=10 共 1626s（162s/張）。recovery vs 原圖 mean PSNR：S0 39.1、S1 38.1、S2 38.0 dB（SSIM ~0.965，同量級，確認 [0,1] 範圍正確、還原圖為正常 CXR）。
+* [事實] cross-method parity（N=10，mean PSNR dB / mean SSIM）：
+  - 還原圖：S2–S0 **46.0 / 0.996**、S2–S1 51.8 / 0.9995、S0–S1 46.4 / 0.996。
+  - 偽健康圖：S2–S0 **43.6 / 0.995**、S2–S1 50.7 / 0.999、S0–S1 43.5 / 0.995。
+  - heatmap：S2–S0 **34.7 / 0.890**、S2–S1 40.4 / 0.952、S0–S1 36.6 / 0.959。
+* [事實] 目視（10 張 grid）：還原圖與偽健康圖三法逐列幾乎無法區分；heatmap 多數列一致，少數列（如第 6、7 列）熱點**位置相同、強度**在 S0/S1/S2 間有差異。
+* [結論] **S2–S0 的下游差異與前作自身 S0–S1 同一量級**（restored 46.0 vs 46.4、healthy 43.6 vs 43.5、heatmap 34.7 vs 36.6 dB）→ 引入 S2 未比前作兩方案之間引入更多下游變動。heatmap 一致性數字偏低係 |還原−偽健康| 差分放大 + per-image min-max 正規化所致，非定位區域不同。
+
+### 4. 達標判定 (Assessment)
+* [x] contribution.md + Q11 parity demo 完成，實證支持 E 段「更換加密流程對下游定位透明、等價到既有 sampler 殘差帶、不劣化」。
+* [限制] 非定位準確度 benchmark（無 ground-truth mask）；只能宣稱「保留/不劣化」，不能宣稱 S2 改善定位。
+* [注意] 確定性：pipeline 設計為確定性（eta=0、seed 1911），但此為 GPU 浮點實驗，**不保證跨次 bit-identical**（有別於 Q10 的 CPU 任務）；數字為單次 N=10 量測，趨勢穩健。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 殘差來源：M1 把 DDIM invert/regen 夾在加密外層跑兩次，三密碼的加密影像不同 → 還原圖有 sampler 殘差級別差異（非恆等），與 Q10.1 歸因一致。此差異落在前作 S0/S1 之間既有的變動帶內。
+* 可選加強：若未來取得定位 ground-truth，可補量化 IoU/Dice；目前資料不可得，於 limitations 誠實交代。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* Q11 為使用者 2026-10-19 當面指示的 appendix 式 utility 示範，**不在 WORKFLOW.md 既列子任務內**（供稽核方知悉）。判定非研究設計變更（未改 method of record、未換資料集——CheXpert 為既有專案資料集、未改方法），比照 skill「appendix ablation 不需回 Cowork」。未修改前作原始碼（`past/SourceCode/` 僅唯讀 import）。
+
+### 7. 下一步
+* 待使用者裁決是否 commit（`contribution.md` + `scripts/q11_localization_parity.py` + `paper_assets/tables/table_localization_parity.*` + `image/localization_parity_grid.png` + 本 PROGRESS 條目；per-image PNG 目錄體積較大，commit 前以 `scripts/check_staged_files.sh` 檢視是否納入）。
+* conditioning 正式數字仍待 BDIA 附錄 GPU go。
+* 使用者手動 push 本地 commits。
