@@ -69,4 +69,8 @@
 - [x] 本表（§1）外部數字已對 refpaper PDF **正文表**核對（2026-10-21）：
   - PriCheXy-Net 81.8%→57.7%（µ=0.01）、分類 80.5%→75.8%、Privacy-Net Ver.49.8/Class.57.5、DP-Pix Ver.50.0–52.5/Class.50.0–52.9 → 全部出自 **refpaper 112 Table 1**。
   - Packhäuser verification AUC 0.9940（同集）、0.9870（CheXpert 跨集、未微調） → **refpaper 111 摘要 + Table 1/Table 2**。
-- [待辦]（可選）把 Packhäuser 公開權重 out-of-tree 跑一次做跨集 sanity；Opt 3（在 CheXpert 重跑 PriCheXy-Net 做同 pipeline head-to-head）暫不做（數個 GPU-day、CP 值低、需謹慎框定威脅模型差異）。
+- [待辦]（可選）把 Packhäuser 公開權重 out-of-tree 跑一次做跨集 sanity。**可行性已查（2026-10-21）**：
+  - repo `github.com/kaipackhaeuser/CXR-Patient-ReID` 為 **GPL-3.0**；權重隨 repo 附於 `PatientVerification/trained_models/`（非獨立 release），載入需其 `networks/` 架構 code。
+  - repo 已附現成跨集腳本 `evaluate_model_chexpert.py`（+ covid19 版）→ 幾乎 clone→指向 CheXpert→跑，GPU 純推論。
+  - [結論] GPL copyleft 僅於**散布**觸發、**私用不觸發**；只要 clone 於**樹外**（不 `git add`）、當獨立工具跑（不 import 進本 repo）、不轉散布其權重，本 repo 保持 license-clean；論文僅引用其工作 + 報告跑出的數字（事實陳述）。
+- [待辦] Opt 3（在 CheXpert 重跑 PriCheXy-Net 做同 pipeline head-to-head）暫不做（數個 GPU-day、CP 值低、需謹慎框定威脅模型差異）。
