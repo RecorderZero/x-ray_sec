@@ -19,13 +19,13 @@
 |---|---|---|---|---|---|---|---|---|
 | **本研究 S2** | CXR (CheXpert) | **是（精確, AEAD）** | 是（解密） | 噪聲狀密文 | 密文 ≈ 隨機（T2-BB cos/abs/learned 皆 ~chance）；還原後身分保留 | **解密後 by-construction 保留**（Q11 parity） | **形式化 T1–T4 密碼分析 + AEAD/tamper/KDF + fixed-norm** | 本研究凍結表 |
 | 前作 S0/S1 | CXR | 是 | 是 | 密文 | **透明**：anon cos = plaintext cos（AUC 0.657，弱） | 解密後保留 | 無（線性自逆，已被本研究破解） | contribution.md、T2-BB |
-| PriCheXy-Net | CXR (ChestX-ray14) | 否 | 否 | 擬真合成 CXR | re-id AUC **81.8%→57.7%**（重訓後） | 分類 AUC 幾乎不降（~80%） | 無密碼分析（學習變形場） | refpaper 112（MICCAI 2023） |
-| Privacy-Net | CXR | 否 | 否 | 混淆影像 | （作為 112 基線） | 分類下降較大（~57.5%） | — | refpaper 112 內比較 |
-| DP-Pix | CXR | 否 | 否 | DP 像素化 | （作為 112 基線） | 分類下降大（50.0–52.9%） | 差分隱私保證 | refpaper 112 內比較 |
+| PriCheXy-Net | CXR (ChestX-ray14) | 否 | 否 | 擬真合成 CXR | re-id AUC **81.8%→57.7%**（µ=0.01、10 次重訓平均） | 分類 AUC **80.5%→75.8%**（同 µ=0.01 點；弱匿名 µ=0.001 時 ~80%） | 無密碼分析（學習變形場） | refpaper 112 Table 1（MICCAI 2023） |
+| Privacy-Net | CXR | 否 | 否 | 混淆影像 | Ver. AUC 49.8（112 基線） | 分類下降較大（57.5%） | — | refpaper 112 Table 1 |
+| DP-Pix | CXR | 否 | 否 | DP 像素化 | Ver. AUC 50.0–52.5（112 基線） | 分類下降大（50.0–52.9%） | 差分隱私保證 | refpaper 112 Table 1 |
 | RiDDLE | Face | 是（password） | 是 | 擬真去識別臉 | 身分層去識別 | 身分層 | StyleGAN2 latent encryptor | refpaper 112 |
 | G2Face | Face | 是 | 是 | 擬真去識別臉 | 身分層去識別 | 高保真還原 | 生成+幾何先驗 | refpaper 113 |
 | Secret-key diffusion | Face (CelebA-HQ/LFW) | **是（正確金鑰精確還原）** | 是 | 去識別臉 | 優於 RiDDLE/G2-Face/iFADIT | — | 確定性正逆向 diffusion 注入 secret key | arXiv 2510.01031（2025/10） |
-| CXR-Patient-ReID（攻擊工具） | CXR | — | — | — | **verification AUC 0.9940（CXR14）、0.9870（CheXpert 跨集）** | — | —（再識別網路本身） | refpaper 111（Sci Rep 2022） |
+| CXR-Patient-ReID（攻擊工具） | CXR | — | — | — | **verification AUC 0.9940（CXR14 同集）、0.9870（CheXpert 跨集、未微調）** | — | —（再識別網路本身） | refpaper 111 摘要+Table 1/2（Sci Rep 2022） |
 
 ---
 
@@ -66,5 +66,7 @@
 ## 4. 待產出
 
 - [x] Opt 2：`scripts/reid_external_attacker.py` → `paper_assets/tables/table_reid_external.{csv,json}`（已執行，見 §3.1）。
-- [待辦] 本表（§1）外部數字於定稿前再逐一對 refpaper PDF 正文核對頁碼（目前 112/111 來自摘要頁，Privacy-Net/DP-Pix 細項待正文表）。
+- [x] 本表（§1）外部數字已對 refpaper PDF **正文表**核對（2026-10-21）：
+  - PriCheXy-Net 81.8%→57.7%（µ=0.01）、分類 80.5%→75.8%、Privacy-Net Ver.49.8/Class.57.5、DP-Pix Ver.50.0–52.5/Class.50.0–52.9 → 全部出自 **refpaper 112 Table 1**。
+  - Packhäuser verification AUC 0.9940（同集）、0.9870（CheXpert 跨集、未微調） → **refpaper 111 摘要 + Table 1/Table 2**。
 - [待辦]（可選）把 Packhäuser 公開權重 out-of-tree 跑一次做跨集 sanity；Opt 3（在 CheXpert 重跑 PriCheXy-Net 做同 pipeline head-to-head）暫不做（數個 GPU-day、CP 值低、需謹慎框定威脅模型差異）。
