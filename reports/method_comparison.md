@@ -61,6 +61,21 @@
 - [結論] **即使換成專用、發表級、且確實學會再識別的架構攻擊者，S2 的匿名視圖仍降至隨機（AUC 0.445），而前作 S0 仍殘留洩漏（0.616）。** 強化了「S2 匿名性對更強攻擊者穩健」的主張，並與 T2-BB（線性 `cos`/`abs` + 弱學習式）互補——此處為影像級強學習式攻擊者。
 - [限制] GPU 浮點訓練，單次量測、不保證跨次 bit-identical（同 Q11）；victim N=20 小；為 license-clean 重寫架構（非原始 ChestX-ray14 checkpoint）。
 
+### 3.2 原始權重跨集 sanity（Packhäuser 公開 checkpoint，樹外執行）
+
+- [事實] 取 Packhäuser et al. 2022 **公開 checkpoint**（`CXR-Patient-ReID`, GPL-3.0；weights sha256-oid `331efaed…`, 95.4 MB，經 LFS raw 端點下載並核對），**原封不動**套在與 §3.1 **完全相同**的 victim 集與輸入視圖上（只換權重）。於**樹外**（`/data2/external_gpl/`，不入庫、不散布）CPU 執行，seed 1911。
+
+| 條件 | Top-1 | AUC | 對照 §3.1 reimpl |
+|---|---|---|---|
+| plaintext | 0.850 | **0.982** | 0.764 |
+| S0 密文（range） | 0.100 | 0.560 | 0.616 |
+| S1 密文（range） | 0.050 | 0.493 | 0.541 |
+| **S2 密文（range）** | 0.100 | **0.477** | 0.445 |
+
+- [結論] 原始 checkpoint 在我們 CheXpert victim 上 plaintext **AUC 0.982**，貼近其發表的跨集 0.987 → **坐實**：(i) 我們的 CheXpert 影像/前處理無誤，(ii) §3.1 reimpl 的 0.764 僅因只在 1000 病患上訓練（原作 800k pairs）、架構與資料皆正確、攻擊者「能」近乎完美。
+- [結論] **即使換成原作者本尊、plaintext 近乎完美（0.982）的 checkpoint，S2 密文仍被壓到隨機（AUC 0.477）；S0 仍殘留洩漏（0.560）。** 這是比 reimpl 更強的外部證據——不是我們訓練不足造成的假性安全。
+- [限制] 為跨資料集套用（原權重訓於 ChestX-ray14），且用**我們的** bicubic/grayscale 前處理（非其 bilinear/RGB 原協定），故 plaintext AUC 不必等於 0.987；單次 CPU 量測；N=20。為 GPL 外部工具，僅引用+報告數字，code/權重不入庫。
+
 ---
 
 ## 4. 待產出
@@ -69,8 +84,7 @@
 - [x] 本表（§1）外部數字已對 refpaper PDF **正文表**核對（2026-10-21）：
   - PriCheXy-Net 81.8%→57.7%（µ=0.01）、分類 80.5%→75.8%、Privacy-Net Ver.49.8/Class.57.5、DP-Pix Ver.50.0–52.5/Class.50.0–52.9 → 全部出自 **refpaper 112 Table 1**。
   - Packhäuser verification AUC 0.9940（同集）、0.9870（CheXpert 跨集、未微調） → **refpaper 111 摘要 + Table 1/Table 2**。
-- [待辦]（可選）把 Packhäuser 公開權重 out-of-tree 跑一次做跨集 sanity。**可行性已查（2026-10-21）**：
-  - repo `github.com/kaipackhaeuser/CXR-Patient-ReID` 為 **GPL-3.0**；權重隨 repo 附於 `PatientVerification/trained_models/`（非獨立 release），載入需其 `networks/` 架構 code。
-  - repo 已附現成跨集腳本 `evaluate_model_chexpert.py`（+ covid19 版）→ 幾乎 clone→指向 CheXpert→跑，GPU 純推論。
-  - [結論] GPL copyleft 僅於**散布**觸發、**私用不觸發**；只要 clone 於**樹外**（不 `git add`）、當獨立工具跑（不 import 進本 repo）、不轉散布其權重，本 repo 保持 license-clean；論文僅引用其工作 + 報告跑出的數字（事實陳述）。
+- [x] Packhäuser 公開權重 out-of-tree 跨集 sanity（2026-10-21，見 §3.2）：plaintext 0.982（≈發表 0.987）、S2 0.477≈隨機。
+  - repo `github.com/kaipackhaeuser/CXR-Patient-ReID` 為 **GPL-3.0**；權重隨 repo 以 Git LFS 附於 `PatientVerification/trained_models/`（經 raw 端點下載並核對 sha256）。
+  - 樹外執行（`/data2/external_gpl/`，不 `git add`、不散布權重/code）→ 本 repo 保持 license-clean；論文僅引用 + 報告數字。
 - [待辦] Opt 3（在 CheXpert 重跑 PriCheXy-Net 做同 pipeline head-to-head）暫不做（數個 GPU-day、CP 值低、需謹慎框定威脅模型差異）。
