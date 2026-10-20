@@ -753,3 +753,91 @@
 * 完成 paired test、effect size、bootstrap CI、multiple-comparison 規則與 claim→evidence matrix；正式結論只引用 formal artifact。
 * 補齊 M1／M2 與 AEAD-reference 的誤差、runtime、storage 歸因，並把「部署比較」和「storage-controlled attribution」分開呈現。
 * 正式 GPU 任務預估超過 30 分鐘；啟動前依專案規則另報目的、預估時間與小型替代方案，取得使用者明確裁決。
+
+---
+
+## Week 7（2026-10-15～10-20）｜formal 主結果凍結、誤差歸因與金鑰診斷、下游定位與 T2-BB inner-risk（F9、Q10、Q11、T2-BB）
+
+> 範圍涵蓋 `PROGRESS.md` 自「2026-10-15 · Track F · F9 CPU」至「2026-10-20 · Track T2-BB」的全部條目。其中數條 PROGRESS 標頭誤植為「W8」（AF-040、T2-BB），實際屬本週，已併入本段（使用者 2026-10-20 確認）。附錄素材於 `appendix/week7/`（MANIFEST 已釘每檔與來源 SHA-256），編號 `W7-T<k>`／`W7-F<k>`。
+
+### 7.1 範圍與狀態
+
+| 子任務 | 內容 | 稽核判定 | 主要 commit |
+|---|---|---|---|
+| F9.1–F9.5 | formal mixed-deployment 品質五表＋paired 統計＋claim matrix 填滿＋frozen security 組裝 | Achieved；G5 已通過 | `ed99ce6`、`0ab73a0`、`f405d38` |
+| AF-039 | formal 統計表加存檔欄＋同存檔（加密-only）配對 family | 已處理，待稽核複驗 | `d661df2` |
+| Q10.1–Q10.4 | 誤差歸因、數值精度、AEAD-ref、M1/M2 對照（CPU） | 完成 | `e5a17c9` |
+| Q10.5 | 單 bit 金鑰雪崩診斷（optional，CPU） | 完成 | `8ccec2a` |
+| Q11 | 下游病灶定位 parity demo（S0/S1/S2，GPU N=10）＋contribution.md | 完成 | `341e339` |
+| AF-040 | numeric-precision note 與資料一致、attribution 逐法精確 | 已處理，待稽核複驗 | `d3acc44` |
+| T2-BB | inner-risk anon↔anon linkage pilot（P2 另表）＋參考文件 | 完成（pilot 定稿） | `c8a6a34`、`a6d9245` |
+| 附錄（BDIA 2×2） | BDIA CPU 腳手架＋smoke（GPU run 待使用者 go，與 F9/G5 無相依） | 腳手架完成 | `4296965`、`b4100ef`、`fca5ccd`、`4fd2c5d` |
+
+### 7.2 本週重點
+
+1. [結論] **加密本身幾乎不損品質，+7.7 dB 幾乎全來自存檔協定。** formal 同存檔配對（same_storage family）PSNR S2−S0 中位 +0.30 dB、S2−S1 +0.035 dB（p_holm=0.30 不顯著）；部署對照（含存檔差異）S2−S0 中位 +7.68 dB（r=1.0）。兩 family 各自獨立 Holm，統計表每列自標存檔（W7-T2）。
+2. [事實] **S2 認證 fail-closed、合法還原無損。** wrong-key／wrong-nonce 各 200/200 拒絕、驗證失敗時 inverter 零呼叫（W7-T4）；transform-only latent cosine=1.000000、float32 worst max_abs 1.55e-6（W7-T9）。
+3. [結論] **前作 0.9989 是影像空間殘差，非 transform 性質。** 誤差階梯顯示加密層 latent cosine=1.0，M1 影像缺口來自 sampler 反轉＋8-bit 量化，大部署差來自 legacy 存檔（W7-T8）；M2 payload 6 種全 byte-exact、5 類竄改全 fail-closed（W7-T10）。
+4. [事實] **KDF 對 master key 具良好雪崩。** 單 bit 翻轉 → derived sign-subkey Hamming 0.505、permutation change ~1.0、ciphertext |cos| 3.1e-3（W7-T11、W7-F1）；定位為診斷，不以金鑰空間作安全論證。
+5. [結論] **換加密流程對下游定位透明。** Q11 跨法 parity 中 S2−S0 與前作自身 S0−S1 同量級（還原圖 46.0 vs 46.4 dB），非準確度 benchmark（W7-T12、W7-F2）。
+6. [結論] **T2-BB：前作對 inner-risk linkage 透明但訊號弱、S2 回隨機、學習式無法改善。** S0/S1 range cos AUC 0.657 = plaintext cos 0.659（正交映射保內積），線性上界僅 ~0.66；S2 per-image nonce 降至隨機；學習式 pilot efficacy=false（過擬合）（W7-T13、T14、T15）。
+
+### 7.3 實驗結果與分析
+
+**(a) formal 品質主結果（W7-T1、W7-T2）。** marginal M1 重構 PSNR：P 37.46／S0 31.15／S1 31.42／**S2 38.82** dB（patient-cluster bootstrap CI，N=200）。端到端 S2−S0 +7.68 dB 同時含存檔協定效應；加密-only（雙方保值域）隔離後 S2−S0 僅 +0.30 dB（mean +0.54），S2−S1 不顯著，SSIM/LPIPS/L∞ 多為 honest null。**限制**：mixed 為實際舊／新部署比較，非單因子加密消融；index.md 與統計表存檔欄已明載，不得歸因為加密演算法單獨提升。
+
+**(b) 誤差歸因與數值精度（W7-T8、W7-T9、W7-T10）。** 階梯：crypto transform-only（無損，cosine=1.0）→ M2 精確 latent 天花板（全方法同，殘差＝VAE＋8-bit）→ M1 sampler（honest 主殘差）→ M1 legacy 存檔（純存檔損失）→ conditioning（deferred GPU，交叉引用 BDIA 附錄，不杜撰）。**限制**：magnitude/precision/AEAD 為指定量測，非通用安全證明。
+
+**(c) 金鑰雪崩（W7-T11、W7-F1）。** 支持「金鑰材料與影像無關且良好擴散」的構造論述（與 per-image nonce、CSPRNG 金鑰一致）；僅刻畫 S2/S2a 金鑰排程，非安全證明。
+
+**(d) 下游定位 parity（W7-T12、W7-F2）。** 還原圖與偽健康圖三法逐列幾乎無法區分；heatmap 熱點位置一致、強度略有差異。**限制**：無 ground-truth mask（前作外部測試集原始影像與醫師座標不可得），只能宣稱「保留／不劣化」，非定位準確度提升；為單次 GPU 浮點量測，不保證跨次 bit-identical。
+
+**(e) T2-BB inner-risk（W7-T13～T15）。** 步驟 1 影像層 DenseNet121 Top-1 0.550／AUC 0.811（訊號存在，屬 outer-risk 上界）；步驟 2 新增原始帶符號 cos scorer 證實前作透明性（cos(anon)=cos(plaintext)），但 cos/abs/norm 線性上界皆 ~0.66、弱；S2 回隨機；學習式 shadow 攻擊（200 病患）train loss→0.0048 但 shadow-val AUC 0.48、efficacy=false（過擬合）。**限制**：N=20(victim)/200(shadow pilot) 規模小；記憶化／訓練集重疊以 disjoint split 控制；結論限於固定統計＋pilot 學習式攻擊者，非通用安全證明。判定 pilot 定稿，不補跑 1000（期望值低）。
+
+### 7.4 論文可用素材（`appendix/week7/`）
+
+| 編號 | 內容 | 建議用途 | 建議章節 |
+|---|---|---|---|
+| W7-T1 | formal fidelity（N=200，五指標＋CI） | 正文主表 | Results／fidelity |
+| W7-T2 | formal paired 統計（兩 family，存檔自標） | 正文主表 | Results／statistics |
+| W7-T3 | formal anonymity（public-view linkage） | 正文 | Results／anonymity |
+| W7-T4 | formal wrong-key／nonce（authenticated open） | 正文 | Results／authentication |
+| W7-T5 | formal runtime 分解 | 附錄 | Results／runtime |
+| W7-T6 | formal storage 分項 | 附錄 | Results／storage |
+| W7-T7 | claim→evidence matrix（10 假設全 supported） | 正文 | Discussion |
+| W7-T8 | 誤差歸因階梯 | 正文 | Results／error attribution |
+| W7-T9 | transform round-trip 精度掃描 | 附錄 | Results／numeric precision |
+| W7-T10 | AEAD-reference round-trip＋竄改 | 附錄 | Results／AEAD |
+| W7-T11、W7-F1 | 金鑰雪崩表＋雙直方圖 | 附錄 | Results／key avalanche |
+| W7-T12、W7-F2 | 下游定位 parity 表＋10 張 grid | 附錄 | Results／downstream utility |
+| W7-T13～T15 | T2-BB 影像控制／latent linkage／學習式攻擊 | 附錄 | Results／T2-BB inner-risk |
+
+### 7.5 決策紀錄
+
+| 日期 | 決定 | 出處 |
+|---|---|---|
+| 10-15 | `[決定]` 先背景跑 Q8 formal parent（N=200），停在 legacy supplement 前等同意；Week 7 sampler 維持 DDIM+非對稱 | 使用者裁決 |
+| 10-16 | `[決定]` 同意啟動 legacy supplement（formal）；BDIA 2×2 附錄「有時間才跑」，升為正式方法需回 Cowork，附錄只背書「品質更好＋安全相同」 | 使用者裁決、skill §9 |
+| 10-17 | `[決定]` 補 Q10.5 optional partial-key 診斷 | 使用者裁決 |
+| 10-19 | `[決定]` 整理 contribution.md＋跑 Q11 下游定位 parity（CFG 接還原影像，非還原 latent） | 使用者裁決 |
+| 10-20 | `[決定]` T2-BB 以最弱～學習式攻擊者光譜做 pilot；efficacy=false 故不補跑 1000；pilot 定稿 | 使用者裁決、protocol §10 |
+
+### 7.6 稽核狀態
+
+* G5 主表凍結**已通過**（使用者 2026-10-20 確認）。
+* AF-039（MINOR/EVIDENCE）：已以已凍結資料補同存檔 family 與存檔欄，mixed 主數字逐格不變，待稽核複驗轉 CLOSED。
+* AF-040（MINOR/REPRO）：numeric-precision note 已改為由計算值格式化、attribution 逐法精確，無量化結論改變，待稽核複驗。
+* claim matrix 10 假設全 supported、0 pending。
+
+### 7.7 限制與未解問題
+
+* 所有 formal 統計來自 security_v1 N=200、mixed deployment；+7.7 dB 大部分為存檔效應，加密本身增益小（同存檔 S2−S0 +0.30 dB）。
+* Q11 無定位 ground-truth，只能宣稱保留／不劣化；GPU 浮點單次量測不保證跨次 bit-identical。
+* T2-BB 規模小（victim 20／shadow pilot 200），結論限於固定統計＋pilot 學習式攻擊者。
+* conditioning 軸（y=0 vs 無條件）對 M1 保真的正式數字待 BDIA 2×2 附錄 GPU run；誤差階梯 stage5 現為 deferred。
+
+### 7.8 下週計畫
+
+* 待稽核複驗 AF-039／AF-040 後關閉。
+* BDIA 2×2 安全＋品質附錄 GPU run 待使用者 go（指令模板見 PROGRESS 2026-10-16 條目）；完成後回填誤差階梯 stage5 與附錄。
+* 其餘依 WORKFLOW 後續子任務推進。
