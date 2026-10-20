@@ -1,0 +1,362 @@
+{
+  "schema_version": 1,
+  "task_id": "T2BB-Step2-pilot",
+  "seed": 1911,
+  "split": "splits/t2bb_inner_v1.csv",
+  "n_patients": 20,
+  "n_images": 40,
+  "checkpoint_sha256_prefix": null,
+  "noise_level": 500,
+  "inversion_seconds": 0.1,
+  "inversion_sec_per_image": 0.002,
+  "decrypt_maxabs": {
+    "S0": 0.0,
+    "S1": 0.0,
+    "S2": 9.5367431640625e-07
+  },
+  "random_top1": 0.05,
+  "protocol": "reports/t2bb_inner_linkage_protocol.md",
+  "note": "Inner-risk anon<->anon linkage pilot. Interpret only if the plaintext_latent positive control is above random. S2 uses a PER-IMAGE nonce (its defense), so near-random is expected by construction; the predecessor S0/S1 are the real target. Off-the-shelf densenet121 is a black-box lower bound, not a trained re-id net.",
+  "results": [
+    {
+      "top1": 0.3,
+      "top5": 0.5,
+      "auc": 0.6585526315789474,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "plaintext_latent",
+      "storage": "none",
+      "scorer": "cos"
+    },
+    {
+      "top1": 0.2,
+      "top5": 0.55,
+      "auc": 0.656578947368421,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "plaintext_latent",
+      "storage": "none",
+      "scorer": "abs"
+    },
+    {
+      "top1": 0.1,
+      "top5": 0.4,
+      "auc": 0.5798684210526316,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "plaintext_latent",
+      "storage": "none",
+      "scorer": "sorted_abs"
+    },
+    {
+      "top1": 0.15,
+      "top5": 0.5,
+      "auc": 0.6802631578947368,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "plaintext_latent",
+      "storage": "none",
+      "scorer": "norm"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.3,
+      "auc": 0.5122368421052632,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "minmax",
+      "scorer": "cos"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.3,
+      "auc": 0.5122368421052632,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "minmax",
+      "scorer": "abs"
+    },
+    {
+      "top1": 0.05,
+      "top5": 0.15,
+      "auc": 0.4606578947368421,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "minmax",
+      "scorer": "sorted_abs"
+    },
+    {
+      "top1": 0.05,
+      "top5": 0.3,
+      "auc": 0.5198684210526315,
+      "neg_control_top1": 0.1,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "minmax",
+      "scorer": "norm"
+    },
+    {
+      "top1": 0.15,
+      "top5": 0.35,
+      "auc": 0.5092105263157894,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "minmax",
+      "scorer": "densenet121"
+    },
+    {
+      "top1": 0.25,
+      "top5": 0.5,
+      "auc": 0.6567105263157895,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "range_preserving",
+      "scorer": "cos"
+    },
+    {
+      "top1": 0.2,
+      "top5": 0.55,
+      "auc": 0.6555263157894737,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "range_preserving",
+      "scorer": "abs"
+    },
+    {
+      "top1": 0.2,
+      "top5": 0.4,
+      "auc": 0.5753947368421053,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "range_preserving",
+      "scorer": "sorted_abs"
+    },
+    {
+      "top1": 0.05,
+      "top5": 0.5,
+      "auc": 0.6773684210526316,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "range_preserving",
+      "scorer": "norm"
+    },
+    {
+      "top1": 0.15,
+      "top5": 0.35,
+      "auc": 0.5092105263157894,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S0",
+      "storage": "range_preserving",
+      "scorer": "densenet121"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.3,
+      "auc": 0.5122368421052632,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "minmax",
+      "scorer": "cos"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.3,
+      "auc": 0.5122368421052632,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "minmax",
+      "scorer": "abs"
+    },
+    {
+      "top1": 0.05,
+      "top5": 0.15,
+      "auc": 0.4606578947368421,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "minmax",
+      "scorer": "sorted_abs"
+    },
+    {
+      "top1": 0.05,
+      "top5": 0.3,
+      "auc": 0.5198684210526315,
+      "neg_control_top1": 0.1,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "minmax",
+      "scorer": "norm"
+    },
+    {
+      "top1": 0.1,
+      "top5": 0.25,
+      "auc": 0.5205921052631579,
+      "neg_control_top1": 0.15,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "minmax",
+      "scorer": "densenet121"
+    },
+    {
+      "top1": 0.25,
+      "top5": 0.5,
+      "auc": 0.6567105263157895,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "range_preserving",
+      "scorer": "cos"
+    },
+    {
+      "top1": 0.2,
+      "top5": 0.55,
+      "auc": 0.6555263157894737,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "range_preserving",
+      "scorer": "abs"
+    },
+    {
+      "top1": 0.2,
+      "top5": 0.4,
+      "auc": 0.5753947368421053,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "range_preserving",
+      "scorer": "sorted_abs"
+    },
+    {
+      "top1": 0.05,
+      "top5": 0.5,
+      "auc": 0.6773684210526316,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "range_preserving",
+      "scorer": "norm"
+    },
+    {
+      "top1": 0.1,
+      "top5": 0.25,
+      "auc": 0.5205921052631579,
+      "neg_control_top1": 0.15,
+      "random_top1": 0.05,
+      "scheme": "S1",
+      "storage": "range_preserving",
+      "scorer": "densenet121"
+    },
+    {
+      "top1": 0.05,
+      "top5": 0.25,
+      "auc": 0.4992105263157895,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "minmax",
+      "scorer": "cos"
+    },
+    {
+      "top1": 0.05,
+      "top5": 0.25,
+      "auc": 0.4992105263157895,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "minmax",
+      "scorer": "abs"
+    },
+    {
+      "top1": 0.15,
+      "top5": 0.25,
+      "auc": 0.5325,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "minmax",
+      "scorer": "sorted_abs"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.1,
+      "auc": 0.43065789473684213,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "minmax",
+      "scorer": "norm"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.15,
+      "auc": 0.41486842105263155,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "minmax",
+      "scorer": "densenet121"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.1,
+      "auc": 0.4330263157894737,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "range_preserving",
+      "scorer": "cos"
+    },
+    {
+      "top1": 0.15,
+      "top5": 0.45,
+      "auc": 0.5688157894736842,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "range_preserving",
+      "scorer": "abs"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.2,
+      "auc": 0.49973684210526315,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "range_preserving",
+      "scorer": "sorted_abs"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.2,
+      "auc": 0.47960526315789476,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "range_preserving",
+      "scorer": "norm"
+    },
+    {
+      "top1": 0.0,
+      "top5": 0.15,
+      "auc": 0.41486842105263155,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "scheme": "S2",
+      "storage": "range_preserving",
+      "scorer": "densenet121"
+    }
+  ]
+}

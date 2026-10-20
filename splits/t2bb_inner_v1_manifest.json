@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "split": "splits/t2bb_inner_v1.csv",
+  "split_sha256": "a7765297502925caf076cb0af09bdda46313e31471ec8aa26f8c6f1ae7d735ec",
+  "seed": 1911,
+  "purpose": "T2-BB inner-risk anon<->anon linkage enrollment set",
+  "protocol": "reports/t2bb_inner_linkage_protocol.md",
+  "patients": 20,
+  "images_per_patient": 2,
+  "distinct_studies_per_patient": 2,
+  "total_images": 40,
+  "legacy_sample_rows": 32000,
+  "legacy_random_state": 1911,
+  "legacy_csv_sha256": "1503f075cfe359d22c2ca5a9e15f7dead4d543a189774d0fdff67d1ce6fd1b16",
+  "raw_csv_sha256": "449292c6df0fc3140add2444b7788121c1f32694d9d1a6b1493171a45a615a95",
+  "excluded_training_patient_count": 22253,
+  "excluded_security_v1_patient_count": 200,
+  "eligible_patient_count": 5274,
+  "patient_disjoint_from_reproduced_training_sample": true,
+  "patient_disjoint_from_security_v1": true,
+  "label_counts": {
+    "0": 0,
+    "1": 40
+  },
+  "hash_fields": [
+    "sample_id",
+    "patient_id",
+    "label",
+    "source_path",
+    "file_sha256"
+  ]
+}

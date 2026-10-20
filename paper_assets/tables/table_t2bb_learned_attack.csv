@@ -1,0 +1,7 @@
+channel,set,train_patients,final_loss,top1,top5,auc,neg_control_top1,random_top1
+s0_abs,shadow_val_learned,200,0.0048,0.0,0.125,0.4806,0.025,0.025
+s0_abs,victim_learned,200,0.0048,0.05,0.2,0.468,0.15,0.05
+s0_abs,victim_fixed_cos,200,0.0048,0.2,0.55,0.657,0.0,0.05
+s2_anon,shadow_val_learned,200,0.0044,0.0,0.075,0.4714,0.025,0.025
+s2_anon,victim_learned,200,0.0044,0.05,0.3,0.4875,0.0,0.05
+s2_anon,victim_fixed_cos,200,0.0044,0.0,0.1,0.433,0.0,0.05

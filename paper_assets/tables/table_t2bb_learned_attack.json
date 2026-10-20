@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "task_id": "T2BB-learned",
+  "seed": 1911,
+  "train_patients": 200,
+  "epochs": 200,
+  "channels": [
+    "s0_abs",
+    "s2_anon"
+  ],
+  "verdict": {
+    "learned_victim_auc": 0.468,
+    "fixed_victim_auc": 0.657,
+    "shadow_val_learned_top1": 0.0,
+    "net_learned": false,
+    "beats_fixed": false,
+    "efficacy": false
+  },
+  "results": [
+    {
+      "channel": "s0_abs",
+      "set": "shadow_val_learned",
+      "train_patients": 200,
+      "final_loss": 0.0048,
+      "top1": 0.0,
+      "top5": 0.125,
+      "auc": 0.4806,
+      "neg_control_top1": 0.025,
+      "random_top1": 0.025
+    },
+    {
+      "channel": "s0_abs",
+      "set": "victim_learned",
+      "train_patients": 200,
+      "final_loss": 0.0048,
+      "top1": 0.05,
+      "top5": 0.2,
+      "auc": 0.468,
+      "neg_control_top1": 0.15,
+      "random_top1": 0.05
+    },
+    {
+      "channel": "s0_abs",
+      "set": "victim_fixed_cos",
+      "train_patients": 200,
+      "final_loss": 0.0048,
+      "top1": 0.2,
+      "top5": 0.55,
+      "auc": 0.657,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05
+    },
+    {
+      "channel": "s2_anon",
+      "set": "shadow_val_learned",
+      "train_patients": 200,
+      "final_loss": 0.0044,
+      "top1": 0.0,
+      "top5": 0.075,
+      "auc": 0.4714,
+      "neg_control_top1": 0.025,
+      "random_top1": 0.025
+    },
+    {
+      "channel": "s2_anon",
+      "set": "victim_learned",
+      "train_patients": 200,
+      "final_loss": 0.0044,
+      "top1": 0.05,
+      "top5": 0.3,
+      "auc": 0.4875,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05
+    },
+    {
+      "channel": "s2_anon",
+      "set": "victim_fixed_cos",
+      "train_patients": 200,
+      "final_loss": 0.0044,
+      "top1": 0.0,
+      "top5": 0.1,
+      "auc": 0.433,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05
+    }
+  ],
+  "note": "Efficacy = net_learned (shadow-val Top-1 >= 2x random) AND beats_fixed (victim AUC>=0.70 & Top-1>=0.25 vs fixed-abs 0.66). s2_anon is the by-construction control (per-image nonce -> expected ~random)."
+}

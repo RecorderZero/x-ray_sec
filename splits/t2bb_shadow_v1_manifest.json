@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "split": "splits/t2bb_shadow_v1.csv",
+  "split_sha256": "dbc36b34f0460d63a0b48b072bb78f1d02d13828877598d3463c79ecf8eae402",
+  "seed": 1911,
+  "purpose": "T2-BB inner-risk learned-attack shadow TRAINING set",
+  "protocol": "reports/t2bb_inner_linkage_protocol.md",
+  "ordering": "fixed global permutation of all eligible; split is a prefix (nested/reusable)",
+  "patients": 1000,
+  "images_per_patient": 2,
+  "total_images": 2000,
+  "legacy_sample_rows": 32000,
+  "legacy_random_state": 1911,
+  "legacy_csv_sha256": "1503f075cfe359d22c2ca5a9e15f7dead4d543a189774d0fdff67d1ce6fd1b16",
+  "raw_csv_sha256": "449292c6df0fc3140add2444b7788121c1f32694d9d1a6b1493171a45a615a95",
+  "excluded_training_patient_count": 22253,
+  "excluded_security_v1_patient_count": 200,
+  "excluded_victim_patient_count": 20,
+  "eligible_patient_count": 5254,
+  "disjoint_from_training": true,
+  "disjoint_from_security_v1": true,
+  "disjoint_from_victim": true,
+  "label_counts": {
+    "0": 11,
+    "1": 1989
+  },
+  "hash_fields": [
+    "sample_id",
+    "patient_id",
+    "label",
+    "source_path",
+    "file_sha256"
+  ]
+}

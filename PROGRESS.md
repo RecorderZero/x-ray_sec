@@ -2026,3 +2026,40 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * 待稽核方下一輪複驗 AF-040（驗收：note 數量級與 CSV 一致）後關閉。
 * conditioning 正式數字仍待 BDIA 附錄 GPU go。
 * 使用者手動 push 本地 commits。
+
+## 2026-10-20 · W8 · Track T2-BB · Inner-risk 匿名圖 linkage（pilot 定稿：前作透明但弱、S2 回隨機、學習式過擬合）
+
+### 1. 當前目標 (Objective)
+* 對應 `WORKFLOW.md`：T2-BB（PROPOSAL §3，P2 選做／另表）。protocol：`reports/t2bb_inner_linkage_protocol.md`。
+* 核心問題：多張匿名圖之間（anon↔anon）是否可連結到同一病患？前作 S0/S1 與我們的 S2 各如何？
+
+### 2. 執行動作 (Actions Taken)
+* split：`scripts/build_t2bb_inner_split.py`→`splits/t2bb_inner_v1.csv`（20 病患×2 victim）；`scripts/build_t2bb_shadow_split.py`→`splits/t2bb_shadow_v1.csv`（1000 病患×2 shadow，固定全域 permutation 前綴、與訓練/security/victim disjoint）。
+* 反演快取：`scripts/t2bb_invert_cache.py`（file_sha256-keyed、prefix 可增量重用、gitignored）。背景 run 反演 victim 40 + shadow 前 200 = 440 latent。
+* 步驟 1：`scripts/t2bb_step1_image_control.py`（影像層 positive control）。
+* 步驟 2：`scripts/t2bb_inner_linkage.py`——新增 `cos`（原始帶符號 cosine，前作正交不變量的最強線性探針）scorer，並改為 cache-reuse（40 張全命中、CPU 0.1s）。
+* 學習式：`scripts/t2bb_learned_attack.py`（SupCon metric net，shadow 訓練、victim 評估；channels s0_abs/s2_anon）。
+* 指令（皆 `scripts/run_cfg_ddim.sh`）：`python -m scripts.t2bb_step1_image_control --split splits/t2bb_inner_v1.csv`；`python -m scripts.t2bb_invert_cache --split splits/t2bb_shadow_v1.csv --max-patients 200`；`python -m scripts.t2bb_inner_linkage --split splits/t2bb_inner_v1.csv --force`；`python -m scripts.t2bb_learned_attack --shadow-split splits/t2bb_shadow_v1.csv --max-patients 200 --victim-split splits/t2bb_inner_v1.csv`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 步驟1 影像層：DenseNet121(ImageNet) Top-1=0.550、AUC=0.811、neg-ctrl 0.100 → 同病患 biometric 訊號在影像層存在。
+* [事實] 步驟2 latent/anon（decrypt 正控制 S0/S1 max_abs=0.0、S2=9.5e-7）：
+  - plaintext_latent cos/abs/norm AUC=0.659/0.657/0.680（Top-1 0.30/0.20/0.15）。
+  - S0=S1 range_preserving cos AUC=0.657 ≈ plaintext cos → **透明性證實**（正交映射保內積）；minmax 降至 0.512。
+  - S2 cos/abs 降至 ≈0.499（minmax）／0.433（range cos）→ **per-image nonce 回隨機**。
+* [事實] 學習式 pilot(200)：train loss→0.0048 但 shadow-val AUC=0.48、victim AUC=0.468 < 固定 0.657，`efficacy=false`（過擬合；合成 smoke 曾達 Top-1=1.0 證非 trainer bug）。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標**：三結論成立——(i) 前作對 inner-risk 透明但訊號弱（AUC≈0.66，cos(anon)=cos(plaintext)）；(ii) 最弱～學習式攻擊者皆無法顯著連結（Top-1≤~0.3、AUC≤~0.68，學習式過擬合）；(iii) S2 by-construction 回隨機。
+* [決定] 依 §10 決策點**結案**；不補跑 1000（~3.5h GPU，期望值低：cos≈abs≈norm≈0.66 上界 + 學習式過擬合皆指向 latent linkage 本就弱）。
+* artifact：`table_t2bb_step1_image_control`、`table_t2bb_inner_linkage`、`table_t2bb_learned_attack`（各 csv+json）；protocol §15 定稿。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* [限制] N=20(victim)/200(shadow pilot) 小；記憶化/訓練集重疊以 disjoint split 控制（manifest 記錄）。結論限於固定統計 + pilot 學習式攻擊者，非通用安全證明。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。
+
+### 7. 下一步
+* 整理原子化 commit（scripts/splits/tables/protocol/PROGRESS；latent 快取 gitignored 不入庫）。
+* BDIA 2×2 附錄 GPU run 仍待使用者 go（與本 track 無相依）。

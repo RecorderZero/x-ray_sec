@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "task_id": "T2BB-Step1",
+  "seed": 1911,
+  "split": "splits/t2bb_inner_v1.csv",
+  "protocol": "reports/t2bb_inner_linkage_protocol.md 7.1",
+  "note": "Image-space positive control on plaintext CXRs (no inversion/encryption). Top-1 >> random and high AUC => same-patient biometric signal exists at the image level, so Step 2 (does it survive inversion+cipher?) is interpretable. Encoders are off-the-shelf ImageNet, not CXR-trained, so this is a LOWER bound on a black-box attacker; a dedicated re-id net (Packhauser 2022) would be stronger.",
+  "results": [
+    {
+      "n_query": 20,
+      "n_gallery": 20,
+      "top1": 0.55,
+      "top5": 0.75,
+      "random_top1": 0.05,
+      "auc": 0.8114473684210526,
+      "neg_control_top1": 0.1,
+      "encoder": "densenet121_imagenet",
+      "embedding_dim": 1024
+    },
+    {
+      "n_query": 20,
+      "n_gallery": 20,
+      "top1": 0.3,
+      "top5": 0.75,
+      "random_top1": 0.05,
+      "auc": 0.7578947368421053,
+      "neg_control_top1": 0.05,
+      "encoder": "alexnet_imagenet",
+      "embedding_dim": 256
+    },
+    {
+      "n_query": 20,
+      "n_gallery": 20,
+      "top1": 0.2,
+      "top5": 0.45,
+      "random_top1": 0.05,
+      "auc": 0.62,
+      "neg_control_top1": 0.05,
+      "encoder": "rawpix32_cosine",
+      "embedding_dim": 1024
+    }
+  ]
+}
