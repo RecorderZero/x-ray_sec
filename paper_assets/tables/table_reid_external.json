@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "task_id": "REID-external",
+  "seed": 1911,
+  "architecture": "Siamese ResNet-50 (ImageNet), emb128, |ea-eb| head, BCE (Packhauser 2022 arch, reimpl)",
+  "trained_on": "t2bb_shadow_v1.csv first 1000 patients (CheXpert)",
+  "shadow_val_pair_auc": 0.9113,
+  "note": "License-clean reimplementation of Packhauser et al. 2022 (refpaper 111) verification architecture, trained on CheXpert shadow patients (NOT their ChestX-ray14 checkpoint). Published ceilings for context: their verification AUC 0.994 (ChestX-ray14), 0.987 (CheXpert cross-dataset). plaintext = strong-attacker ceiling here; ciphertext conditions test whether the anonymized latent view defeats this stronger attacker. S2 expected ~random.",
+  "results": [
+    {
+      "top1": 0.15,
+      "top5": 0.45,
+      "auc": 0.7643421052631579,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "condition": "plaintext",
+      "scheme": "-",
+      "storage": "-"
+    },
+    {
+      "top1": 0.15,
+      "top5": 0.3,
+      "auc": 0.6159210526315789,
+      "neg_control_top1": 0.1,
+      "random_top1": 0.05,
+      "condition": "S0_range_preserving",
+      "scheme": "S0",
+      "storage": "range_preserving"
+    },
+    {
+      "top1": 0.1,
+      "top5": 0.25,
+      "auc": 0.5413157894736842,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05,
+      "condition": "S1_range_preserving",
+      "scheme": "S1",
+      "storage": "range_preserving"
+    },
+    {
+      "top1": 0.05,
+      "top5": 0.15,
+      "auc": 0.44473684210526315,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05,
+      "condition": "S2_range_preserving",
+      "scheme": "S2",
+      "storage": "range_preserving"
+    }
+  ]
+}

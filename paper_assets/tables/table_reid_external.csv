@@ -1,0 +1,5 @@
+condition,scheme,storage,top1,top5,auc,neg_control_top1,random_top1
+plaintext,-,-,0.15,0.45,0.7643,0.05,0.05
+S0_range_preserving,S0,range_preserving,0.15,0.3,0.6159,0.1,0.05
+S1_range_preserving,S1,range_preserving,0.1,0.25,0.5413,0.05,0.05
+S2_range_preserving,S2,range_preserving,0.05,0.15,0.4447,0.0,0.05

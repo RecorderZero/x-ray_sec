@@ -2063,3 +2063,70 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 整理原子化 commit（scripts/splits/tables/protocol/PROGRESS；latent 快取 gitignored 不入庫）。
 * BDIA 2×2 附錄 GPU run 仍待使用者 go（與本 track 無相依）。
+
+## 2026-10-20 · W8 · Track T2-BB-M1-Frozen · 實際公開匿名圖的黑箱 linkage pilot
+
+### 1. 當前目標 (Objective)
+* 補強既有 T2-BB：舊 `t2bb_inner_linkage.py` 直接把 encrypted latent 正規化後評分，能回答正交結構透明性，但不是攻擊者實際拿到的 DDIM-generated M1。新目標是以真正公開 PNG、無 checkpoint／key／latent／原圖的 frozen encoder，驗證跨 study anon↔anon 同病患 linkage。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/t2bb_m1_generate.py`：沿用 `t2bb_inner_v1`（20 病患×gallery/query）與既有 40 latent cache，生成 P/S0/S1/S2 共 160 張真正 M1。P/S0/S1=predecessor legacy range-discarding PNG；S2=fixed-norm+per-image random nonce+SOT R=1/no permutation，公開 private-range container 的 q/255。
+* 新增 `scripts/t2bb_m1_frozen_linkage.py`：只讀 public PNG，以 frozen ImageNet DenseNet121 與 CXR RAD-DINO embedding 算 cosine retrieval；報 Top-1/Top-5/AUC、fixed-gallery conditional-query bootstrap CI、5000 次 label permutation null/p-value。
+* 攻擊/真值硬隔離：public manifest v2 改 opaque 隨機 ID/檔名並打亂順序，不含 sample/patient/pair/role；private truth map 位於 export 外，embedding/similarity 完成後才 join。加入 SHA containment、tamper、truth-leak、path-traversal 負控制；`--checkpoint` 現在綁定實際 model loader。
+* 安裝 `transformers==4.46.3` 於 CFG_DDIM，RAD-DINO resolved revision `110cbc...`（weights SHA `dbfb9f...`）；完整版本與 SHA 寫入 `artifacts/t2bb_m1_environment.txt`，scoring 強制 `local_files_only=True`。
+* 2-patient smoke：16 generation + 兩 encoder通過。正式 run：`T2BB_M1_GEN_20261020T023232092216Z_5340a90f`（PID 2636751，已退出），160/160、1257 s、managed state=succeeded/exit 0；之後把 v1 truth-bearing manifest 無損遷移成 v2（PNG bytes 不變）。
+* 結果：`paper_assets/tables/table_t2bb_m1_frozen.{csv,json}`。單元測試 `tests/unit/test_t2bb_m1_frozen_linkage.py` 4 passed；另含 q8/preprocess regression 共至少 5 passed。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] P positive control：DenseNet Top-1=0.50/AUC=0.810；RAD-DINO Top-1=0.75/AUC=0.976；兩者 permutation p=0.0002。→ DDIM-generated、legacy-stored P M1 確實保留足以 linkage 的病患訊號，null 有可解讀分母。
+* [事實] S0：DenseNet 0.00/0.434（AUC p=0.940），RAD-DINO 0.10/0.532（p=0.161）。S1：0.05/0.479（p=0.642）、0.05/0.498（p=0.512）。S2：0.10/0.558（p=0.098）、0.00/0.510（p=0.374）。random Top-1=0.05；所有 encrypted cells 未顯著。
+* [事實] public export 160 artifacts 經 SHA 驗證，manifest `f8ee6b...`；禁止欄位集合為空。結果 8 列皆 finite 且落在 [0,1]。
+* [觀察] managed wrapper 的 status progress 未 ingest 子程序 `progress.json`，執行中維持 0/null，但 stdout 有逐張 1–160，最終 state/exit/manifest/PNG 數量均成功。初始 Visdom localhost 拒絕為前作 import side effect、非 run failure；新版 generator 已用 headless no-op 避免後續連線雜訊。
+
+### 4. 達標判定 (Assessment)
+* [x] **pilot 達標**：actual-M1 positive control 強，frozen-encoder BB attack 對 S0/S1/S2 均回到近隨機且不顯著。
+* [修正舊結論] 不能再把 direct-latent 的 `cos` 透明性直接寫成「公開 S0/S1 圖可被 BB 顯著連結」。正確分層是：S0/S1 對可接觸 latent 統計的介面透明；在目前 PNG-only frozen-encoder T2-BB 下未成功。
+* [限制] N=20、單一隨機 S2 key、兩個 frozen encoders，屬 exploratory pilot；null 不是通用安全證明，不能宣稱 S2 顯著優於 S0/S1。S2 DenseNet AUC=0.558/p=0.098 需誠實保留。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* direct-latent 與 actual-M1 結論不同的主因是公開介面不同：DDIM generation + 8-bit per-image public view 破壞了可直接利用的 latent 幾何，而 P control 證明不是 encoder 完全失效。
+* 若要繼續提高攻擊上界，優先做 shadow-trained **image-space** encoder（輸入必須是 actual public M1），或擴大 victim/key repetitions；既有 latent SupCon 不應直接當作此介面的上界。任何預估 >30 分鐘 GPU 工作仍先回使用者裁決。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。T2-BB 仍為 P2 選做／另表；未改主方法、正式 N=200 主結果或 frozen claims。這一輪是修正既有 T2-BB 測量介面，結果不併入主表。
+
+### 7. 下一步
+* 交由稽核複驗 public/private truth isolation、checkpoint binding、encoder provenance 與 `table_t2bb_m1_frozen` 重算。
+* 由使用者裁決是否把 T2-BB 往 shadow-trained actual-M1 image encoder／多 key／更大 victim N 擴展；目前 pilot 可作誠實的附錄結果。
+* 無背景程序仍在執行；正式 PID 2636751 已退出，smoke/analyzer 也都完成。
+
+## 2026-10-20 · W7 · Track 方法比較 · 外部 re-id 攻擊者（Packhäuser 架構重寫）+ 定位表
+
+### 1. 當前目標 (Objective)
+* 使用者 2026-10-20 指示：補強方法比較（目前只對前作 S0/S1）。找醫學匿名化相關論文，試著實作或借用數據比較我們方法好壞。選定 (1) 定位表（借發表數字）+ (2) 借外部 re-id 攻擊者；先查可行性。
+* 交付：`reports/method_comparison.md`（定位表）、`scripts/reid_external_attacker.py` + `table_reid_external`（外部攻擊者）。
+
+### 2. 執行動作 (Actions Taken)
+* 文獻盤點：refpaper/ 已有關鍵 CXR 基線 112（PriCheXy-Net, MICCAI 2023）、111（CXR-Patient-ReID, Sci Rep 2022）、114、RiDDLE、G2Face；web 補 secret-key diffusion（arXiv 2510.01031, 2025）、CheXGenBench（2505.10496）。可行性：兩 repo 皆 **GPL-3.0**（不 vendor，改依論文重寫架構）；re-id 架構 = Siamese ResNet-50、256²、ImageNet norm、emb 128、BCE。
+* `reports/method_comparison.md`：§0 誠實界線（可逆/金鑰 vs 不可逆去識別，不同威脅模型、不可單一數字比高低）、§1 九列定位總表、§2 讀表要點、§3 借外部攻擊者設計 + §3.1 結果。
+* `scripts/reid_external_attacker.py`（license-clean 重寫，非他們 ChestX-ray14 checkpoint）：在 `splits/t2bb_shadow_v1.csv`（CheXpert 1000×2）訓練 Siamese ResNet-50（early-stop on held-out shadow pair-AUC），重用 `t2bb_inner_linkage.encrypt/attacker_view/evaluate` 與 victim 快取 latent 評 plaintext / S0/S1/S2 密文。指令：`scripts/run_cfg_ddim.sh python -m scripts.reid_external_attacker --max-patients 1000 --epochs 60 --patience 6`（背景 GPU，~12 分）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 攻擊者學習有效：held-out shadow pair-verification AUC **0.911**（非過擬合，對照 T2-BB 學習式 0.48）。
+* [事實] victim（N=20×2）AUC：plaintext **0.764**（舊 DenseNet 0.811、Packhäuser 報告 CheXpert 0.987）；S0 密文 0.616；S1 0.541；**S2 0.445 ≈ 隨機**。來源 `table_reid_external.{csv,json}`。
+* [結論] **即使換成專用發表架構、且確實學會再識別的攻擊者，S2 匿名視圖仍降至隨機（0.445）、前作 S0 仍殘留洩漏（0.616）**。與 T2-BB（線性 cos/abs + 弱學習式）互補，此為影像級強學習式攻擊者。
+
+### 4. 達標判定 (Assessment)
+* [x] Opt 1 定位表、Opt 2 外部攻擊者皆完成；S2 擊退強攻擊者之證據入庫。
+* [限制] GPU 浮點單次訓練、不保證跨次 bit-identical（同 Q11）；victim N=20 小；license-clean 重寫架構非原始 checkpoint；§1 外部數字部分取自摘要頁，定稿前再核對正文。
+* [決定] Opt 3（CheXpert 重跑 PriCheXy-Net head-to-head）暫不做：數個 GPU-day、CP 值低、需謹慎框定威脅模型差異。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 學長論文（03_related_works §GAN-based Privacy Protection、02_background §Advantages of Diffusion）已明載不選 GAN 之由：GAN 不可逆（原始像素永久丟棄）、幻覺改變病灶、訓練不穩/mode collapse/記憶化；diffusion 的 DDIM 確定性反演才能精確還原。[注意] 匿名圖「像噪聲」源於釋放加密潛碼 x_T（by design 的安全特性），非「少了 GAN」。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。方法比較為使用者當面指示的補強；未修改 past/SourceCode/、未改主方法/資料集。GPU run 已取得使用者裁決。
+
+### 7. 下一步
+* §1 外部數字核對正文頁碼；（可選）Packhäuser 公開權重 out-of-tree 跨集 sanity。
+* 使用者手動 push 本地 commits。
