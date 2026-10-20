@@ -1,0 +1,73 @@
+{
+  "task_id": "BDIA2X2-table",
+  "run_id": "BDIA2X2_20261020T182731Z_efbf6f85",
+  "seed": 1911,
+  "cells": [
+    {
+      "m1_psnr_db": 38.81902519119138,
+      "m1_ssim": 0.9698652583281756,
+      "m1lat_cosine": 0.9997943986834489,
+      "m1lat_max_abs": 0.08873742435127496,
+      "cell": "1",
+      "sampler": "DDIM",
+      "conditioning": "asymmetric",
+      "source": "Q8_FORMAL (reused)",
+      "n": 200,
+      "anon_psnr_db": null,
+      "nfe_model_evals": 1996.0
+    },
+    {
+      "m1_psnr_db": 39.89545865600769,
+      "m1_ssim": 0.9726169751541143,
+      "m1lat_cosine": 0.9997867346858583,
+      "m1lat_max_abs": 0.0898629654943943,
+      "anon_psnr_db": 5.275589578557021,
+      "nfe_model_evals": 1996.0,
+      "cell": "2",
+      "sampler": "DDIM",
+      "conditioning": "symmetric_null",
+      "source": "BDIA2X2_20261020T182731Z_efbf6f85",
+      "n": 200
+    },
+    {
+      "m1_psnr_db": 39.17020885402633,
+      "m1_ssim": 0.9728418985006366,
+      "m1lat_cosine": 0.9996981238807292,
+      "m1lat_max_abs": 0.1069476167112589,
+      "anon_psnr_db": 5.290132677718209,
+      "nfe_model_evals": 1996.0,
+      "cell": "3",
+      "sampler": "BDIA",
+      "conditioning": "asymmetric",
+      "source": "BDIA2X2_20261020T182731Z_efbf6f85",
+      "n": 200
+    },
+    {
+      "m1_psnr_db": 40.16746379519481,
+      "m1_ssim": 0.9752772451509262,
+      "m1lat_cosine": 0.9996793130462067,
+      "m1lat_max_abs": 0.11008999850600958,
+      "anon_psnr_db": 5.291616410081402,
+      "nfe_model_evals": 1996.0,
+      "cell": "4",
+      "sampler": "BDIA",
+      "conditioning": "symmetric_null",
+      "source": "BDIA2X2_20261020T182731Z_efbf6f85",
+      "n": 200
+    }
+  ],
+  "derived": {
+    "sampler_bdia_minus_ddim": {
+      "asymmetric_m1_psnr_db": 0.3512,
+      "symmetric_null_m1_psnr_db": 0.272,
+      "asymmetric_m1lat_cosine": -0.0001,
+      "symmetric_null_m1lat_cosine": -0.0001
+    },
+    "conditioning_symnull_minus_asym": {
+      "ddim_m1_psnr_db": 1.0764,
+      "bdia_m1_psnr_db": 0.9973
+    }
+  },
+  "nfe_cost_parity": true,
+  "conclusion": "Sampler axis (BDIA vs DDIM at matched conditioning): m1 PSNR moves by +0.35/+0.27 dB (asymmetric/symmetric-null); latent recon cosine unchanged (~0.9997) at IDENTICAL NFE (1996). BDIA's exact-inversion property buys nothing material at T=500 single-shot; DDIM suffices. Conditioning axis (symmetric-null minus asymmetric): +1.08/+1.00 dB -- the ~1 dB is the quality price of the anonymizing (asymmetric) conditioning, NOT a free gain: the symmetric cells are not anonymizing (quality/reversibility ablation only; no security claim)."
+}

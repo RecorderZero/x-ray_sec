@@ -2130,3 +2130,43 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * §1 外部數字核對正文頁碼；（可選）Packhäuser 公開權重 out-of-tree 跨集 sanity。
 * 使用者手動 push 本地 commits。
+
+## 2026-10-21 · W7 · Track 收尾 · BDIA/DDIM 2×2 保真消融 + Packhäuser 原始權重跨集 sanity
+
+### 1. 當前目標 (Objective)
+* 使用者 2026-10-21 指示：(a) 同意 Packhäuser 公開權重 out-of-tree 跨集 sanity；(b) 仍要跑 6 小時 BDIA 實驗，雖對 PSNR 無大幅進步，但可寫入論文當做過的實驗、與 DDIM 做消融、供後續研究者參考。
+* 交付：`paper_assets/tables/table_bdia_2x2.{csv,json}` + `scripts/bdia_2x2_table.py`（BDIA 2×2 凍結表）；`method_comparison.md` §3.2（原始權重 sanity，已 commit afd1821）。
+
+### 2. 執行動作 (Actions Taken)
+* **正文核對**（commit 2bf109f/4e04de7）：§1 外部數字對 refpaper 112 Table 1、111 摘要+Table 1/2 逐一核對；修 PriCheXy-Net 分類為 80.5→75.8%（µ=0.01 點）。
+* **原始權重 sanity**：clone `kaipackhaeuser/CXR-Patient-ReID`（GPL-3.0）至**樹外** `/data2/external_gpl/`（不 `git add`）；權重為 Git LFS，經 raw 端點下載並核對 sha256=`331efaed…`（95.4 MB）。樹外 adapter `reid_original_weights_sanity.py` 重用我們的輸入建構/encrypt/attacker_view/evaluate，只換模型為他們原始 `SiameseNetwork`（embed=forward_once, head=fc_end），CPU 執行（不碰 GPU，不干擾 BDIA 計時）。
+* **BDIA 2×2 GPU run**：CPU self-test 先過；`scripts/run_cfg_ddim.sh python -m scripts.bdia_2x2_runner --evidence-role formal --cells 2 3 4 --checkpoint …/modelchexpert050000.pt --limit 0`（N=200，random key，與 vLLM 共存 GPU peak ~0.8 GB）。run_id `BDIA2X2_20261020T182731Z_efbf6f85`，exit 0、無 failures.json、stderr 空、validated。`scripts/bdia_2x2_table.py` 聚合 cell 2/3/4 並從凍結 Q8_FORMAL fidelity 表注入 cell 1（reference=x0/z 消歧）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] **原始權重 sanity**（victim N=20×2，樹外 CPU）：plaintext Top-1 0.850/AUC **0.982**（≈發表跨集 0.987）；S0 0.560；S1 0.493；**S2 0.477 ≈ 隨機**。來源 `/data2/external_gpl/reid_original_weights_sanity.json`。
+* [事實] **BDIA 2×2**（m1 vs x0 PSNR / m1lat-z cosine，N=200，NFE 全 **1996** cost-parity）：
+
+  | | asymmetric（匿名條件） | symmetric-null |
+  |---|---|---|
+  | DDIM | cell1 38.82 / 0.999794（凍結 Q8） | cell2 39.90 / 0.999787 |
+  | BDIA | cell3 39.17 / 0.999698 | cell4 40.17 / 0.999679 |
+
+* [結論] **sampler 軸（BDIA−DDIM，同條件）**：m1 PSNR 僅 +0.35/+0.27 dB、latent cosine 不變（~0.9997）、NFE 相同 → **T=500 單發加密下 BDIA 的 exact-inversion 買不到實質改善，DDIM 已足夠**（乾淨的 negative/robustness 結果）。
+* [結論] **conditioning 軸（symmetric-null−asymmetric）**：+1.08/+1.00 dB —— 這 ~1 dB 是**匿名化（asymmetric）條件的品質代價**，非免費增益；symmetric-null 不具匿名性，本表僅報保真/可逆，**不重新宣稱安全性**（安全邊界見 `bdia_security_verify.py`）。補回 Q10.1 stage-5 一直 deferred 的 conditioning 軸。
+* [結論] 原始 checkpoint plaintext 0.982≈發表 0.987 → 坐實 (i) 我們 CheXpert 影像/前處理無誤、(ii) §3.1 reimpl 0.764 僅因只訓 1000 病患（架構/資料皆正確）。**即使原作者本尊近乎完美的權重，S2 仍被壓到隨機（0.477）**。
+
+### 4. 達標判定 (Assessment)
+* [x] BDIA 2×2 凍結表入庫、sanity 入庫、正文核對完成。
+* [限制] BDIA 為 GPU 浮點單次量測、runtime/peak 非跨次 bit-identical（同 Q11）；sanity 為跨資料集套用（原權重訓於 ChestX-ray14）+ 我們 bicubic/grayscale 前處理（非其 bilinear/RGB 原協定），plaintext AUC 不必等於 0.987；N=20 小。
+* [決定] 外部 GPL code/權重/adapter 全留樹外、不入庫、不散布 → 本 repo 保持 license-clean；論文僅引用+報告數字。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* BDIA 消融定位為「完整性/擋審稿/robustness」次要貢獻，非賣點：措辭須為「sampler 選擇對保真度影響有限」，不得寫成「BDIA 改善本方法」。
+* [待辦]（可選）把 `table_bdia_2x2` 併入 Week-7 appendix（會改動已 commit 的 appendix MANIFEST，待使用者裁示）。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。BDIA 6h GPU run 已取得使用者裁決（CLAUDE.md §3）；未改 past/SourceCode/、未改主方法/資料集；GPL 外部工具樹外執行。
+
+### 7. 下一步
+* 收尾 P11/Z12；（可選）appendix 併入 BDIA 表。
+* 使用者手動 push 本地 commits。
