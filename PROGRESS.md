@@ -2201,3 +2201,36 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 收尾 P11/Z12。
 * 使用者手動 push 本地 commits。
+
+## 2026-10-22 · W7/W8 · Track 收尾 · P11（重現/表圖/claim audit/freeze）+ Z12（測試/索引/交接）
+
+### 1. 當前目標 (Objective)
+* 使用者 2026-10-22 指示開始 P11/Z12 收尾；先確認 GPU 實驗範圍，P11.2 重跑深度經 AskUserQuestion 選**小切片 N=10 + 確定性驗證**。
+
+### 2. 執行動作 (Actions Taken)
+* **GPU 盤點**：P11/Z12 僅兩處碰 GPU 且皆非長 run——P11.2（N=10 ≤30min，已核准直接跑）與 Z12.1 的 3 支 `skipif(cuda)` 短測試（~2 分）。其餘全 CPU。
+* **P11.1**（`d41e2b0`）：`scripts/p11_experiment_matrix.py` → `final_experiment_matrix.{csv,md}`，34 cells、每個有 run id/provenance、缺值原因；n 從實表讀取。
+* **P11.2**（`bc87369`）：`scripts/p11_reproduce.py` 新 GPU run 反演 N=10，對 frozen E2.3 cache **10/10 bit-exact**（max_abs=0、cos=1）。
+* **P11.3**：確認所有交付表圖由 build script 讀 frozen CSV 生成（`build_claim_matrix/weekly_appendix/attack/defense_package`、`bdia_2x2_table`、`p11_*`），無手抄。
+* **P11.6**（`21c9b0b`）：`scripts/p11_claim_audit.py` 掃論文面向文件 30 處命中，20 同行否定/限縮、10 手檢皆合法 → `claim_audit_p11.md`，0 無證據 over-claim。
+* **P11.7/Z12.4**（`c5a7078`）：`scripts/p11_checksums.py` → `SHA256SUMS`（335 檔）+ `freeze_manifest.json`（combined fingerprint、git HEAD、split hashes、env）。
+* **Z12.1**：`pytest tests/` → **193 passed**（含 3 GPU 測試實跑）、0 fail；`reports/final_test_report.md`。（註：根目錄 `pytest` 會誤收 `past/SourceCode/scripts/test_*`，已改 scope 到 `tests/`。）
+* **Z12.2**：`reports/results_index.md`——RQ1–4 + 4 個 P2 track + freeze 保證的對照索引。
+* **Z12.3**：`reports/december_handoff.md`——thesis 章節 outline + 插圖位置 + 禁止事項。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 主表確定性輸入（E2.3 latent cache）**bit-exact 可重現**；193 測試全綠；0 無證據 over-claim；335 檔 checksum 凍結。
+* [事實] results_index 已把 AF-041/AF-042 的限縮併入對應 track 的「限制」欄，確保論文引用時不漏。
+
+### 4. 達標判定 (Assessment)
+* [x] P11.1/P11.2/P11.3/P11.6/P11.7 完成；Z12.1/Z12.2/Z12.3/Z12.4(freeze manifest) 完成。
+* [待辦] **P11.4**（每圖 caption：take-away+限制、PDF/SVG 300dpi）、**P11.5**（§5–§10 可引用草稿彙整成連續 notes）、威脅模型/pipeline 示意圖（12 月繪）。皆非阻擋。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 收尾階段守 WORKFLOW Week 8 禁令：不新增方法/資料集、不換 seed/sample、不覆蓋舊 run、不手改表格數字；定稿前重跑 `p11_checksums.py` 更新 fingerprint。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。P11.2 GPU 已取得使用者裁決（小切片）；未改 past/SourceCode/、未動凍結範圍。
+
+### 7. 下一步
+* P11.4 caption / P11.5 notes 彙整（可選，寫作期）；使用者手動 push。
