@@ -1,0 +1,11 @@
+sample_id,cosine,max_abs,bit_exact,within_tol
+security_v1_0000,1.00000006,0.0,True,True
+security_v1_0001,1.0,0.0,True,True
+security_v1_0002,1.00000006,0.0,True,True
+security_v1_0003,0.99999994,0.0,True,True
+security_v1_0004,1.0,0.0,True,True
+security_v1_0005,1.0,0.0,True,True
+security_v1_0006,1.0,0.0,True,True
+security_v1_0007,1.0,0.0,True,True
+security_v1_0008,1.00000006,0.0,True,True
+security_v1_0009,1.0,0.0,True,True

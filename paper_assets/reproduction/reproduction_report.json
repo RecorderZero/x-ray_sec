@@ -1,0 +1,92 @@
+{
+  "task_id": "P11.2-reproduction",
+  "target": "E2.3 latent cache (Q8_FORMAL input)",
+  "cache_run": "E2.3_20261009T183736363217Z_84cf642a",
+  "split": "security_v1.csv",
+  "n": 10,
+  "tolerance": {
+    "cosine_min": 0.9999,
+    "max_abs_max": 0.05
+  },
+  "result": {
+    "all_within_tolerance": true,
+    "bit_exact_count": 10,
+    "cosine_min": 0.99999994,
+    "cosine_mean": 1.00000001,
+    "max_abs_max": 0.0,
+    "max_abs_mean": 0.0
+  },
+  "note": "Deterministic DDIM eta=0 inversion re-run on a fresh GPU process vs the frozen E2.3 cache that Q8_FORMAL consumed. Within-tolerance reproduction of this cache reproduces the deterministic input of every main table; residual drift (if any) is GPU float non-determinism, not a pipeline change.",
+  "per_sample": [
+    {
+      "sample_id": "security_v1_0000",
+      "cosine": 1.00000006,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    },
+    {
+      "sample_id": "security_v1_0001",
+      "cosine": 1.0,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    },
+    {
+      "sample_id": "security_v1_0002",
+      "cosine": 1.00000006,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    },
+    {
+      "sample_id": "security_v1_0003",
+      "cosine": 0.99999994,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    },
+    {
+      "sample_id": "security_v1_0004",
+      "cosine": 1.0,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    },
+    {
+      "sample_id": "security_v1_0005",
+      "cosine": 1.0,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    },
+    {
+      "sample_id": "security_v1_0006",
+      "cosine": 1.0,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    },
+    {
+      "sample_id": "security_v1_0007",
+      "cosine": 1.0,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    },
+    {
+      "sample_id": "security_v1_0008",
+      "cosine": 1.00000006,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    },
+    {
+      "sample_id": "security_v1_0009",
+      "cosine": 1.0,
+      "max_abs": 0.0,
+      "bit_exact": true,
+      "within_tol": true
+    }
+  ]
+}
