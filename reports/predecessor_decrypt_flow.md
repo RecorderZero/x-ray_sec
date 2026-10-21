@@ -76,7 +76,25 @@ CFG 本體 `condition_clf_free` (L457)：`eps = (1+w)·eps_cond(y=0) − w·eps_
 - `x_rec` 這張影像**本來就是必要輸出**（重構圖 + heatmap 參考），所以那個 backward 省不掉；能省的只有「再反演」那一次正演。
 - `ddim_anonymization_backward` 的 `clip_denoised=True` 會把像素夾回合法範圍，再反演得到的 `x_rec_T′` 可能比帶解密數值殘差的原始 `x_rec_T` 稍「乾淨」——影響極小，未量化。
 
-[評估] 結論：**可以改成重用 `x_rec_T`，省 1 個 inversion pass、品質至少不劣**；前作沒這麼做純粹是接現成的影像介面函式。若要在論文或後續工作主張此優化，需補一支小實驗比較兩法的 x_healthy / heatmap 差異與耗時（屬 nice-to-have，非必要）。
+[評估] 結論：**可以改成重用 `x_rec_T`，省 1 個 inversion pass、品質至少不劣**；前作沒這麼做純粹是接現成的影像介面函式。此結論已以小實驗證實（§3.1）。
+
+### 3.1 實測（2026-10-22，N=10，`splits/security_v1.csv` 前 10 張，gs∈{0,2}）
+
+用前作自己的建構塊（`legacy_invert`→`legacy_generate` 得 x_rec_T / x_rec；唯讀 import，未改 `past/SourceCode/`）比較：
+- **A（前作）** `ddim_sample_loop_known(x_rec, gs)`：把 x_rec 再反演 → z_T′ → CFG 去噪
+- **B（提議）** `ddim_anonymization_backward(x_rec_T, gs)`：直接從解密 latent CFG 去噪
+
+| 指標 | gs=0 | gs=2 |
+|---|---|---|
+| psnr(A,B) 平均 | **47.85 dB** | **47.55 dB** |
+| cosine(A,B) 平均 | **0.99993** | 0.99991 |
+| 健康步驟耗時 A / B | 22.90s / 15.23s | 22.91s / 15.23s |
+| **B 相對 A 加速** | **1.50×** | **1.51×** |
+
+- [事實] 兩法健康圖**幾乎逐像素相同**（psnr≈47–48 dB、cos≈0.9999，10 張皆然）；10× 放大的 |A−B| 圖近乎全黑，只剩殘餘數值噪聲 → **再反演確為多餘 round-trip**。
+- [事實] **B 穩定快 ~1.50×**（省掉那趟 inversion pass）。
+- [限制] 單次 GPU 浮點量測；健康步驟計時不含共用的 x_rec（重構圖/heatmap 參考本就必算）；此 pipeline 在 gs=2 下健康化幅度本就不大（healthy≈x_rec），但不影響 A vs B 結論。
+- 來源：`scripts/reinvert_ablation.py`、`paper_assets/reinvert_ablation/{reinvert_ablation.csv,reinvert_ablation.json,grid_gs2.png}`（並排圖欄序：x0 | x_rec | healthy_A | healthy_B | 10×|A−B|）。
 
 ---
 
