@@ -2170,3 +2170,34 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 收尾 P11/Z12；（可選）appendix 併入 BDIA 表。
 * 使用者手動 push 本地 commits。
+
+## 2026-10-22 · W7 · Track 稽核回應 · 修 AF-041 / AF-042（方法比較 null 的措辭與控制）
+
+### 1. 當前目標 (Objective)
+* 稽核方 AUD-20261022-01 開立 AF-041（MINOR, DOC）、AF-042（MINOR, METHOD），皆為 null 結果的**措辭／控制**問題（把介面-／表徵-特定的 null 寫得像 scheme-level 安全）；底層數字全部可重現且誠實。使用者 2026-10-22 指示修復。
+
+### 2. 執行動作 (Actions Taken)
+* **AF-041**（`reports/t2bb.md §6` headline）：改綁兩前提（(a) 通用 image-encoder 介面、(b) legacy range-discarding/minmax 儲存）；明示與 §5 minmax 列一致（S0/S1 minmax cos 0.512）**非推翻透明性**；保留 range_preserving `cos` 旁道仍洩漏 0.657（scheme-aware latent 攻擊者仍可連結）；註明正控制 P 0.976 只證 encoder 能讀 image-domain 特徵、非 scheme-level 安全。
+* **AF-042**（`reports/method_comparison.md §3.1/§3.2`）：補一個 **identity-cipher latent-view 控制**隔離「密碼效果 vs 表徵 OOD」——樹外 adapter `reid_original_weights_sanity.py` 加 `plaintext_latent` 條件（未加密 latent 的同表徵 attacker-view），原始 checkpoint CPU 重跑。
+  - 結果：plaintext 真實-CXR **0.982** → plaintext_latent（未加密、換 latent-view 表徵）**0.550** → S0 0.560 → S1 0.493 → **S2 0.477**。
+  - 改寫：S2 安全論述錨在**同表徵 S0 基線**（0.560→0.477）而非 plaintext 真實-CXR 天花板；「擊退強攻擊者」軟化為「現成／發表級 CXR re-id 網路無法連結 S2 的 noise-like 密文」；§4 兩項標 [x]。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] identity 控制坐實稽核方質疑：**0.982→0.550 的降幅大半來自 latent-view 對 CXR 網路 OOD（未加密即近隨機），非密碼**。密碼淨效果在同表徵內：plaintext_latent 0.550 ≈ S0 0.560（S0 透明正交變換）→ S2 0.477（per-image nonce 移掉殘留 ~0.06）。
+* [結論] S2 相對前作 S0 的改善**在同表徵下成立且乾淨**；但不得宣稱「S2 擊退 plaintext 0.76/0.98 的強攻擊者」（跨表徵、混淆 OOD）。與 §5（S2 range cos 0.433、S0 0.657）內部一致。
+* [事實] 來源 `/data2/external_gpl/reid_original_weights_sanity.json`（樹外 GPL 工具，code/權重/json 不入庫；文件僅報數字）。
+
+### 4. 達標判定 (Assessment)
+* [x] AF-041、AF-042 的措辭／控制修正皆入庫；數字未變（原本就正確），僅收斂宣稱範圍並補控制列。
+* [限制] identity 控制為單次 CPU、N=20；跨資料集 + 我方前處理。BDIA 2×2（稽核無 finding）不動。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 教訓：null/安全類結論務必標清「在什麼介面、什麼表徵、什麼儲存下」成立；跨表徵的天花板不能當同一攻擊者的基線。後續 P11 claim-audit 一併套用此檢查。
+* 待稽核方複驗 AF-041/042；Q11 parity、reinvert ablation、decrypt flow 文件尚待稽核（AUD-20261022-01 §5 [待辦]）。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。僅改文件措辭 + 補樹外控制；未改主方法/資料集、未改 past/SourceCode/、未動 F9/G5 凍結範圍。
+
+### 7. 下一步
+* 收尾 P11/Z12。
+* 使用者手動 push 本地 commits。

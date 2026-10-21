@@ -55,11 +55,11 @@
 | plaintext（天花板） | 0.15 | **0.764** | 原圖 biometric 訊號存在；本研究舊 DenseNet 0.811、Packhäuser 報告 CheXpert 0.987 |
 | S0 密文（range） | 0.15 | 0.616 | 殘留洩漏，與 T2-BB `cos` 0.657 一致（前作透明性） |
 | S1 密文（range） | 0.10 | 0.541 | 近隨機 |
-| **S2 密文（range）** | 0.05 | **0.445** | **≈ 隨機 → S2 擊退此強攻擊者** |
+| **S2 密文（range）** | 0.05 | **0.445** | **≈ 隨機；同表徵下 < S0 0.616（per-image-nonce 效果）** |
 
 - [事實] 攻擊者在 held-out shadow 病患上 pair-verification AUC 0.911（非過擬合）；對 victim 原圖達 0.764。來源：`paper_assets/tables/table_reid_external.{csv,json}`。
-- [結論] **即使換成專用、發表級、且確實學會再識別的架構攻擊者，S2 的匿名視圖仍降至隨機（AUC 0.445），而前作 S0 仍殘留洩漏（0.616）。** 強化了「S2 匿名性對更強攻擊者穩健」的主張，並與 T2-BB（線性 `cos`/`abs` + 弱學習式）互補——此處為影像級強學習式攻擊者。
-- [限制] GPU 浮點訓練，單次量測、不保證跨次 bit-identical（同 Q11）；victim N=20 小；為 license-clean 重寫架構（非原始 ChestX-ray14 checkpoint）。
+- [結論] **乾淨的比較是同一 latent-view 表徵內 S0（0.616）vs S2（0.445）**：攻擊者看到的都是密文 attacker-view（min-max 當灰階）、都 noise-like，S0（透明正交變換）仍殘留洩漏、S2 回到隨機 → **隔離出 per-image-nonce 的效果，S2 相對前作 S0 的改善成立**。與 T2-BB（線性 `cos`/`abs` + 弱學習式）互補——此處為影像級學習式攻擊者。
+- [限制]（AF-042）plaintext 的 **0.764 是真實-CXR 表徵的天花板，不是 S2 被比較的基線**：CXR re-id 網路對 noise-like 的 latent-view 本就 OOD（見 §3.2 identity 控制 `plaintext_latent`=0.550，未加密即已近隨機），會同時因「密碼強」與「輸入 OOD」而崩潰，故**不**據此宣稱「S2 擊退達 0.76/0.98 的強攻擊者」；更誠實的說法是「現成／發表級 CXR re-id 網路無法連結 S2 的 noise-like 密文」。GPU 浮點訓練、單次量測、不保證跨次 bit-identical（同 Q11）；victim N=20 小；為 license-clean 重寫架構（非原始 ChestX-ray14 checkpoint）。
 
 ### 3.2 原始權重跨集 sanity（Packhäuser 公開 checkpoint，樹外執行）
 
@@ -67,14 +67,16 @@
 
 | 條件 | Top-1 | AUC | 對照 §3.1 reimpl |
 |---|---|---|---|
-| plaintext | 0.850 | **0.982** | 0.764 |
+| plaintext（真實 CXR） | 0.850 | **0.982** | 0.764 |
+| plaintext_latent（identity 控制，同表徵、**不加密**） | 0.050 | **0.550** | — |
 | S0 密文（range） | 0.100 | 0.560 | 0.616 |
 | S1 密文（range） | 0.050 | 0.493 | 0.541 |
 | **S2 密文（range）** | 0.100 | **0.477** | 0.445 |
 
 - [結論] 原始 checkpoint 在我們 CheXpert victim 上 plaintext **AUC 0.982**，貼近其發表的跨集 0.987 → **坐實**：(i) 我們的 CheXpert 影像/前處理無誤，(ii) §3.1 reimpl 的 0.764 僅因只在 1000 病患上訓練（原作 800k pairs）、架構與資料皆正確、攻擊者「能」近乎完美。
-- [結論] **即使換成原作者本尊、plaintext 近乎完美（0.982）的 checkpoint，S2 密文仍被壓到隨機（AUC 0.477）；S0 仍殘留洩漏（0.560）。** 這是比 reimpl 更強的外部證據——不是我們訓練不足造成的假性安全。
-- [限制] 為跨資料集套用（原權重訓於 ChestX-ray14），且用**我們的** bicubic/grayscale 前處理（非其 bilinear/RGB 原協定），故 plaintext AUC 不必等於 0.987；單次 CPU 量測；N=20。為 GPL 外部工具，僅引用+報告數字，code/權重不入庫。
+- [結論] **必須分開兩個效應（AF-042）**：從 0.982 → `plaintext_latent` **0.550**（identity 控制，**未加密**、只是換成 latent-view 表徵）即大幅崩塌 → **大部分降幅來自「latent-view 對 CXR re-id 網路 OOD／讀不動」，不是密碼**。**密碼的淨效果要在同一 latent-view 表徵內看**：`plaintext_latent` 0.550 ≈ **S0 0.560**（S0 為透明正交變換，與未加密 latent 連結相當）→ **S2 0.477**，per-image nonce 把透明基線殘留的 ~0.06 移掉。
+- [結論] 因此正確論述是：**現成／發表級 CXR re-id 網路無法連結 S2 的 noise-like 密文；且在同表徵下 S2（0.477）仍優於前作透明的 S0（0.560）**——不把 S2 的安全錨在 plaintext 真實-CXR 天花板（0.982，不同表徵）。原始 checkpoint 另排除「訓練不足造成假性安全」。
+- [限制] 為跨資料集套用（原權重訓於 ChestX-ray14），且用**我們的** bicubic/grayscale 前處理（非其 bilinear/RGB 原協定），故 plaintext AUC 不必等於 0.987；單次 CPU 量測；N=20。為 GPL 外部工具，僅引用+報告數字，code/權重不入庫。identity 控制來源同 §3.2 adapter（`reid_original_weights_sanity.py`，plaintext_latent 條件）。
 
 ---
 
@@ -87,4 +89,6 @@
 - [x] Packhäuser 公開權重 out-of-tree 跨集 sanity（2026-10-21，見 §3.2）：plaintext 0.982（≈發表 0.987）、S2 0.477≈隨機。
   - repo `github.com/kaipackhaeuser/CXR-Patient-ReID` 為 **GPL-3.0**；權重隨 repo 以 Git LFS 附於 `PatientVerification/trained_models/`（經 raw 端點下載並核對 sha256）。
   - 樹外執行（`/data2/external_gpl/`，不 `git add`、不散布權重/code）→ 本 repo 保持 license-clean；論文僅引用 + 報告數字。
+- [x] AF-042 identity-cipher latent-view 控制（2026-10-22，見 §3.2 `plaintext_latent`=0.550）：隔離「密碼效果 vs latent-view 表徵 OOD」，S2 安全論述已改錨在同表徵 S0 基線、軟化「擊退強攻擊者」措辭。
+- [x] AF-041：`t2bb.md §6` headline 已綁兩前提（image-encoder 介面 + range-discarding 儲存）、明示與 §5 minmax 一致（非推翻透明性）、保留 range_preserving `cos` 旁道仍洩漏 0.657。
 - [待辦] Opt 3（在 CheXpert 重跑 PriCheXy-Net 做同 pipeline head-to-head）暫不做（數個 GPU-day、CP 值低、需謹慎框定威脅模型差異）。

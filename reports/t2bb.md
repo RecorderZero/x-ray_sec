@@ -6,9 +6,9 @@
 
 ---
 
-## 0. 一句話結論
+## 0. 目前狀態（2026-10-20 actual-M1 pilot 完成）
 
-前作 S0/S1 對 inner-risk linkage **透明但訊號本身弱**（cos/abs/norm 線性上界 AUC≈0.66，且 `cos(anon)=cos(plaintext)` 證實加密未遮蔽）；最弱～學習式攻擊者皆**無法顯著連結**（學習式 pilot 過擬合）；我們的 **S2 per-image nonce 將其降至隨機**。pilot 規模定稿，未 scale 1000（期望值低）。
+舊 pilot 證明前作 S0/S1 在**加密 latent 的直接統計**上透明，但該實驗把 latent 正規化成 PNG 後直接評分，並不是部署時真正公開的 DDIM-generated M1。現在新增較嚴格的 `T2-BB-M1-Frozen`：先產生真正的 P/S0/S1/S2 公開匿名 PNG，再由完全不接觸 latent、checkpoint、key 或原圖的 frozen DenseNet121 / RAD-DINO 做 anon↔anon linkage。舊結論保留為「結構探針」，新的 M1 結果另列，不互相取代。
 
 ---
 
@@ -48,6 +48,8 @@
 | `scripts/t2bb_step1_image_control.py` | **步驟 1**：影像層 positive control（DenseNet121/AlexNet/rawpix） | victim split → `table_t2bb_step1_image_control.*` |
 | `scripts/t2bb_inner_linkage.py` | **步驟 2**：反演+加密(S0/S1/S2)+存檔 view+scorer(cos/abs/sorted_abs/norm/densenet121) | victim split(+快取) → `table_t2bb_inner_linkage.*` |
 | `scripts/t2bb_learned_attack.py` | **學習式上界攻擊**：SupCon metric net，shadow 訓練、victim 評估 | shadow+victim split(+快取) → `table_t2bb_learned_attack.*` |
+| `scripts/t2bb_m1_generate.py` | **目標端匯出器**：cached latent→P/S0/S1/S2→實際 DDIM generation→部署口徑公開 PNG；公開 manifest 使用 opaque ID，真值另存私有 map | victim split(+快取+checkpoint) → public export + sibling private eval map |
+| `scripts/t2bb_m1_frozen_linkage.py` | **真正 BB 評估端**：只讀公開 PNG，以 ImageNet DenseNet121 / CXR RAD-DINO frozen embedding 評分；embedding 完成後才 join 私有 pair truth | public export + private eval map → `table_t2bb_m1_frozen.*` |
 
 ### 2.4 反演快取（實驗真正吃的資料，**gitignored、未入庫**）
 - 路徑：`artifacts/t2bb_latent_cache/`
@@ -63,6 +65,14 @@
 | `paper_assets/tables/table_t2bb_step1_image_control.{csv,json}` | 步驟 1：影像層 Top-1/Top-5/AUC/neg-control |
 | `paper_assets/tables/table_t2bb_inner_linkage.{csv,json}` | 步驟 2：各 (scheme, storage, scorer) 的 Top-1/Top-5/AUC + 正/負控制 + decrypt max_abs |
 | `paper_assets/tables/table_t2bb_learned_attack.{csv,json}` | 學習式：shadow-val / victim-learned / victim-fixed 三組 + efficacy verdict |
+| `paper_assets/tables/table_t2bb_m1_frozen.{csv,json}` | 真正公開 M1 上的 frozen-encoder Top-1/Top-5/AUC、conditional-query bootstrap CI、permutation null/p-value（完成後產生） |
+
+### 2.6 T2-BB-M1-Frozen 的硬隔離
+
+- 公開匯出目錄只含 PNG、opaque 隨機 ID、method/storage/hash/公開 nonce；**不含** `patient_id`、`pair_id`、`pair_role` 或可解碼檔名。
+- 評估真值在公開目錄之外的 sibling private map。scorer 先由 PNG 算 embedding/similarity，最後才 join truth 計算指標。
+- P/S0/S1 採目前 mixed-deployment 的 predecessor legacy PNG；S2 採 private-range 容器的 public q/255 view。這是端到端方法差異，不是 storage-controlled attribution。
+- N=20 為 exploratory pilot、單一隨機 S2 key draw；CI 是固定 gallery 下的 conditional-query bootstrap，不能解讀成正式族群推論。
 
 ---
 
@@ -120,6 +130,25 @@ scripts/run_cfg_ddim.sh python -m scripts.t2bb_learned_attack \
 ```
 > `--max-patients N` 取 shadow 前 N 病患（讀檔後即切片）；channels 預設 `s0_abs`（前作可遷移的 \|z\| 不變量）與 `s2_anon`（per-image nonce 對照，預期隨機）。
 
+### 步驟 F — 實際公開 M1 + frozen encoder（GPU 約 21–24 分鐘）
+
+```bash
+# 先 smoke：2 病患 × 2 影像 × 4 方法 = 16 次 generation
+scripts/run_cfg_ddim.sh python -m scripts.t2bb_m1_generate \
+  --limit-patients 2 --out-dir artifacts/t2bb_m1_public_smoke
+
+# 完整 victim pilot：20 × 2 × 4 = 160 次 generation
+scripts/run_cfg_ddim.sh python scripts/managed_run.py --task-id T2BB_M1_GEN --gpu-id 0 \
+  --heartbeat-seconds 30 -- python -m scripts.t2bb_m1_generate \
+  --out-dir artifacts/t2bb_m1_public_v1
+
+# encoder 端只讀 public export；truth map 僅供最後計分
+scripts/run_cfg_ddim.sh python -m scripts.t2bb_m1_frozen_linkage \
+  --export-dir artifacts/t2bb_m1_public_v1
+```
+
+> smoke 實測為 7.85 秒/generation，因此 160 次約 21 分鐘；低於 30 分鐘 GPU gate。RAD-DINO 執行時 `local_files_only=True`，結果記錄 resolved revision 與權重/config SHA-256。
+
 ---
 
 ## 4. 要「scale 到 1000」怎麼做（reuse 設計）
@@ -137,7 +166,7 @@ scripts/run_cfg_ddim.sh python -m scripts.t2bb_learned_attack \
 
 ---
 
-## 5. 結果摘要（定稿 2026-10-20，N=20 victim / 200 shadow pilot，seed 1911）
+## 5. 舊結果摘要（direct-latent 結構探針；非實際公開 M1）
 
 **步驟 1（影像層）**：DenseNet121 Top-1=0.550、AUC=0.811 → 同病患 biometric 訊號在影像層存在。
 
@@ -153,9 +182,25 @@ scripts/run_cfg_ddim.sh python -m scripts.t2bb_learned_attack \
 
 **學習式（pilot 200）**：train loss→0.0048 但 shadow-val AUC=0.48、victim AUC=0.468 < 固定 0.657，`efficacy=false`（過擬合；合成 smoke 曾達 Top-1=1.0，證非 trainer bug）。
 
+上述數字回答「latent 結構是否透明」，不再單獨用來結案整個 T2-BB。真正部署輸出的結論以 `table_t2bb_m1_frozen.*` 為準。
+
+## 6. Actual-M1 frozen-encoder 結果（N=20 pilot）
+
+| method | storage | DenseNet Top-1 / AUC | RAD-DINO Top-1 / AUC |
+|---|---|---:|---:|
+| P | legacy | 0.50 / 0.810 | **0.75 / 0.976** |
+| S0 | legacy | 0.00 / 0.434 | 0.10 / 0.532 |
+| S1 | legacy | 0.05 / 0.479 | 0.05 / 0.498 |
+| S2 | private-range public q | 0.10 / 0.558 | 0.00 / 0.510 |
+
+- [事實] P positive control 很強：DenseNet AUC=0.810、RAD-DINO AUC=0.976，兩者 permutation p=0.0002。這證明實際 DDIM-generated P M1 仍保留可連結的病患訊號，故 encrypted methods 的 null 可以被解讀。
+- [事實] S0/S1/S2 的 AUC 全落在 0.434–0.558，所有 permutation p≥0.098；Top-1=0–0.10，接近 20 人 gallery 的 random 0.05。兩個 frozen encoder 都沒有顯著 anon↔anon linkage。
+- [結論]（AF-041）在本 pilot 的**雙重前提下——(a) 通用 image-encoder 介面、(b) legacy range-discarding（minmax）儲存**——S0/S1 與 S2 的 encoder 可見 cross-study linkage 皆落回隨機。**此與 §5 的 minmax 列一致（S0/S1 minmax cos 0.512），並非推翻透明性**：在 range_preserving 儲存下 S0/S1 的 `cos` linkage 仍為 **0.657**，scheme-aware 的 latent 攻擊者仍可連結（§6 用的正是 legacy range-discarding PNG，故只在此 PNG 情境下不能沿用 direct-latent probe 的「S0/S1 可被顯著連結」）。正控制 P（同 legacy minmax）仍 0.976，是因 P 的 latent-as-image 保留 CXR 空間結構、而 S0/S1 的 sign-flip/permutation 打亂成 noise-like——此只證明 encoder 能讀 image-domain 特徵，**無法排除 range_preserving 的 `cos` 旁道**，也不是 scheme-level 安全證明。
+- [限制] 此 null 只支持「兩個指定 frozen encoder 未成功」，不是通用 BB 安全證明。S2 DenseNet AUC=0.558、p=0.098 為接近但未達顯著的探索性結果；N=20 CI 寬，不能宣稱 S2 優於 S0/S1。若要強化 BB 上界，下一步應是 shadow-trained image encoder 或擴大 victim/key repetitions，而不是從本 pilot 做安全證明。
+
 ---
 
-## 6. 注意事項
+## 7. 注意事項
 
 - **seed=1911** 固定所有隨機來源；影像正規化依 security pipeline（`e1_ddim_runner.preprocess`，[0,1]）。
 - **cos scorer 的意義**：是「透明性探針」（正交映射保內積，`cos(z_ano)=cos(z)`），非強 biometric；linkage 判定看 verification AUC 的背景分布，不是單一對的 cos 值。
