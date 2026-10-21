@@ -1,0 +1,19 @@
+{
+  "task_id": "P11.7/Z12.4-freeze",
+  "generated_utc": "2026-10-21T17:45:57Z",
+  "git": {
+    "head": "21c9b0b9315d288421ae3498fafd7aa640d128ad",
+    "branch": "main",
+    "dirty_files": 33
+  },
+  "n_files_hashed": 335,
+  "sha256sums_combined": "592dcf5d937d4e27c5de1471508ef0692dd4796e1029b299b3ad4c268fa3b6fc",
+  "split_hashes": {
+    "security_v1_manifest.json": "5843da54d027cbe5b7d518349a374f859b5d2c0e07b9b66ea5f89c9530a94490",
+    "t2bb_inner_v1_manifest.json": "a7765297502925caf076cb0af09bdda46313e31471ec8aa26f8c6f1ae7d735ec",
+    "t2bb_shadow_v1_manifest.json": "dbc36b34f0460d63a0b48b072bb78f1d02d13828877598d3463c79ecf8eae402"
+  },
+  "environment_freeze": "artifacts/environment_freeze.txt",
+  "seed": 1911,
+  "note": "Covers paper_assets/ + appendix/ frozen deliverables. Re-run after any table/figure change; the combined hash is the single freeze fingerprint. Main-table reproduction (P11.2) is bit-exact 10/10 vs the E2.3 cache."
+}
