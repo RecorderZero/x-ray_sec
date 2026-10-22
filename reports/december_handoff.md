@@ -21,18 +21,22 @@
 | 10 | Ablations | `table_bdia_2x2`、`reinvert_ablation/grid_gs2.png` | Fig: reinvert 並排圖；Table: BDIA 2×2 | sampler 不是瓶頸；reinvert 可省 1 pass |
 | 11 | Conclusion | `claim_matrix` | — | 10 條 supported 宣稱 + Section-5 限縮 |
 
-## 插圖清單（現有、300 dpi 需確認）
+## 插圖清單（現有）
 
-| 圖 | 檔案 | 用於 § | 需補 |
-|---|---|---|---|
-| S2 視覺 grid | `paper_assets/q8_formal/fig_P8_visual_grid.png` | §7 | caption + take-away（P11.4） |
-| reinvert 並排 | `paper_assets/reinvert_ablation/grid_gs2.png` | §10 | caption |
-| localization parity | `paper_assets/localization_parity/` | §7 附錄 | caption |
-| 威脅模型 / pipeline | 待繪 | §3/§4 | 新繪（示意圖，非數據圖） |
+| 圖 | 檔案 | 用於 § | 向量檔（300 dpi） | 需補 |
+|---|---|---|---|---|
+| S2 視覺 grid | `paper_assets/q8_formal/fig_P8_visual_grid.png` | §7 | `fig_P8_visual_grid.pdf` ✅ | caption + take-away（P11.4） |
+| reinvert 並排 | `paper_assets/reinvert_ablation/grid_gs2.png` | §10 | `grid_gs2.pdf` ✅ | caption |
+| localization parity | `paper_assets/localization_parity/`（每病人零件 PNG） | §7 附錄 | — | 先合成單張 grid（12 月，選圖/版面屬寫作決定），再加 caption |
+| 威脅模型 / pipeline | 待繪 | §3/§4 | — | 新繪（示意圖，非數據圖） |
 
-## 尚待（P11.4/P11.5，非阻擋）
-- P11.4：為上表每張圖補 caption（take-away + 限制）、輸出 PDF/SVG 300 dpi。
-- P11.5：§5–§10 的可引用草稿已散落於各 `reports/*.md` 與 package `index.md`，需彙整成連續 method/result notes。
+> PDF 由 `scripts/p11_figure_export.py` 無損嵌入原始像素（`FlateDecode`，非 PIL 的
+> JPEG/DCTDecode），bit-exact、可重跑。兩張 grid 是真實 CXR 像素的點陣圖，**不做 SVG**
+> （SVG 只會 base64 包同一份點陣,無向量化效益）；真正該向量化的是 §3/§4 的示意圖。
+
+## 尚待（P11.4 caption / P11.5，非阻擋，12 月寫作期）
+- P11.4：**向量匯出已完成**（上表兩張 grid 的 PDF）。剩 caption 文字（take-away + 限制，跟 §7/§10 正文口徑一致）、localization 合成圖、§3/§4 示意圖。
+- P11.5：§5–§10 的可引用草稿已散落於各 `reports/*.md` 與 package `index.md`，需彙整成連續 method/result notes（跟論文正文同步寫最省力）。
 - 威脅模型圖與 pipeline 圖為示意圖，12 月繪製。
 
 ## Freeze 狀態

@@ -2234,3 +2234,31 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * P11.4 caption / P11.5 notes 彙整（可選，寫作期）；使用者手動 push。
+
+## 2026-10-23 · W8 · Track P11 · P11.4 機械性向量匯出（PDF，無損）
+
+### 1. 當前目標 (Objective)
+* `WORKFLOW` 子任務：P11.4 的機械性部分（圖檔向量匯出）。使用者裁定 caption 文字與示意圖留 12 月寫作期、現在先做零風險的向量匯出。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/p11_figure_export.py`：自建最小 PDF、以 `FlateDecode` **無損**嵌入原始像素（規避 Pillow 8.4 PDF writer 的 `DCTDecode`/JPEG 有損再編碼），300 dpi、確定性（無時間戳）、可重跑；內含 zlib round-trip 斷言。
+* 匯出 `paper_assets/q8_formal/fig_P8_visual_grid.pdf`（2560×1178 RGB，8.53×3.93 in）、`paper_assets/reinvert_ablation/grid_gs2.pdf`（1300×2600 L，4.33×8.67 in）。
+* 重跑 `scripts/p11_checksums.py` → `SHA256SUMS`（337 檔）+ 更新 `freeze_manifest.json`（combined `325c4b62…`）。
+* 更新 `reports/december_handoff.md` 插圖清單（標記 PDF 已出、localization 仍待合成、不做 SVG 的理由）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 腳本內 zlib 解壓 == 原 PNG 像素（bit-exact），`_verify` 斷言通過；`pdfinfo` 頁面尺寸符合 300 dpi；`pdftoppm` 回render shape 完全一致（方向正確），mean 差 3.3/7.8 於 255 為 Poppler 邊緣重取樣，非嵌入有損。
+* [結論] 兩張 grid 是真實 CXR 像素的點陣圖，PDF（點陣無損嵌入）才是正解；**不產 SVG**（只會 base64 包同一份點陣）。真正該向量化的是 §3/§4 示意圖，12 月繪。
+
+### 4. 達標判定 (Assessment)
+* [x] P11.4 向量匯出完成（兩張 grid PDF，bit-exact）。
+* [待辦] P11.4 剩 caption 文字、localization 合成圖、§3/§4 示意圖；P11.5 notes 彙整。皆 12 月寫作期、非阻擋。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 守 Week 8 凍結：未改表格數字、未動既有 PNG（原圖保留）、未換 seed/sample；定稿前照常重跑 `p11_checksums.py`。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。純 CPU、無 GPU；未改 past/SourceCode/。
+
+### 7. 下一步
+* caption 文字 / P11.5 notes / 示意圖留 12 月跟正文同步寫；使用者手動 push。
