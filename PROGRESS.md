@@ -2317,3 +2317,35 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 視使用者是否要把此圖與論述併入論文 §7 fidelity 討論；使用者手動 push。
+
+## 2026-10-24 · W8 · Track P2 · RQ4 端到端可逆性彙整（密碼層 vs 影像層、雙框架）+ 前作 cos 定論
+
+### 1. 當前目標 (Objective)
+* 使用者要求：(1) 盤點本專案指標 vs 前作 6 項；(2) 確立「新 cos 路徑」= `z→加密→解密→ẑ` 的 latent cos；(3) S0/S1(legacy) 與 S2(range-reserve) 端到端比較並寫進 `results_index.md`；(4) 把討論摘要存檔；(5) 確認「若照論文定義」S0/S1 真實 latent cos 會是多少。
+
+### 2. 執行動作 (Actions Taken)
+* 擴寫 `reports/results_index.md` RQ4 下新增一節「端到端可逆性：密碼層與影像層分開、兩種框架對照」((a) 密碼層 transform-only、(b) as-shipped 部署、(c) 同存檔 encryption-only、(d) M2 byte-exact 上界）。
+* 數字同源確認 `paper_assets/q8_formal/table_fidelity.csv`（N=200 formal，image/vs x0/m1_image_inversion）、`tables/table_statistics_formal.csv`（same_storage 配對差）、`table_error_attribution.csv`（transform-only）、`table_aead_reference.csv`（M2）。
+* 前作 cos 發現**不重寫**：已存於 `reports/metric_semantics.md` §1（AF-022/E2.4），結論指向之。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 真正逐位元精確可逆的是 **S0/S1**（密碼層 MaxAbs=0、bit-exact 100%）；代價是留下攻擊線索（RQ1：S0 逐元素幅值、S1 sorted-幅值 gallery linkage Top-1=1.0；KPA 1–2 對還原金鑰；T4 竄改全被接受）。
+* [事實] **S2** 引入 8.3e-7 的 WHT float 殘差（非密碼缺陷），換取安全（RQ2：幅值攻擊壓到隨機 0.010/random 0.005；per-image nonce 跨 nonce 不可轉移；HMAC 竄改 7/7 拒絕）。
+* [事實] 影像端 vs x0（N=200）：S0 legacy 31.15 dB、S1 legacy 31.42 dB、S2 range-reserve 38.82 dB。部署差 S2−S0 +7.67、S2−S1 +7.40 dB。
+* [事實][修正] 使用者原述「同存檔 S2 仍全面獲勝」需修正：same_storage 下 **S2−S0 = +0.30 dB（顯著）**，但 **S2−S1 = +0.03 dB（不顯著，p=0.30，為打平）**。
+* [結論] 密碼可逆性（latent 空間，S2 殘差 8.3e-7）與影像保真（影像空間，由 sampler+存檔協定決定）**脫鉤**；S2「更像原圖」主要來自強制保值域存檔的工程，不是密碼更可逆——(b) 的 +7.7 dB 幾乎全是 legacy 丟值域所致。
+* [事實] 「若照論文定義」真實 latent cos(z, ẑ)：S0/S1 = **0.990（legacy PNG 交接）／0.9999（float 交接）**；純 transform-only（無 pipeline）= **1.0**。即使改算真 latent cos 也 ~0.99，與前作 0.9989 同級，**仍不蘊含影像無損**（legacy 僅 31 dB）——前作的問題在推論「cos≈1 ⇒ 無損」，不在數字本身。
+* [事實] byte 級逐位元還原走 M2 latent-payload+AEAD：`table_aead_reference.csv` 所有 payload `byte_equality_rate=1.0`、竄改全拒。
+
+### 4. 達標判定 (Assessment)
+* [x] results_index.md RQ4 節已擴寫並與凍結表同源；PROGRESS 摘要完成。純 docs，未動凍結數字、未改 `past/SourceCode/` 與 `audit/`、無 GPU、無新計算。
+* [x] `scripts/p11_claim_audit.py` 重掃通過（results_index 未新增未scope 的 over-claim 詞；新節刻意不用 無損/lossless/zero-distortion，改以 MaxAbs/bit-exact/byte-exact 表述）。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+*(達標，略)*
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。
+
+### 7. 下一步
+* 委員簡報用語：建議以「密碼可逆性(latent,精確)與影像保真(pipeline,~38 dB)為兩個脫鉤的量;S2 的 8.3e-7 遠低於 pipeline 誤差故看不見;S2 更像原圖來自保值域存檔工程 + 安全設計」framing，待使用者定稿。使用者手動 push。

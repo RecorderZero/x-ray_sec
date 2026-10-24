@@ -14,6 +14,40 @@
 | **RQ3** norm 旁道 | T1 精確 latent 的 norm 相關=1.0（可 linkage）；AF-025 **fixed-norm** 把 T1 與 T2-WB 的 norm-only Top-1 降到隨機（0.005） | `defense_package`（D7-C3/C4/C9/C10）、`tables/table_{norm_leakage,AF025_fixed_norm_*}` | norm linkage 的顯著性本就依存檔（range_preserving 才顯著）；fixed-norm 為處置 |
 | **RQ4** 保真/可逆 | S2 M1 影像 PSNR **38.82 dB**（SSIM 0.970、LPIPS 0.067；私有保值域部署）；**加密本身成本**（同存檔）S2−S0 中位 **+0.30 dB**；部署對照 +7.68 dB 幾乎全來自 legacy 存檔丟值域。latent round-trip cosine 0.999794，殘差為 sampler+8-bit（非 transform） | `q8_formal/table_fidelity`、`tables/table_statistics_formal`、`table_error_attribution` | M1 非 pixel bit-exact（sampler+PNG）；bit-exact 走 M2 latent-payload+AEAD；N=200 |
 
+### RQ4 端到端可逆性：密碼層與影像層分開，兩種框架對照
+
+> 數字同源 `q8_formal/table_fidelity.csv`（N=200 formal）、`tables/table_statistics_formal.csv`、`table_error_attribution.csv`。可逆性判準一律用**影像端**指標；cos 不作判準（前作把**影像** cos 誤當 latent 一致性，詳 `reports/metric_semantics.md` §1）。
+
+**(a) 密碼層（transform-only：`z → 加密 → 解密 → ẑ`，無生成、無存檔）**
+
+| 方案 | latent cos(z, ẑ) | MaxAbs | float32 bit-exact rate | 性質 |
+|---|---|---|---|---|
+| S0 Rademacher | 1.000000 | **0** | **100 %** | 代數精確逆（sign⊙sign=1） |
+| S1 Signed Perm | 1.000000 | **0** | **100 %** | 代數精確逆（P∘P⁻¹=I） |
+| S2 WHT/range-reserve | ≈1.0 | **8.3e-7** | 15.6 % | WHT float 捨入殘差，非密碼缺陷 |
+
+* [事實] 密碼可逆性以 **MaxAbs／bit-exact** 判定（不是 cos）：S0/S1 逐位元精確逆；S2 殘差 8.3e-7，比 pipeline 本身誤差（~1e-2）低約 10^4–10^5 倍，影像端量不到。
+
+**(b) 影像端 M1 端到端還原 vs x0（N=200，as-shipped 部署框架）**
+
+| 方案 | 存檔 | PSNR | SSIM | L∞ | LPIPS |
+|---|---|---|---|---|---|
+| S0 | legacy PNG | 31.15 dB | 0.918 | 0.493 | 0.134 |
+| S1 | legacy PNG | 31.42 dB | 0.895 | 0.391 | 0.167 |
+| **S2** | **range-reserve** | **38.82 dB** | **0.970** | **0.149** | **0.067** |
+
+* 部署框架下 S2 領先約 **+7.4–7.7 dB**（配對差 S2−S0 +7.67、S2−S1 +7.40，p≪1e-30）。
+
+**(c) 同存檔（encryption-only：拉齊存檔協定後只剩密碼差異）**
+
+* [事實] `table_statistics_formal.csv` same_storage：S2−S0 = **+0.30 dB（顯著）**、S2−S1 = **+0.03 dB（不顯著，p=0.30）**；三者皆 ~38.5–38.8 dB。
+* [結論] (b) 的 +7.7 dB **幾乎全來自存檔協定**（legacy min-max 丟值域），不是密碼。S2 的影像優勢來自「強制保值域 + AEAD 保護 lo/hi」的工程與安全設計，**不是密碼更可逆**——密碼層反而 S0/S1 才是逐位元精確逆、S2 有 8.3e-7 殘差。
+
+**(d) 上界與 byte 級還原路徑**
+
+* M2 exact-latent 天花板（存精確 latent→影像）三方案相同：**41.87 dB**／SSIM 0.984／L∞ 0.096，殘差純屬 sampler+8-bit，與密碼無關。
+* 需要 byte 級逐位元可逆 → 走 M2 latent-payload + AEAD：`tables/table_aead_reference.csv` 所有 payload roundtrip `byte_equality_rate = 1.0`（byte-exact），竄改全部被拒。
+
 ## P2 / 附錄 tracks
 
 | Track | 一句話結論 | 關鍵表 / run | 限制 |
