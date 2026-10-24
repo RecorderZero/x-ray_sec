@@ -1,13 +1,13 @@
 {
   "task_id": "P11.7/Z12.4-freeze",
-  "generated_utc": "2026-10-24T13:38:18Z",
+  "generated_utc": "2026-10-24T16:46:26Z",
   "git": {
-    "head": "1ea0131bc48ca604886aaf6d03807075f1ba2d7f",
+    "head": "d7b7e2fdf11d2c20dd43a4eafe16b690c4f7dfc5",
     "branch": "main",
-    "dirty_files": 36
+    "dirty_files": 33
   },
   "n_files_hashed": 340,
-  "sha256sums_combined": "a1aa9f9ae6d1cdb8027677adf80b60a96daf70ff1a52fbb4cdd4ee5c77e1cb0e",
+  "sha256sums_combined": "2fea598c0de02c8fedfc10e9d8e897eb2c5b16c3c5dceb6577f273355b13d0a4",
   "split_hashes": {
     "security_v1_manifest.json": "5843da54d027cbe5b7d518349a374f859b5d2c0e07b9b66ea5f89c9530a94490",
     "t2bb_inner_v1_manifest.json": "a7765297502925caf076cb0af09bdda46313e31471ec8aa26f8c6f1ae7d735ec",

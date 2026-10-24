@@ -32,7 +32,7 @@ byte-exact original needs M2 AEAD-ref)". `bit-exact` is deliberately **not** ban
 | **README.md:72** | **精確還原 (exact-recovery)** | "一對精確還原**金鑰**" = KPA recovers the cipher **key** from one plaintext pair (A4.3) — not image recovery; supported |
 | **method_comparison.md:27** | **精確還原 (exact-recovery)** | the **external** Secret-key-diffusion paper's own claim (arXiv 2510.01031 row, source cited) — reported, not ours |
 | PROPOSAL.md:252 | perfect secrecy / IND-CPA | under the heading「不正確說法:」— **negative enumeration** of what NOT to claim |
-| results_index.md:31, claim_audit_p11.md:* | IND-CPA / lossless / etc. | this report + the results index **listing the avoided phrases** (meta); not assertions |
+| results_index.md:65, claim_audit_p11.md:* | IND-CPA / lossless / etc. | this report + the results index **listing the avoided phrases** (meta); not assertions |
 
 ## Guarantees explicitly NOT claimed (Section-5, enforced)
 
