@@ -2290,3 +2290,30 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 待稽核複驗 AF-043。caption 文字/P11.5/示意圖仍留 12 月寫作期；使用者手動 push。
+
+## 2026-10-24 · W8 · Track P2 · latent 誤差「方向≠大小」demo（獨立重現 + 影像並排圖）
+
+### 1. 當前目標 (Objective)
+* 使用者要求產生 demo，驗證 `重要.md`「cos 不代表還原程度好壞」：同樣大小的 latent 誤差、方向不同，影像還原差天共地。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/latent_direction_demo.py`（GPU，確定性 seed 1911）：重用 `e2_legacy_wrapper.legacy_invert/legacy_generate`（guidance −1、T=500），對 dev_v1.1 idx {0,1,10,11} 四張，於 z 注入 4 種誤差（白雜訊小/大、S0 實際解密誤差、P 實際 re-inversion 誤差），報 latent cos/rmse 與影像 PSNR vs G(z)；**額外輸出實際生成影像並排圖** `paper_assets/latent_direction_demo/grid.png`（稽核版只有長條圖）。
+* 是稽核診斷 `audit/e2_latent_direction_sensitivity.py` 的實作方獨立重現（未改稽核檔）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 四條件 mean 與 `重要.md`／稽核圖 w01_fig03 **逐一吻合**：white_small cos 0.990/31.3 dB；S0_actual cos 0.991/31.8 dB；white_large cos 0.654/6.4 dB；**P_actual cos 0.275/43.9 dB**。
+* [事實] 更強的個案：P_actual 於 idx 010/011 latent cos **0.04/0.01（近正交）**，影像仍 44.0/43.4 dB → latent 距離與影像品質可完全脫鉤。
+* [事實] 範圍確認 x0 [0,1]、base [−0.006,1]，佐證稽核以 [0,1] 計 PSNR 的慣例正確。
+* [結論] 同樣大小的誤差，隨機/金鑰打散方向（生成器敏感）→ 影像崩；P 的 re-inversion 方向（生成器不敏感）→ 影像近乎無損。可逆性必看影像端指標。
+
+### 4. 達標判定 (Assessment)
+* [x] demo 完成、數字重現稽核診斷、並排圖交付；確定性（seed 固定）。GPU <30 分、使用者指示授權。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 可作論文 fidelity 討論的插圖（latent cos 不可作可逆性指標的視覺證據）；若要寫進正文，另擬一段。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。未改 past/SourceCode/ 與 audit/；GPU <30 分。
+
+### 7. 下一步
+* 視使用者是否要把此圖與論述併入論文 §7 fidelity 討論；使用者手動 push。

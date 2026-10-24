@@ -1,0 +1,5 @@
+condition,latent_cos,latent_rmse,image_psnr_vs_base_dB
+white_small,0.9904,0.1354,31.29
+S0_actual,0.9908,0.132,31.83
+white_large,0.6541,1.1234,6.37
+P_actual,0.2751,1.1338,43.91
