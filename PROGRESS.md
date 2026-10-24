@@ -2262,3 +2262,31 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * caption 文字 / P11.5 notes / 示意圖留 12 月跟正文同步寫；使用者手動 push。
+
+## 2026-10-24 · W8 · Track P11 · 修 AF-043（exact-recovery 詞表缺口 + 一處影像端過度宣稱）
+
+### 1. 當前目標 (Objective)
+* 回應稽核 AUD-20261023-01 開立之 **AF-043**（MINOR, DOC）：P11.6 claim-audit 詞表漏「精確還原/exact-recover」，致 `method_comparison.md:10` 影像端 exact-recovery 過度宣稱漏網。
+
+### 2. 執行動作 (Actions Taken)
+* `scripts/p11_claim_audit.py`：BANNED 加入 `精[確準](還原|恢復)`、`exact(ly)?[- ]recover`；明列**不**納入 `bit-exact`（本專案正確區分詞、非過度宣稱）。
+* `reports/method_comparison.md`：改 3 處影像端 exact-recovery 宣稱——:10（+:20 表格「可逆?」欄）、:35。一律改為「金鑰控制高保真還原（latent/crypto 精確 cos=1、max_abs≈8.3e-7；影像端 ~38–42 dB，非 bit-exact；逐 byte 需 M2 AEAD-ref）」；:35 另把「密文期零洩漏」改為「密文期不可連結（T2-BB ~chance）」。
+* `paper_assets/claim_audit_p11.md`：更新 verdict（50 hits）、記錄 AF-043 修正、改以**逐項人工處置**為準（稽核指出同行否定 heuristic 兩方向皆會誤判，僅作排序）；新增 README:72（還原金鑰≠還原影像）、method_comparison:27（外部論文自述）、PROPOSAL:252（反例列舉）、results_index/本報告（meta）之處置列。
+* 重跑 `scripts/p11_checksums.py` → `SHA256SUMS`（337 檔）+ `freeze_manifest.json`（combined `3f2d6836…`，HEAD=186df46）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 擴充詞表重掃：影像端 exact-recovery 過度宣稱 **0 處**。剩 exact-recovery 命中 = README:72（KPA 還原**金鑰**）、method_comparison:27（外部 arXiv 2510.01031 自述）、claim_audit 報告自身 meta —— 皆合法。
+* [事實] 修正與自身凍結證據一致：M2 exact-latent 天花板 41.87 dB、Q11 recovery ~38 dB，皆非影像 bit-exact；bit-exact 僅成立於 latent/crypto 層或 M2 AEAD-ref。
+* [限制] `method_comparison.md` 在 reports/（草稿、非凍結範圍），不進 checksum；claim_audit_p11.md 在 paper_assets/ 已重算入 fingerprint。
+
+### 4. 達標判定 (Assessment)
+* [x] AF-043 兩項建議（(a) 詞表 (b) :10 改寫）皆完成並擴及 :20/:35 同類句；重掃 0 影像端過度宣稱。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 詞表缺口的教訓：claim-audit 的價值在「區分詞」而非一般褒義詞；已把專案最關鍵的 latent-vs-image 區分詞補上。自動 same-line 否定僅排序、不作判準。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。純 docs/scanner，未動凍結表數字、未改 past/SourceCode/、無 GPU。
+
+### 7. 下一步
+* 待稽核複驗 AF-043。caption 文字/P11.5/示意圖仍留 12 月寫作期；使用者手動 push。

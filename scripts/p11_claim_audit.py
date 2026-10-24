@@ -31,6 +31,12 @@ BANNED = {
     r"完美(安全|保密)": "perfect security(zh)",
     r"100\s*%\s*(secure|安全|恢復|還原|reversib)": "100% claim",
     r"zero[- ]distortion": "zero-distortion",
+    # AF-043: the project's key distinguishing phrase -- image-space "exact recovery"
+    # is only true at the latent/crypto layer or via the M2 AEAD-ref payload, never
+    # for the M1 image hand-off (~38-42 dB). "bit-exact" is deliberately NOT banned:
+    # it is the precise term the project uses correctly, not an over-claim word.
+    r"精[確準](還原|恢復)": "exact-recovery(zh)",
+    r"exact(ly)?[- ]recover": "exact-recovery",
 }
 
 # search these globs; exclude auditor/log/predecessor
