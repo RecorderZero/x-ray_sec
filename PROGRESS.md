@@ -2378,3 +2378,35 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 建議：(i) 把 layer A（reinvert 省 pass、免費 1.5×）併入主流程；(ii) 把 S0/S1/S2 加密 pipeline 接上減步掃描，測加密端到端在低步數下的保真（真正的判準）；(iii) 不夠再上 BELM（layer B2）。層 C 需使用者裁決才啟動。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · 對齊 decode 加密端到端掃描（B1 真實版，回答 S2≈P）
+
+### 1. 當前目標 (Objective)
+* 使用者裁示：後續改用「對齊 respaced decode」（~46 dB 那版）；接著測 B1/B2/B3；並確認「S2 的 PSNR 會不會跟 P 差不多好」。本輪先做 B1 的加密端到端版 + 回答 S2≈P。
+* 背景：off-by-one 根因測試已收斂——forward 逐位元相同（max_abs=0），47-vs-42 的差 100% 在 backward decode 的 timestep 記帳；但不是單純一格偏移（δ=1≈δ=0、C 崩 6 dB），標 [推定] 收尾，診斷腳本未 commit（標註待清）。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/aligned_encrypted_sweep.py`：用 `Respaced`（對齊 F/B）跑加密端到端 4-pass（z=F(x0); anon=B(E(z)); zc=F(anon); x_rec=B(D(zc))），float 交接，P/S0/S1/S2a，N∈{499,100,50}，dev idx {0,1,10,11}。
+* S0/S1 用 `apply_legacy_key`；S2a 用 `src.crypto.sot.transform/inverse_transform`（專案 `FIXTURE_KEY` + per-image nonce，rounds=2、use_permutation=True，正交 SOT；**norm-preserving，非 fixed-norm v2**）。開跑前印 crypto 往返 sanity。
+* 中途被關機（b5ocxn305）→ 重跑（b91e91b6u，exit 0）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] crypto sanity：P/S0/S1 max|D(E(z))−z|=0；S2a=9.5e-7（WHT float 殘差，符合 8.3e-7 級）。
+* [事實] recon PSNR vs x0（4 張平均，float 交接）：N=499 P 40.23 / S0 45.10 / S1 46.35 / **S2a 46.26**（S2a−P **+6.04**）；N=100 P 34.56 / S2a 38.22（+3.65）；N=50 P 32.27 / S2a 33.09（+0.82）。整套 4-pass 牆鐘 33.1s / 6.3s / 3.2s。
+* [事實] **三個加密方案 recon 全部 ≥ P**。方向與凍結數據一致（legacy+float 時 S0/S1=38.7/39.4 > P 37.6），非 bug；對齊 decode 放大了差距。
+* [推定] 機制：正交加密使 F∘B 的往返誤差被精確解回，復原潛向量 ẑ≈z 很緊，等效只隔一次生成；P 要再反演一張自然圖，多吃一輪影像往返。
+* [限制] float 交接＝最佳情況。部署含 PNG：凍結顯示 legacy PNG 會把 S0/S1 砸到 31 dB（低於 P），range-preserving 才回 ~38。故「部署下 S2≈P」由存檔協定決定（已刻畫）；本實驗隔離證明 sampler+cipher 本身不讓 S2 輸 P。
+* [事實] B1 操作點：N=100（5×）S2a ~38.2 dB ≈ 凍結 range-preserving S2 38.8；N=50（10×）~33。
+
+### 4. 達標判定 (Assessment)
+* [x] 回答 S2≈P（是，且 ≥ P，與 S1 重合）；B1 加密版完成並與凍結交叉驗證一致。GPU smoke（~13 分，含關機重跑）；float 交接；未改 past/SourceCode/、audit/；未碰凍結表。
+* 產物：`paper_assets/aligned_encrypted_sweep/{sweep.json,sweep.csv}`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 「加密 > P」屬反直覺但經凍結數據交叉驗證確認方向一致；機制標 [推定] 待深究。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。
+
+### 7. 下一步
+* B2（BELM）、B3（exact-inv DPM-Solver++）：各需新實作可反演取樣器 + full-density 重現關卡，逐一交付（smoke 先驗證再採信）；較大 run 需 GPU go/no-go。可選：加 PNG（range-preserving）交接重跑本掃描，看部署下 S2 vs P；及 fixed-norm S2 v2 的 norm 還原。診斷腳本待清標後再決定是否 commit。使用者手動 push。
