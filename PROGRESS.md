@@ -2438,3 +2438,36 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * B2（BELM）為主線下一步（看能否在 <N=100 仍保 ~38 dB）。可選 grid 視覺化本掃描。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · 部署掃描視覺化 + B2(BELM) smoke（不穩定，暫不採用）
+
+### 1. 當前目標 (Objective)
+* 記錄部署掃描結果表（已寫入 `new_model.md §9`）；產生視覺化 grid；開始 B2（BELM）並先 smoke 驗證。
+* [決定] 使用者 2026-10-27 放寬 GPU 規則：>30 分可直接跑，但**一律先 smoke 確認再放大**（取代 CLAUDE.md §3 的 30 分 go/no-go，不改 CLAUDE.md；見 memory working-rules）。
+
+### 2. 執行動作 (Actions Taken)
+* `scripts/deploy_s2_grid.py` → `paper_assets/deploy_s2_sweep/grid.png`（P vs S2fn × N={499,200,100,50,25} × 2 圖，已 SendUserFile）。
+* `scripts/belm_sampler.py`：實作 O-BELM（arXiv:2410.07273 Eq.18 forward/Eq.19 exact-inverse），沿用同一 model + 對齊 DDIM bootstrap，不改 past/。smoke=key-free 往返對照同步數 DDIM；含 clip 開關與 σ̄-均勻網格 `schedule_sigbar`。
+* new_model.md §9 補上 float + 部署兩張結果表。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] BELM key-free 往返 smoke（2 圖，PSNR vs x0），三配置：
+  - DDIM(t)：499/200/100/50/25 = 47.36/43.79/38.83/33.72/28.43（單調，基準）。
+  - BELM(t,clip)：48.73/29.09/37.31/26.51/21.23 → **非單調、減步遠差於 DDIM**。
+  - BELM(σ̄,no-clip)：44.65/44.14/31.15/37.01/24.54 → **仍非單調**（N=200 勝 DDIM、N=100 又崩）。
+* [事實] 係數與論文 Eq.18/19 逐項相符（非抄錯）。
+* [推定] 不穩定主因：BELM 線性多步對步程表敏感 + 本模型吃**整數 timestep**，σ̄-均勻排程在高噪端需次整數解析度（N=499 σ̄ 網格塌成 379 相異整數 t）。
+* [結論] **BELM 在此 pixel-space/整數-timestep 設定非快贏**；要穩定需規整連續排程 + 次整數內插 + bootstrap 校正，屬多天專門工程。本輪不採用。
+
+### 4. 達標判定 (Assessment)
+* [x] grid 交付；B2 smoke 完成並**正確攔到不穩定**（未放大、未採信）。GPU smoke（含關機後重跑的其他實驗）；未改 past/SourceCode/、audit/；未碰凍結表。
+* 產物：`paper_assets/deploy_s2_sweep/grid.png`、`paper_assets/belm_smoke/smoke.json`、`new_model.md §9`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* smoke-first 原則生效：BELM 第一版就攔到不穩定，避免拿壞 sampler 去跑大實驗。負面結果照記。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* [注意] 使用者口頭放寬 CLAUDE.md §3（GPU >30 分 go/no-go）為「smoke-first、長度不限」；未改 CLAUDE.md，記於 memory 與此。
+
+### 7. 下一步
+* 待使用者裁決：(a) 投入做穩定 BELM（連續 σ̄ 排程 + 次整數內插，多天）/ (b) 鎖定 B1 為輕量化結論、B2/B3 擱置。S2 的 S0/S1 legacy 對照、fixed-norm 容器完整版（AEAD）為可選。使用者手動 push。

@@ -1,0 +1,49 @@
+{
+  "seed": 1911,
+  "indices": [
+    0,
+    1
+  ],
+  "rows": [
+    {
+      "N": 499,
+      "ddim_t": 47.36,
+      "belm_t_clip": 48.73,
+      "belm_sigbar_noclip": 44.65,
+      "sigbar_grid_pts": 379,
+      "finite": true
+    },
+    {
+      "N": 200,
+      "ddim_t": 43.79,
+      "belm_t_clip": 29.09,
+      "belm_sigbar_noclip": 44.14,
+      "sigbar_grid_pts": 200,
+      "finite": true
+    },
+    {
+      "N": 100,
+      "ddim_t": 38.83,
+      "belm_t_clip": 37.31,
+      "belm_sigbar_noclip": 31.15,
+      "sigbar_grid_pts": 101,
+      "finite": true
+    },
+    {
+      "N": 50,
+      "ddim_t": 33.72,
+      "belm_t_clip": 26.51,
+      "belm_sigbar_noclip": 37.01,
+      "sigbar_grid_pts": 51,
+      "finite": true
+    },
+    {
+      "N": 25,
+      "ddim_t": 28.43,
+      "belm_t_clip": 21.23,
+      "belm_sigbar_noclip": 24.54,
+      "sigbar_grid_pts": 26,
+      "finite": true
+    }
+  ]
+}
