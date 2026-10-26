@@ -1,0 +1,246 @@
+{
+  "seed": 1911,
+  "top_timestep": 499,
+  "indices": [
+    0,
+    1,
+    10,
+    11
+  ],
+  "legacy_dense_roundtrip_anchor_psnr": 42.348,
+  "validation_gate_full_density_psnr": 46.61930271559675,
+  "validation_gate_monotonic": true,
+  "validation_gate_pass": true,
+  "summary": {
+    "499": {
+      "evals_per_pass": 499,
+      "mean_roundtrip_psnr_db": 46.61930271559675,
+      "mean_seconds_per_pass": 8.7532,
+      "est_4pass_seconds": 35.01
+    },
+    "200": {
+      "evals_per_pass": 200,
+      "mean_roundtrip_psnr_db": 43.38090480365669,
+      "mean_seconds_per_pass": 3.5075,
+      "est_4pass_seconds": 14.03
+    },
+    "100": {
+      "evals_per_pass": 100,
+      "mean_roundtrip_psnr_db": 38.84909670112608,
+      "mean_seconds_per_pass": 1.7554,
+      "est_4pass_seconds": 7.02
+    },
+    "50": {
+      "evals_per_pass": 50,
+      "mean_roundtrip_psnr_db": 33.889046832209516,
+      "mean_seconds_per_pass": 0.8806,
+      "est_4pass_seconds": 3.52
+    },
+    "25": {
+      "evals_per_pass": 25,
+      "mean_roundtrip_psnr_db": 28.65226228771715,
+      "mean_seconds_per_pass": 0.4405,
+      "est_4pass_seconds": 1.76
+    },
+    "10": {
+      "evals_per_pass": 10,
+      "mean_roundtrip_psnr_db": 21.445932342907,
+      "mean_seconds_per_pass": 0.1762,
+      "est_4pass_seconds": 0.7
+    }
+  },
+  "per_sample": [
+    {
+      "N": 499,
+      "evals_per_pass": 499,
+      "sample_id": "dev_v1.1_000",
+      "roundtrip_psnr_vs_x0_db": 45.963492819996645,
+      "fwd_seconds": 8.7369,
+      "bwd_seconds": 8.7662
+    },
+    {
+      "N": 499,
+      "evals_per_pass": 499,
+      "sample_id": "dev_v1.1_001",
+      "roundtrip_psnr_vs_x0_db": 48.747987103146606,
+      "fwd_seconds": 8.7598,
+      "bwd_seconds": 8.7829
+    },
+    {
+      "N": 499,
+      "evals_per_pass": 499,
+      "sample_id": "dev_v1.1_010",
+      "roundtrip_psnr_vs_x0_db": 45.84566382905137,
+      "fwd_seconds": 8.7431,
+      "bwd_seconds": 8.7566
+    },
+    {
+      "N": 499,
+      "evals_per_pass": 499,
+      "sample_id": "dev_v1.1_011",
+      "roundtrip_psnr_vs_x0_db": 45.92006711019237,
+      "fwd_seconds": 8.7244,
+      "bwd_seconds": 8.7559
+    },
+    {
+      "N": 200,
+      "evals_per_pass": 200,
+      "sample_id": "dev_v1.1_000",
+      "roundtrip_psnr_vs_x0_db": 42.837476671117614,
+      "fwd_seconds": 3.4973,
+      "bwd_seconds": 3.5155
+    },
+    {
+      "N": 200,
+      "evals_per_pass": 200,
+      "sample_id": "dev_v1.1_001",
+      "roundtrip_psnr_vs_x0_db": 44.75099497116409,
+      "fwd_seconds": 3.5028,
+      "bwd_seconds": 3.516
+    },
+    {
+      "N": 200,
+      "evals_per_pass": 200,
+      "sample_id": "dev_v1.1_010",
+      "roundtrip_psnr_vs_x0_db": 42.944683414902435,
+      "fwd_seconds": 3.4999,
+      "bwd_seconds": 3.5161
+    },
+    {
+      "N": 200,
+      "evals_per_pass": 200,
+      "sample_id": "dev_v1.1_011",
+      "roundtrip_psnr_vs_x0_db": 42.99046415744262,
+      "fwd_seconds": 3.504,
+      "bwd_seconds": 3.5084
+    },
+    {
+      "N": 100,
+      "evals_per_pass": 100,
+      "sample_id": "dev_v1.1_000",
+      "roundtrip_psnr_vs_x0_db": 37.75224053196772,
+      "fwd_seconds": 1.7489,
+      "bwd_seconds": 1.7491
+    },
+    {
+      "N": 100,
+      "evals_per_pass": 100,
+      "sample_id": "dev_v1.1_001",
+      "roundtrip_psnr_vs_x0_db": 39.91613449776338,
+      "fwd_seconds": 1.7502,
+      "bwd_seconds": 1.7552
+    },
+    {
+      "N": 100,
+      "evals_per_pass": 100,
+      "sample_id": "dev_v1.1_010",
+      "roundtrip_psnr_vs_x0_db": 38.80045992884441,
+      "fwd_seconds": 1.7556,
+      "bwd_seconds": 1.7612
+    },
+    {
+      "N": 100,
+      "evals_per_pass": 100,
+      "sample_id": "dev_v1.1_011",
+      "roundtrip_psnr_vs_x0_db": 38.9275518459288,
+      "fwd_seconds": 1.7639,
+      "bwd_seconds": 1.7595
+    },
+    {
+      "N": 50,
+      "evals_per_pass": 50,
+      "sample_id": "dev_v1.1_000",
+      "roundtrip_psnr_vs_x0_db": 32.926844576354625,
+      "fwd_seconds": 0.879,
+      "bwd_seconds": 0.8789
+    },
+    {
+      "N": 50,
+      "evals_per_pass": 50,
+      "sample_id": "dev_v1.1_001",
+      "roundtrip_psnr_vs_x0_db": 34.52310917383293,
+      "fwd_seconds": 0.879,
+      "bwd_seconds": 0.8824
+    },
+    {
+      "N": 50,
+      "evals_per_pass": 50,
+      "sample_id": "dev_v1.1_010",
+      "roundtrip_psnr_vs_x0_db": 33.86397064874665,
+      "fwd_seconds": 0.8816,
+      "bwd_seconds": 0.8836
+    },
+    {
+      "N": 50,
+      "evals_per_pass": 50,
+      "sample_id": "dev_v1.1_011",
+      "roundtrip_psnr_vs_x0_db": 34.242262929903845,
+      "fwd_seconds": 0.8802,
+      "bwd_seconds": 0.8802
+    },
+    {
+      "N": 25,
+      "evals_per_pass": 25,
+      "sample_id": "dev_v1.1_000",
+      "roundtrip_psnr_vs_x0_db": 27.9622664570182,
+      "fwd_seconds": 0.4402,
+      "bwd_seconds": 0.4405
+    },
+    {
+      "N": 25,
+      "evals_per_pass": 25,
+      "sample_id": "dev_v1.1_001",
+      "roundtrip_psnr_vs_x0_db": 28.89794909180246,
+      "fwd_seconds": 0.4398,
+      "bwd_seconds": 0.4407
+    },
+    {
+      "N": 25,
+      "evals_per_pass": 25,
+      "sample_id": "dev_v1.1_010",
+      "roundtrip_psnr_vs_x0_db": 28.62646102890286,
+      "fwd_seconds": 0.4396,
+      "bwd_seconds": 0.4414
+    },
+    {
+      "N": 25,
+      "evals_per_pass": 25,
+      "sample_id": "dev_v1.1_011",
+      "roundtrip_psnr_vs_x0_db": 29.12237257314508,
+      "fwd_seconds": 0.44,
+      "bwd_seconds": 0.4416
+    },
+    {
+      "N": 10,
+      "evals_per_pass": 10,
+      "sample_id": "dev_v1.1_000",
+      "roundtrip_psnr_vs_x0_db": 20.789417146746256,
+      "fwd_seconds": 0.1761,
+      "bwd_seconds": 0.1763
+    },
+    {
+      "N": 10,
+      "evals_per_pass": 10,
+      "sample_id": "dev_v1.1_001",
+      "roundtrip_psnr_vs_x0_db": 21.380185280781188,
+      "fwd_seconds": 0.1754,
+      "bwd_seconds": 0.1764
+    },
+    {
+      "N": 10,
+      "evals_per_pass": 10,
+      "sample_id": "dev_v1.1_010",
+      "roundtrip_psnr_vs_x0_db": 21.495214104183148,
+      "fwd_seconds": 0.1762,
+      "bwd_seconds": 0.1765
+    },
+    {
+      "N": 10,
+      "evals_per_pass": 10,
+      "sample_id": "dev_v1.1_011",
+      "roundtrip_psnr_vs_x0_db": 22.1189128399174,
+      "fwd_seconds": 0.1759,
+      "bwd_seconds": 0.1765
+    }
+  ]
+}

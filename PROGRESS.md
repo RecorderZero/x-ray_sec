@@ -2349,3 +2349,32 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 委員簡報用語：建議以「密碼可逆性(latent,精確)與影像保真(pipeline,~38 dB)為兩個脫鉤的量;S2 的 8.3e-7 遠低於 pipeline 誤差故看不見;S2 更像原圖來自保值域存檔工程 + 安全設計」framing，待使用者定稿。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · 加速路線規劃(new_model.md)+ respaced DDIM 減步掃描(layer B1)
+
+### 1. 當前目標 (Objective)
+* 使用者問：有無更快/更少步數的取樣法、模型輕量化是否必重訓、重訓會連帶重做哪些實驗、時間多久 → 規劃成 `new_model.md`；並先做 layer B1（DDIM 減步）看效果。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `new_model.md`：三層加速路線（A 省冗餘 pass 免費 1.5× / B 換可反演快取樣器不重訓：respaced DDIM、BELM、exact-inv DPM-Solver++ / C 模型輕量化必重訓）＋重訓連鎖成本（§4：純密碼不變量可留，凡經 generator 或其 latent 分布的 RQ1–4/T2-BB/re-id 全重做）＋時間估計（C 約 3–5 週起）。
+* [事實] 查證現有 loop 不支援 respacing：`gaussian_diffusion.py:1462,1525` 逐 timestep Δt=1、`:796/:845` 綁 `alphas_cumprod_prev/next`。
+* 新增 `scripts/respaced_ddim_sweep.py`：自寫 respaced forward/backward（沿用同一 model 的 `p_mean_variance`+`_predict_eps_from_xstart`+`alphas_cumprod`，eta=0、guidance −1，不改 `past/`），掃 N∈{499,200,100,50,25,10}，量無加密往返 PSNR(x_rec,x0)+牆鐘；內建 legacy 密集往返錨點與驗證關卡。
+
+### 3. 執行結果 (Results & Observations)
+* [事實]（4 張 dev 平均）往返 PSNR / 秒per-pass / 加速：499→46.62 dB/8.75s/1.0×；200→43.38/3.51/2.5×；100→38.85/1.76/5.0×；50→33.89/0.88/9.9×；25→28.65/0.44/19.9×；10→21.45/0.18/49.7×。
+* [事實] legacy 密集往返錨點 = **42.35 dB**（對齊已知 P anon_vs_x0 42.23），respaced full-density 46.62 dB ≥ legacy−1 且單調 → **驗證關卡 PASS**。
+* [推定] respaced 比 legacy 高 4.3 dB，因 respaced backward 的 eval timestep 與 x 雜訊階對齊，修掉 legacy backward 的端點 off-by-one。
+* [限制] 此為**無加密**往返（最佳情況）。加密會把誤差打散到生成器敏感方向（見 `metric_semantics.md` §3.5 latent-direction），故減步對 S0/S1/S2 加密端到端的傷害可能更大，須另測加密 pipeline 低步數端到端保真。
+
+### 4. 達標判定 (Assessment)
+* [x] new_model.md 交付；B1 掃描完成且自我驗證（PASS）。GPU smoke（含 legacy 錨點數趟密集往返，數分鐘）、未改 `past/SourceCode/`、不動 `audit/`、未碰凍結表。
+* 產物：`paper_assets/respaced_ddim_sweep/{sweep.json,sweep.csv,grid.png}`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 第一次 smoke 以 exit 137 被殺（session 中斷，非程式 OOM）；第二次誤包 nohup 脫離背景追蹤；第三次直接追蹤式背景執行成功。教訓：GPU smoke 用追蹤式背景執行、勿再包 nohup。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。GPU smoke <30 分、不需 go/no-go。
+
+### 7. 下一步
+* 建議：(i) 把 layer A（reinvert 省 pass、免費 1.5×）併入主流程；(ii) 把 S0/S1/S2 加密 pipeline 接上減步掃描，測加密端到端在低步數下的保真（真正的判準）；(iii) 不夠再上 BELM（layer B2）。層 C 需使用者裁決才啟動。使用者手動 push。
