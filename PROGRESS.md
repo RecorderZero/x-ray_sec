@@ -2410,3 +2410,31 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * B2（BELM）、B3（exact-inv DPM-Solver++）：各需新實作可反演取樣器 + full-density 重現關卡，逐一交付（smoke 先驗證再採信）；較大 run 需 GPU go/no-go。可選：加 PNG（range-preserving）交接重跑本掃描，看部署下 S2 vs P；及 fixed-norm S2 v2 的 norm 還原。診斷腳本待清標後再決定是否 commit。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · 部署真實版 S2 減步掃描（range-preserving PNG + 對齊 decode + fixed-norm）
+
+### 1. 當前目標 (Objective)
+* 使用者要求：完整 4-pass（inversion→加密→生成匿名圖→**range-preserving PNG 存讀**→inversion→解密→生成還原圖），對齊 decode，步數 499/400/200/100/50/25，看部署下 S2（含 **fixed-norm v2**）vs P；並解釋「P 46→40」。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/deploy_s2_sweep.py`：沿用 `Respaced`；匿名圖經 `scripts.m1_storage.range_preserving_png_handoff` 真實存讀；P / S2a（SOT 正交）/ S2fn（`src.crypto.s2_fixed_norm.normalize_to_fixed_norm`→`sot.transform`…`inverse_transform`→`restore_original_norm`，C=248.261；AEAD 容器只管防竄改、不影響保真，故在 latent 層直接帶 exact orig norm）。dev idx {0,1,10,11}。
+* 記錄 recon（雙輪）與 single_roundtrip（單輪=匿名圖對 x0，P 時即「46」）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] crypto sanity：P=0、S2a/S2fn max|D(E(z))−z|≈8.9e-7。
+* [事實] recon PSNR vs x0（range-preserving，4 張平均）N=499/400/200/100/50/25：P 40.21/39.54/37.41/34.62/32.27/28.88；S2a 45.26/43.60/42.09/37.79/32.92/27.52；**S2fn 45.63/45.27/41.77/37.67/33.01/27.83**。整套 4-pass 牆鐘 33.8/27.0/13.5/6.8/3.4/1.7s。
+* [事實] **range-preserving 幾乎不傷 S2**：N=499 S2a float 46.26→PNG 45.26（−1 dB），不像 legacy PNG 把 S0/S1 砸到 31。
+* [事實] **S2fn ≈ S2a 全 N 重合**（差 <1.7 dB，常略高）→ fixed-norm 的保真代價 ≈ 0；藏 norm 的安全幾乎免費。
+* [事實] **S2 ≥ P 一路到 N=50**；N=25 才跌破 P（−1 dB、~28 dB，不可用）。
+* [事實] 「P 46→40」=單輪 vs 雙輪往返：single_roundtrip 欄 P N=499=46.62（=key-free sweep 的 46），雙輪 recon=40.21，一致。
+* [推定] 操作點：N=200（~13.5s）S2fn 41.8>凍結 38.8；N=100（~6.8s,~5×）S2fn 37.7≈凍結 38.8；N=50（~3.4s,~10×）仍 ≥ P。
+
+### 4. 達標判定 (Assessment)
+* [x] 部署版完成；回答 S2（含 fix-norm）vs P 與 P 46→40。GPU smoke（~18 分）；未改 past/SourceCode/、audit/；未碰凍結表。
+* 產物：`paper_assets/deploy_s2_sweep/{sweep.json,sweep.csv}`。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* 無。
+
+### 7. 下一步
+* B2（BELM）為主線下一步（看能否在 <N=100 仍保 ~38 dB）。可選 grid 視覺化本掃描。使用者手動 push。
