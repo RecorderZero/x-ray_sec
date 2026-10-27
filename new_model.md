@@ -235,3 +235,16 @@
 * [事實] cosine 全 ~1.0、SSIM 0.96–0.999；aligned 全程優於 legacy 慣例。decode 慣例增益在 S2fn（+6.5）遠大於 P（+2.0）—— S2fn 的保值域+fixed-norm 讓 aligned decode 的改善更能留存。
 * [決定/AF-044] **aligned-DDIM 為正確的 re-baseline**；報 DPM++ 的 sampler 增益一律對 aligned-DDIM（同慣例同 N），不對 legacy-decode 凍結數字；與凍結數字相比時明列 decode 慣例分量。
 * [限制] 此為 dev n=4 單次；formal N=200（security_v1，patient-cluster CI、LPIPS）為 item 1 的正式交付，待後續。
+
+### 11.5 Item 2：層 A 等價 ablation @ DPM++ N=100（`scripts/layerA_dpm_ablation.py`）
+
+> 4-pass 把最後一趟分岔：從解出的 x_rec_T 同生還原圖（無條件）與偽健康圖（CFG），省掉「把還原圖 re-invert」那趟。驗證 A（re-invert 後生成）≈ B（直接從 x_rec_T 生成）。CFG eps=(1+gs)eps_cond−gs·eps_uncond（cond=y0、uncond=null）。dev idx {0,1,10,11}、N=100、gs∈{0,2}。
+
+| sampler | recovery cos (A,B) | recovery psnr | healthy gs2 cos (A,B) | healthy gs2 psnr |
+|---|---|---|---|---|
+| aligned-DDIM | 0.99987 | 40.7 | 0.99987 | 40.8 |
+| **DPM++** | **0.99997** | **46.7** | **0.99997** | **47.1** |
+
+* [事實] DPM++ 下 re-inversion 完全冗餘：A≈B 的 cos **0.99997**（還原與偽健康皆是），追平並超過前作 legacy DDIM 的 0.9999（ABL-2）。→ **4-pass 層 A 對新 sampler 成立**，可安全省掉一趟 inversion。
+* [事實] DPM++ 的 A-vs-B 一致度（cos/psnr）高於 aligned-DDIM，與其較緊的 latent 往返一致。
+* [決定] 新標準 pipeline 的 4-pass 分岔（item 2）**已實證**；偽健康圖品質（A vs B）在 gs=0/2 均不受省趟影響。

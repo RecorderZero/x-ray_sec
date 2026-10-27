@@ -2594,3 +2594,29 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * §11.2 item 2（層 A ablation @ DPM++）、item 3（安全平價）。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · §11.2 item 2：層 A 等價 ablation @ DPM++ N=100
+
+### 1. 當前目標 (Objective)
+* 執行 §11.2 item 2：在 DPM++ N=100 下重證「4-pass 分岔（從 x_rec_T 同生還原圖+偽健康圖）≈ 不分岔（re-invert 還原圖再生成）」，即 re-inversion 那趟冗餘。
+
+### 2. 執行動作 (Actions Taken)
+* `scripts/layerA_dpm_ablation.py`（新）：為 aligned-DDIM 與 DPM++ 加 CFG backward（eps=(1+gs)eps_cond−gs·eps_uncond，cond=y0/uncond=null），自含不改既有 sampler。每圖量 recovery_A=backward(forward(recovery_B)) vs recovery_B=backward(x_rec_T)，及 healthy_A/B（CFG）於 gs∈{0,2}，報 psnr/ssim/cos(A,B)。--smoke 2 圖、full 4 圖。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 4 圖平均 A-vs-B：DPM++ recovery cos **0.99997**（psnr 46.7）、healthy gs2 cos **0.99997**（psnr 47.1）；aligned-DDIM cos 0.99987（psnr 40.7）。
+* [事實] gs=0 CFG 與無條件 recovery 一致（gs=0 → eps_cond，與部署 backward 同路徑），自洽。
+* [結論] re-inversion 在 DPM++ 下冗餘（cos 0.9999+，追平/超過前作 legacy 0.9999）→ 4-pass 層 A 對新 sampler 成立；偽健康圖品質不受省趟影響。
+
+### 4. 達標判定 (Assessment)
+* [x] smoke→4 圖兩階段；自含 CFG 未改既有 sampler/past/、未碰 audit/、凍結表。
+* 產物：`paper_assets/layerA_dpm/{ablation.json,smoke.json}`、`new_model.md §11.5`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 接 item 3（AF-045）：影像空間安全平價——T2BB-3/4 + MC-2，攻防皆 DPM++ N=100，證換 sampler 後連結/再識別攻擊不變強。此為較大工程（需讓匿名圖生成端改用 DPM++ 並重算攻擊指標），啟動前先 smoke。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* [注意] 沿用 2026-10-27 口頭放寬 CLAUDE.md §3，未改 CLAUDE.md。
+
+### 7. 下一步
+* §11.2 item 3（影像空間安全平價，DPM++）。使用者手動 push。

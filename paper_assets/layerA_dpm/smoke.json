@@ -1,0 +1,125 @@
+{
+  "seed": 1911,
+  "smoke": true,
+  "N": 100,
+  "guidance": [
+    0.0,
+    2.0
+  ],
+  "indices": [
+    0,
+    1
+  ],
+  "variants": {
+    "A": "re-invert recovery then (CFG) generate",
+    "B": "generate directly from recovered latent"
+  },
+  "aggregate": {
+    "aligned-DDIM": {
+      "recovery_mean_cos": 0.999872,
+      "recovery_mean_psnr": 40.739,
+      "healthy_gs0_mean_cos": 0.999872,
+      "healthy_gs0_mean_psnr": 40.742,
+      "healthy_gs2_mean_cos": 0.999882,
+      "healthy_gs2_mean_psnr": 41.064
+    },
+    "DPM++": {
+      "recovery_mean_cos": 0.999974,
+      "recovery_mean_psnr": 47.752,
+      "healthy_gs0_mean_cos": 0.999974,
+      "healthy_gs0_mean_psnr": 47.749,
+      "healthy_gs2_mean_cos": 0.999977,
+      "healthy_gs2_mean_psnr": 48.341
+    }
+  },
+  "per_sample": [
+    {
+      "sampler": "aligned-DDIM",
+      "N": 100,
+      "sample_id": "dev_v1.1_000",
+      "recovery_AB": {
+        "psnr_db": 40.099,
+        "ssim": 0.9848,
+        "cosine": 0.999852
+      },
+      "healthy_gs0_AB": {
+        "psnr_db": 40.104,
+        "ssim": 0.9848,
+        "cosine": 0.999853
+      },
+      "healthy_gs0_finite": true,
+      "healthy_gs2_AB": {
+        "psnr_db": 40.741,
+        "ssim": 0.9857,
+        "cosine": 0.999873
+      },
+      "healthy_gs2_finite": true
+    },
+    {
+      "sampler": "aligned-DDIM",
+      "N": 100,
+      "sample_id": "dev_v1.1_001",
+      "recovery_AB": {
+        "psnr_db": 41.379,
+        "ssim": 0.9854,
+        "cosine": 0.999891
+      },
+      "healthy_gs0_AB": {
+        "psnr_db": 41.379,
+        "ssim": 0.9854,
+        "cosine": 0.999891
+      },
+      "healthy_gs0_finite": true,
+      "healthy_gs2_AB": {
+        "psnr_db": 41.386,
+        "ssim": 0.9859,
+        "cosine": 0.999891
+      },
+      "healthy_gs2_finite": true
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "sample_id": "dev_v1.1_000",
+      "recovery_AB": {
+        "psnr_db": 46.339,
+        "ssim": 0.9985,
+        "cosine": 0.999965
+      },
+      "healthy_gs0_AB": {
+        "psnr_db": 46.335,
+        "ssim": 0.9985,
+        "cosine": 0.999965
+      },
+      "healthy_gs0_finite": true,
+      "healthy_gs2_AB": {
+        "psnr_db": 47.278,
+        "ssim": 0.9988,
+        "cosine": 0.999972
+      },
+      "healthy_gs2_finite": true
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "sample_id": "dev_v1.1_001",
+      "recovery_AB": {
+        "psnr_db": 49.164,
+        "ssim": 0.9989,
+        "cosine": 0.999982
+      },
+      "healthy_gs0_AB": {
+        "psnr_db": 49.164,
+        "ssim": 0.9989,
+        "cosine": 0.999982
+      },
+      "healthy_gs0_finite": true,
+      "healthy_gs2_AB": {
+        "psnr_db": 49.405,
+        "ssim": 0.999,
+        "cosine": 0.999983
+      },
+      "healthy_gs2_finite": true
+    }
+  ]
+}
