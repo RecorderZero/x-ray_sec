@@ -117,8 +117,16 @@
 * [事實] range-preserving 幾乎不傷 S2（N=499 float 46.26→PNG 45.26），不像 legacy PNG 砸 S0/S1 到 31。
 * [事實] **S2fn ≈ S2a 全 N**（差 <1.7 dB）→ fixed-norm 藏 norm 的保真代價 ≈ 0。
 * [事實] S2 ≥ P 一路到 N=50；N=25 才跌破 P（~28 dB，不可用）。
-* [推定] 操作點：N=200（~13.5s）S2fn 41.8>凍結 38.8；**N=100（~6.8s,~5×）37.7≈凍結**；N=50（~10×）33 仍 ≥ P。
+* [推定] 操作點：N=200（~13.5s）、N=100（~6.8s,~5×）、N=50（~10×,仍 ≥ P）。**注意**：本表為 **aligned decode**，凍結 Q8_FORMAL（S2 38.8）為 **legacy decode**，兩者相差約 +4.3 dB 的 decode 慣例（見 §9.3），故**不可**把 aligned-N=100 的 37.7「≈ 凍結 38.8」讀成「N=100 重現凍結操作點」——那是跨慣例巧合。要證操作點須在 **同一 decode 慣例**下比（RQ4 重報，§11.2）。
 * 「P 46→40」=單輪往返（匿名圖=P 輸出，N=499 單輪 46.62）vs 雙輪 recon（40.21）；非異常。
+
+### 9.3 Decode 慣例警告（aligned respaced vs legacy；AF-044）
+
+> [事實] respaced **forward** 與 legacy forward **逐位元相同**（`backward_offbyone_check.json`：`forward_z_max_abs_mine_vs_legacy=0.0`）→ 本研究線與凍結基準的差異**全在 backward/decode**。
+> [事實] 固定同一 z、full-density：aligned decode 47.4 dB vs legacy decode 42.8 dB（+4.6 dB）；dose-response `backward_offset_sweep.json` delta0/1/2/3 = 47.4/47.0/44.7/42.2 → **legacy ≈ delta2–3**（decode eval 比標準對齊慣例偏移 2–3 格）。
+> [推定] 「aligned 較正確、legacy decode 有偏移」可信（respaced 用標準 DDIM 生成慣例、forward 又與 legacy bit-identical）；但 **legacy 的確切機制未定位、非單純一格**（C「持續下移一格」反而崩到 6.4 dB）→ 根因維持 [推定]。
+> [限制/決定] 凍結基準（Q8_FORMAL／RQ4：P/S0/S2/M2）**全用 legacy decode**。因此本檔所有 §9–§10 的 aligned 數字與凍結數字相比均為**跨慣例**：(i) sampler 之間在**同一 grid 內**的對比 self-consistent、成立；(ii) 與凍結數字比較時，**decode 慣例增益（+4.3 dB）必須與 sampler 增益分列**。RQ4 以新 sampler 重報前（§11.2 item 1），**先在 aligned decode 上重算凍結 DDIM 基準**，否則 +4~7 dB 會把 decode-fix 與 sampler 增益混在一起。
+> 診斷腳本：`scripts/backward_offbyone_check.py`、`scripts/backward_offset_sweep.py`（本回合補 commit，Refs AF-044）。
 
 ## 10. 層 B 取樣器對比：BDIA（對齊重做）與 DPM-Solver++（本回合）
 
@@ -176,6 +184,7 @@
 * [事實] N=50（10×、~3.9s）DPM++/S2fn 38.62 dB 仍勝過 DDIM/S2fn 的 N=100（37.67）。端到端 recon 幾乎不隨步數退化。
 * [事實] S2 ≥ P 的既有現象在 DPM++ 下維持（DPM++/S2fn > DPM++/P 全 N）。range-preserving PNG 對 DPM++ 幾乎無損。
 * [決定] **部署採 DPM-Solver++(2M)、操作點 N=100（5×，~7.5s/4pass，端到端 ~44 dB）**；對速度更硬可到 N=50（10×，~3.9s，~38.6 dB，仍 ≥ 原凍結 DDIM baseline）。
+* [限制/AF-045] 此決定**僅就保真/速度**成立；本節全為 key-free 往返/recon，**無任一安全指標在 DPM++ 下重測**。「安全平價」為 [推定]，須待 §11.2 item 3（T2BB-3/4＋MC-2，攻防皆 DPM++ N=100）實測。在該實測前，**不得**於論文宣稱「DPM++ 部署安全不劣於 DDIM」。另：§10.x 與凍結數字的比較受 §9.3 decode 慣例警告約束。
 
 ## 11. Pipeline 切換重做計畫（DPM++ N=100 + 4-pass 定案後）
 

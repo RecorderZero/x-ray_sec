@@ -2537,3 +2537,32 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * [待辦] 可選：(a) 疊加層 A（省 reinvert pass，再 1.5×）；(b) 視覺化 grid（DPM++ × N）；(c) 把 DPM++ 納入正式 formal/attack 重跑前的加速取樣器。待使用者裁決。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · 回應 AUD-20261027-01：AF-044 修正、AF-045 回應
+
+### 1. 當前目標 (Objective)
+* 回應稽核：AUD-20261027-01 的 AF-044（MINOR, METHOD/DOC）、AF-045（QUESTION, SECURITY）。
+
+### 2. 執行動作 (Actions Taken)
+* [AF-044] 已修正｜Refs AF-044：
+  - **措辭**：`new_model.md §9.2` 刪去「aligned-N=100 37.7 ≈ 凍結 38.8」的跨慣例巧合讀法；新增 **§9.3 Decode 慣例警告**，明載 respaced forward 與 legacy **逐位元相同（max_abs=0）**、差異全在 backward，aligned vs legacy decode ≈ +4.3~4.6 dB，dose-response delta0/1/2/3=47.4/47.0/44.7/42.2 → **legacy ≈ delta2–3（非單純一格）**，根因維持 [推定]；並載「與凍結（legacy decode）比較須把 decode 慣例增益與 sampler 增益分列，RQ4 重報前先在 aligned decode 重算凍結 DDIM 基準」。
+  - **診斷腳本補 commit**：`scripts/backward_offbyone_check.py`、`scripts/backward_offset_sweep.py` 及其 JSON（先前「待清」未入庫）；docstring/print 由原「一格假設」改為**實際結果**（C「持續下移一格」崩到 6.4 dB、legacy≈delta2–3，均證非單步偏移）。兩支重跑 **bit-identical 重現**已入庫 JSON（forward=0.0、A=47.36、B=42.79、C=6.40；delta0–3=47.36/47.01/44.69/42.24）。
+  - 驗證指令：`scripts/run_cfg_ddim.sh python -m scripts.backward_offbyone_check`、`... scripts.backward_offset_sweep`。
+* [AF-045] 回應（QUESTION，無異議）｜Refs AF-045：finding 自述「實作方 §11.0 措辭已正確」，本回應將其**形式化為關卡**：`new_model.md §10.4` 新增 [限制/AF-045]——部署決定**僅就保真/速度**成立，「安全平價」為 [推定]，在 §11.2 item 3（T2BB-3/4＋MC-2，攻防皆 DPM++ N=100）**實測前不得於論文宣稱 DPM++ 部署安全不劣於 DDIM**。實測即本輪後續要做的 §11.2。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 診斷腳本重跑與已入庫 JSON 逐值一致（<1e-6）：`reproduces=True`（兩支）。
+* [事實] 無任何凍結表、CSV 主數字變動；AF-044 為措辭/provenance 修正，AF-045 為 scope 收斂＋待實測，均不改既有量化結論。
+
+### 4. 達標判定 (Assessment)
+* [x] AF-044 兩項（措辭去跨慣例巧合 + 補 commit 診斷腳本並誠實化 docstring）完成；AF-045 以 scope 註形式化、實測排入 §11.2。待稽核複驗。
+* 未改 `past/SourceCode/`、`audit/`、凍結表。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 繼續 §11.2：先做 item 1（RQ4 重報，含「先在 aligned decode 重算凍結 DDIM 基準」以同時回應 AF-044 的慣例分列）、item 2（層 A 等價 ablation @ DPM++ N=100）、item 3（影像空間安全平價，回應 AF-045）。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* [注意] 沿用 2026-10-27 口頭放寬 CLAUDE.md §3（GPU smoke-first、長度不限），未改 CLAUDE.md。
+
+### 7. 下一步
+* 執行 §11.2 三項（見 §5）。使用者手動 push。

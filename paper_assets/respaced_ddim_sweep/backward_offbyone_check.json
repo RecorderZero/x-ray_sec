@@ -1,0 +1,29 @@
+{
+  "seed": 1911,
+  "indices": [
+    0,
+    1
+  ],
+  "mean": {
+    "forward_z_max_abs_mine_vs_legacy": 0.0,
+    "A_aligned_psnr": 47.35573996157163,
+    "B_legacy_psnr": 42.78762994059085,
+    "C_shifted_psnr": 6.397591578137196
+  },
+  "per_sample": [
+    {
+      "sample_id": "dev_v1.1_000",
+      "forward_z_max_abs_mine_vs_legacy": 0.0,
+      "A_aligned_psnr": 45.963492819996645,
+      "B_legacy_psnr": 42.50704089804049,
+      "C_shifted_psnr": 6.400285541930565
+    },
+    {
+      "sample_id": "dev_v1.1_001",
+      "forward_z_max_abs_mine_vs_legacy": 0.0,
+      "A_aligned_psnr": 48.747987103146606,
+      "B_legacy_psnr": 43.06821898314119,
+      "C_shifted_psnr": 6.394897614343828
+    }
+  ]
+}
