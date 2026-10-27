@@ -1,0 +1,24 @@
+T2-BB actual-M1 frozen-encoder pilot environment (2026-10-20)
+
+python=3.10.19
+torch=2.14.0+cu130
+torchvision=0.29.0+cu130
+transformers=4.46.3
+Pillow=8.4.0
+scikit-learn=1.2.0
+
+RAD-DINO
+model_id=microsoft/rad-dino
+resolved_revision=110cbc18d5133582e320b43d53bf5c44e410c936
+model.safetensors.sha256=dbfb9f54459c38773505de64a6ab7807bdcb392610fe1e697166342e43fb91ae
+config.json.sha256=89daf9751d9576d586dedf9543c1083211611fa3a36908db7a799b3ce7c68ede
+preprocessor_config.json.sha256=c537fc995c30e2353f07253899618d60e9eae3d5f82473778602c007c6523b56
+
+DenseNet121
+weight_enum=DenseNet121_Weights.IMAGENET1K_V1
+weight.sha256=a639ec97d7c33b07ae66f0b5fb7d0192f95a3b11b7576c66c0126c2a727c4395
+
+Notes:
+- transformers==4.46.3 was added to the existing CFG_DDIM environment for this pilot.
+- Both frozen encoders run with local cached weights; no network access is used during scoring.
+- Exact encoder provenance is also embedded in every result row.
