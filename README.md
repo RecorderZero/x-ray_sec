@@ -2,6 +2,20 @@
 
 本檔是專案的「檔案地圖」。未來新增、重新命名或淘汰腳本、CSV/JSON、報告、圖片時，必須在同一個 commit 更新這裡；大型逐樣本輸出、dataset、checkpoint、cache 與 secret 不列入 Git，只記錄其用途與預期位置。
 
+## 最新平行分支定位實驗（2026-10-27）
+
+| 檔案／位置 | 目的 |
+|---|---|
+| `reports/localization_evaluation_protocol.md` | CheXlocalize 分割／缺標註政策、最新分岔流程、CFG 與 CFG++ 語意、指標與外部比較順序。 |
+| `scripts/chexlocalize_manifest.py` | CPU 檢查原圖／RLE 遮罩／標籤、排除未標註影像、產生不可覆寫的資料 manifest。 |
+| `scripts/localization_metrics.py` | IoU、Dice、pixel AP、pointing、陰性預測面積；明確處理空 GT、平圖與 tied scores。 |
+| `scripts/localization_sampler_smoke.py` | 無 GT 的 DDIM／DPM++ 平行 latent 分支 smoke；直接 x0 CFG 修復與舊 helper 數值診斷。 |
+| `scripts/localization_cfgpp.py` | CFG++ paper v2 Eq26 的 DDIM／DPM++2M 偽健康實驗分支，非官方 code variant 的逐字重現。 |
+| `scripts/chexlocalize_pilot.py` | 僅 validation 的標註定位 pilot；輸出逐條件分數、原圖／還原／偽健康／差分／GT 比較圖。 |
+| `tests/test_chexlocalize_manifest.py`, `tests/test_chexlocalize_pilot.py`, `tests/test_localization_metrics.py`, `tests/test_localization_sampler_smoke.py`, `tests/test_localization_cfgpp.py` | 對應資料、幾何、空遮罩、分支、guidance 公式與 run 前置檢查的 CPU 測試。 |
+| `.cache/localization/`, `.cache/localization_deps/` | 本地完整資料 manifest 與隔離的 pycocotools 依賴，不提交 Git。 |
+| `artifacts/runs/LOC-VAL/<run_id>/` | `per_sample.csv` 為每影像×sampler×scheme×guidance 分數；`localization_summary.json` 分組摘要；PNG 為定位比較圖；NPZ 保留原始浮點分支輸出。全部 run 素材留本機。 |
+
 ## 目前狀態
 
 - E0.1、E1.1–E1.5 已由 AUD-20261008-02 複驗通過；E2.2 已完成 S0/S1 legacy regression，並補上恆等金鑰 P（AF-017）。

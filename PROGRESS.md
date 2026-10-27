@@ -2647,3 +2647,60 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 待使用者裁示：RQ4 formal N=200 重報（item 1 正式交付）＋ MC-2 re-id @ DPM++（item 3 收尾）。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · LOC-VAL 啟動：最新平行分支與公開病灶標註
+
+### 1. 當前目標 (Objective)
+* 使用者新增授權：CheXlocalize 積液定位 → 新部署比較 → BioViL-T/AFLoc → 外部資料，並研究 CFG++。維持 DPM++2M N_steps=100、解密 latent 分岔，非學長舊 reinvert 流程。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 localization 數值 smoke、CFG++ paper variant、CheXlocalize manifest／metrics／pilot 與 CPU tests；協定見 `reports/localization_evaluation_protocol.md`，README 增檔案索引。
+* 使用者下載 `dataset/chexlocalize` 後驗證 val/test 原始幾何、完整 RLE 解碼與 patient disjoint。僅在 `.cache/localization_deps` 安裝 pycocotools2.0.11/no-deps，不改 CFG_DDIM 全域套件。
+
+### 3. 執行結果 (Results & Observations)
+* CPU 63 tests passed；val171張(64陽性107陰性)、test413張(105陽性308陰性)具標註正面影像。未標註正面31/105張明確排除，非陰性；完整 val200/test500 病患互斥。
+* 初次 `LOC-SMOKE_20261027T061435155266Z_2084a51b` **failed**：gs0 vs recovery Linf0.0024699867。已查明為舊 helper 不同係數捨入造成 float32 x0→eps→x0 迭代誤差，非資安阻擋。
+* 新 module 直接混合 clipped x0（不改 legacy/frozen）後，診斷 `LOC-SMOKE_20261027T065416809243Z_1ac6beb8` 42秒成功，實際 DDIM/DPM gs0 Linf均0；gs2新舊熱圖Pearson0.99999876/0.99999731。診斷PID575408已結束。
+* 標註 smoke **執行中**：`LOC-VAL_20261027T065700039777Z_791d3192`，PID579850，陽性／陰性各1張；DDIM/DPM、original/S2 numerical fixture、CFGgs0/2與CFG++lambda0/0.5/1。status/log 在 `artifacts/runs/LOC-VAL/LOC-VAL_20261027T065700039777Z_791d3192/`，需監控至 terminal；預估全程3–8分鐘。
+
+### 4. 達標判定 (Assessment)
+* [x] 資料與數值工程閘門；[ ] 標註 smoke terminal／artifact validation；[ ] 正式定位與外部模型比較。不能以小樣本分數宣稱優於文獻。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* recovery 實際為健康y0 conditional，文件部分「無條件」用語不準。CFGgs0應為零差分；CFG++lambda0是unconditional，差分不必零。
+* DPM++ 提高重構PSNR不代表提高定位；S2本輪無AEAD，僅數值／存檔 fixture，完整 authenticated 部署另做。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 舊計畫不含病灶定位；使用者本輪明確新增授權，本回合以獨立 LOC-VAL pilot 擴充，不覆寫舊結果。遵循最新 AGENTS 的 GPU>30分鐘另行裁決；formal N_images=200 不變。
+
+### 7. 下一步
+* 等標註 smoke 完成並核對結果；validation 校準後再凍結test設定。預估後續 GPU 長任務時間，>30分鐘須請使用者裁決。
+
+## 2026-10-27 · W9 · Track P2 · LOC-VAL 首輪標註 smoke 完成、等待長任務裁決
+
+### 1. 當前目標 (Objective)
+* 完成最新平行latent分支的公開GT評估；確認DPM++與CFG++可執行，不以科學分數作工程成功門檻。
+
+### 2. 執行動作 (Actions Taken)
+* `PYTHONPATH=/data2/paper/.cache/localization_deps scripts/run_cfg_ddim.sh python -m scripts.managed_run --task-id LOC-VAL --gpu-id 0 --validate-artifacts -- python -m scripts.chexlocalize_pilot --include-s2`。
+* 全部5組新增CPU測試檔合計63 passed。檢視GT原始幾何與輸出比較圖；保留40條件的逐樣本分數、NPZ與PNG於ignored run目錄。
+
+### 3. 執行結果 (Results & Observations)
+* `LOC-VAL_20261027T065700039777Z_791d3192` **succeeded**，exit0、artifact validation valid=true/40rows；07:00:44UTC完成、wall224秒，PID579850已退出。此terminal紀錄取代上一條「執行中」狀態；本輪沒有其他程序仍在跑。
+* 陽性/陰性各1張（patient64545/64541）；DPM++/S2數值fixture：CFGgs2陽性Dice0.0934、IoU0.0490、AP0.1277；CFG++lambda0.5 Dice0.0198、lambda1 Dice0。單張結果不能排名或宣稱優越。
+* 陰性DPM++/S2 normalized預測面積CFGgs2=0.160%、CFG++lambda0.5=0.405%、lambda1=1.747%；raw>0.01面積14.60%/78.23%/88.10%，須關注廣泛改變與正規化掩蓋效應。
+* 完整協定／可讀摘要：`reports/localization_evaluation_protocol.md`。原始程式/frozen結果/AUDIT未改。
+
+### 4. 達標判定 (Assessment)
+* [x] CPU、數值、公開GT串接與兩張smoke完成；[ ] 20張pilot／validation校準／N_images200 formal／P-S0-S1-S2完整認證比較／外部模型／外部資料集仍待做。
+* CFG++採論文Eq26 variant，不混稱官方程式另一版本；目前沒有證據顯示比CFG好。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 固定threshold0.5尚未校準、僅1陽性，因此低Dice不是整個架構失敗結論。下一輪先擴validation樣本，檢查guidance與熱圖背景變化，再在val選參，test保留未使用。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 同上，病灶定位為使用者新增範圍；N_images200 formal維持，smoke不是formal。GPU>30分鐘採最新AGENTS顯式裁決，不以過往口頭放寬取代。
+
+### 7. 下一步
+* 已詢問是否同意20張validation pilot（10陽性10陰性），依smoke外推GPU佔用約35–45分鐘；**未啟動**。替代4張約7–10分鐘，CPU僅能做工程／指標驗證。
+* 得到裁決後新建managed run；不得覆寫本次資料、以兩張分數挑最優或將S2 fixture說成完整authenticated部署。
