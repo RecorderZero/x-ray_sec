@@ -895,6 +895,33 @@ WEEKS: dict[int, list[Item]] = {
              "train loss→0.0048 但 shadow-val AUC 0.48、victim AUC 0.468 < 固定 0.657，efficacy=false（過擬合，非 trainer bug）→ 學習式無法改善前作 inner-risk 上界",
              ["paper_assets/tables/table_t2bb_learned_attack.csv"]),
     ],
+    8: [
+        # --- P11 reproducibility / freeze deliverables ---
+        Item("W8-T1", "table", "W8-T1_final_experiment_matrix.csv", "正文", "Discussion／實驗凍結矩陣",
+             "P11.1 最終實驗矩陣：RQ1–4 凍結主結果 + P2/appendix tracks，每 cell 附 run id/provenance，n 由實表讀取。",
+             "全實驗可追溯至凍結 claim 包與 run id；無 cell 因壞結果缺席，負結果明標 done_negative",
+             ["paper_assets/final_experiment_matrix.csv"]),
+        Item("W8-T2", "table", "W8-T2_bdia_2x2.csv", "附錄", "Results／sampler ablation",
+             "BDIA/DDIM × asymmetric/symmetric-null 2×2 保真消融（N=200）：sampler 軸與 conditioning 軸 m1 PSNR Δ，NFE parity 1996。",
+             "BDIA 精確反演在 T=500 single-shot 對 m1 PSNR 無實質增益（<0.4 dB）；robustness／negative。註：此為 legacy backward 下的結論，W9 §10 的對齊 respaced 版已改寫（N=200 +2.4 dB）",
+             ["paper_assets/tables/table_bdia_2x2.csv"],
+             ["BDIA2X2_20261020T182731Z_efbf6f85"]),
+        # --- P11.4 lossless vector exports + P2 figure ---
+        Item("W8-F1", "figure", "W8-F1_P8_visual_grid.pdf", "正文", "Results／visual grid（向量）",
+             "P11.4 P8 視覺 grid 的機械性無損向量匯出（PDF，2560×1178 RGB，8.53×3.93 in）。",
+             "論文正文用向量圖，無點陣重壓縮",
+             ["paper_assets/q8_formal/fig_P8_visual_grid.pdf"]),
+        Item("W8-F2", "figure", "W8-F2_reinvert_ablation_grid.pdf", "附錄", "Results／層 A reinvert ablation（向量）",
+             "P11.4 reinvert ablation grid 的向量匯出（PDF，1300×2600 L，4.33×8.67 in）。",
+             "層 A（省 reinvert pass）定性 grid 向量版；A≈B（psnr 47.5 dB、cos 0.9999，B 1.50×）",
+             ["paper_assets/reinvert_ablation/grid_gs2.pdf"],
+             ["reinvert-ablation (seed 1911)"]),
+        Item("W8-F3", "figure", "W8-F3_latent_direction_demo.png", "附錄", "Results／latent 方向≠大小",
+             "latent 誤差「方向≠大小」demo：dev idx {0,1,10,11} 於 z 注入 4 種誤差（白雜訊小/大、S0 實際解密誤差、P 實際 re-inversion 誤差）的實際生成影像並排（seed 1911、guidance −1、T=500）。",
+             "影像保真由誤差「方向」而非 latent cos/rmse「大小」決定；S0 解密誤差雖大但落在生成器不敏感方向",
+             ["paper_assets/latent_direction_demo/grid.png"],
+             ["latent_direction_demo (seed 1911)"]),
+    ],
 }
 
 MANIFEST_FIELDS = ("id", "kind", "file", "paper_use", "section", "caption_zh", "supports_claim",

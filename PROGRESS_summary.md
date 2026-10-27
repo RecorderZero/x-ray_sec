@@ -841,3 +841,79 @@
 * 待稽核複驗 AF-039／AF-040 後關閉。
 * BDIA 2×2 安全＋品質附錄 GPU run 待使用者 go（指令模板見 PROGRESS 2026-10-16 條目）；完成後回填誤差階梯 stage5 與附錄。
 * 其餘依 WORKFLOW 後續子任務推進。
+
+---
+
+## Week 8（2026-10-19～10-24）｜重現凍結與稽核回應、P2 附錄（匿名圖 linkage、方向≠大小、實驗矩陣）
+
+> 本週以「收尾」為主：P11 重現/表圖/claim audit/freeze、回應三個 MINOR finding（AF-040/041/042/043），並補齊 P2 附錄素材（T2-BB 匿名圖 linkage、latent 方向≠大小 demo、RQ4 端到端彙整）。無模型/密碼變更，無量化主結論改動。
+
+### 8.1 範圍與狀態
+
+| 子任務 | 內容 | 稽核判定 | 主要 commit |
+|---|---|---|---|
+| AF-040 | Q10.2 精度註記與資料漂移修正（float32 1.55e-6／float64 3.05e-15）＋ stage-1 bit-exact 精確化 | 待複驗（提交修正） | `fix: AF-040` |
+| T2-BB inner | 匿名圖 anon↔anon linkage pilot 定稿（image control／latent linkage／學習式） | Achieved（AUD-20261022-01 相關） | 見 W7-T13/14/15 |
+| T2-BB-M1-frozen | 實際公開 PNG 的黑箱 linkage pilot（N=20）＋單元測試 | PASS（AUD-20261022-01） | **未入庫（見 8.7）** |
+| P11.1 | 最終實驗矩陣（34 cells，run id/provenance；W8-T1） | Achieved | `d41e2b0` |
+| P11.4 | 機械性向量匯出（PDF，無損；W8-F1/F2） | Achieved | 見 P11 收尾 |
+| AF-043 | exact-recovery 詞表缺口＋一處影像端過度宣稱修正 | 待複驗 | `fix: AF-043` |
+| P2 direction | latent 誤差「方向≠大小」demo（並排生成圖；W8-F3） | done | — |
+| P2 RQ4 | 端到端可逆性彙整（密碼層 vs 影像層、雙框架）寫入 `results_index.md` | done | d7b7e2f |
+
+### 8.2 本週重點
+
+* [事實] **P11 最終實驗矩陣凍結**：34 cells（RQ1–4 主結果 + P2/appendix），每 cell 附 run id/provenance，`n` 由實表讀取不手抄（W8-T1）。
+* [事實] **AF-040 修正**：`table_numeric_precision.json` 的 note 改由計算欄位格式化，float32 worst **1.55e-6**、float64 **3.05e-15**，與 CSV 一致；稽核獨立重算 1.45e-6／2.90e-15（浮點容差內）。無 CSV 數字或下游結論改變。
+* [事實] **層 A（省 reinvert pass）定量定案**：reinvert ablation A≈B，PSNR **47.5 dB**、cos **0.9999**，B（分岔）**1.50×** 更快（W8-F2）。→ 成為 W9 4-pass pipeline 的依據。
+* [事實] **latent 方向≠大小**：S0 實際解密誤差雖大，落在生成器不敏感方向，影像保真不由 latent cos/rmse「大小」決定（W8-F3）。
+* [事實] **稽核措辭收斂（AF-041/042/043）**：把介面-/表徵-特定的 null 與影像端 exact-recovery 宣稱限縮到有證據範圍；底層數字全部未變。
+
+### 8.3 實驗結果與分析
+
+**P11 重現與凍結（W8-T1）**
+* 34 cells 矩陣由已凍結、已稽核來源組裝（攻防 claim 包的 run_id、F9.5 claim matrix、Q8_FORMAL、P2/appendix）；負結果明標 `done_negative`（如 T2BB 學習式 efficacy=false），無 cell 因壞結果缺席。
+
+**層 A reinvert ablation（W8-F2）**
+* 解密得 `x_rec_T` 後直接分岔（無條件→還原圖、CFG→偽健康圖），省掉「把 x_rec 重新 inversion」那趟：A（不分岔）vs B（分岔）psnr 47.5 dB、cos 0.9999、heatmap 位置一致，B 1.50× 更快。→ 6-pass→4-pass 無實質保真代價。
+
+**sampler ablation（W8-T2）**
+* BDIA/DDIM 2×2（N=200，legacy backward）：sampler 軸 m1 PSNR Δ<0.4 dB，NFE parity 1996 → 當時結論「精確反演在 single-shot 無實質增益」。**更正見下**。
+
+**P2 RQ4 端到端彙整**
+* `results_index.md` 新增節，將可逆性拆成 (a) 密碼層 transform-only（S0/S1 bit-exact、S2 max_abs 8.3e-7）、(b) as-shipped 部署、(c) 同存檔 encryption-only、(d) M2 byte-exact 上界，避免把存檔協定效應誤歸因為加密。
+
+### 8.4 論文可用素材（`appendix/week8/`）
+
+| 編號 | 內容 | 建議用途 | 建議章節 |
+|---|---|---|---|
+| W8-T1 | 最終實驗矩陣（34 cells，run id/provenance） | 正文 | Discussion／實驗凍結 |
+| W8-T2 | BDIA/DDIM 2×2 保真消融（N=200） | 附錄 | Results／sampler ablation |
+| W8-F1 | P8 視覺 grid 向量匯出（PDF，無損） | 正文 | Results／visual grid |
+| W8-F2 | reinvert ablation grid 向量匯出（PDF） | 附錄 | Results／層 A |
+| W8-F3 | latent 方向≠大小 demo（並排生成圖） | 附錄 | Results／metric semantics |
+
+### 8.5 決策紀錄
+
+* [決定]（使用者 2026-10-22）修 AF-041/042：null 結果措辭綁定前提、補 identity-cipher latent-view 控制。
+* [決定]（使用者 2026-10-24）修 AF-043：claim-audit 詞表補 exact-recovery，改以逐項人工處置為準。
+* [決定]（實作方 2026-10-24）RQ4 端到端用「密碼層 vs 影像層、雙框架」呈現，用語避開無損/lossless 等無證據字樣。
+
+### 8.6 稽核狀態
+
+* AF-040（MINOR/REPRO/Q10.2）：修正提交，待複驗（note 數量級與 CSV 一致）。
+* AF-041（MINOR/DOC）、AF-042（MINOR/METHOD）：措辭/控制修正入庫，待複驗。
+* AF-043（MINOR/DOC）：詞表 + 影像端過度宣稱修正，重掃 0 影像端過度宣稱，待複驗。
+* AUD-20261022-01：T2-BB-M1-frozen public/private truth isolation、checkpoint binding PASS。
+
+### 8.7 限制與未解問題
+
+* **[待處理] T2-BB-M1-frozen 頭牌成果未入庫**：`paper_assets/tables/table_t2bb_m1_frozen.{csv,json}`、`scripts/t2bb_m1_*.py`、`tests/unit/test_t2bb_m1_frozen_linkage.py` 目前為 untracked。因未入庫，本週附錄未將其列為凍結素材（`final_experiment_matrix` T2BB-3 列的 provenance 仍指向它）；須先 commit 才能納入 appendix 並在摘要引用其 Top-1/AUC。
+* 樣本數：T2-BB inner/M1-frozen 為 pilot（victim 20×2），非 formal N=200。
+* BDIA 2×2 的「<0.4 dB」結論為 legacy backward 下所得；W9 已以對齊 respaced 版改寫（見 8.8／W9）。
+
+### 8.8 下週計畫（Week 9）
+
+* [事實] W9 已完成加速取樣器線：對齊 respaced DDIM 基準、BDIA 對齊重做、**DPM-Solver++(2M) 定為部署取樣器**（N=100，5×，端到端 ~44 dB；見 `new_model.md §10`）。
+* [決定] 新標準 pipeline：**DPM++ N=100 + 4-pass（層 A）**；切換後重做清單見 `new_model.md §11`（RQ4 重報、層 A 等價 ablation、影像空間安全平價檢查 T2BB-3/4+MC-2）。
+* [待辦] 先 commit T2-BB-M1-frozen（8.7）再補入 appendix；依 §11 推進三項必做重做。
