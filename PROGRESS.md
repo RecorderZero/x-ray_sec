@@ -2566,3 +2566,31 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 執行 §11.2 三項（見 §5）。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · §11.2 item 1 起手：decode 慣例 × sampler 分解（AF-044 re-baseline）
+
+### 1. 當前目標 (Objective)
+* 執行 new_model.md §11.2 item 1 的前置：在 RQ4 以 DPM++ 重報前，先把「換 decode 慣例」與「換 sampler」增益分離（回應 AF-044「先在 aligned decode 重算凍結 DDIM 基準」）。
+
+### 2. 執行動作 (Actions Taken)
+* `scripts/rq4_redo_decode_sampler.py`（新）：固定 storage=range-preserving、scheme∈{P,S2fn}，跑完整 4-pass 部署管線，三 backend——legacy-DDIM（legacy_invert/generate，T=500 凍結慣例，僅 N=499）、aligned-DDIM（Respaced）、aligned-DPM++——量全指標（psnr/ssim/cosine/linf/rmse/mae + single-roundtrip），重用 `e2_anonymization_runner.image_pair_metrics`。--smoke 2 圖、full 4 圖。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 分解（4 圖平均 PSNR dB，recon vs x0）：
+  - P：legacy-DDIM(499)=38.18 → aligned-DDIM(499)=40.21（decode 慣例 **+2.03**）；aligned-DDIM(100)=34.62 → DPM++(100)=40.39（sampler **+5.78**）。
+  - S2fn：legacy-DDIM(499)=39.13 → aligned-DDIM(499)=45.63（decode 慣例 **+6.50**）；aligned-DDIM(100)=37.67 → DPM++(100)=44.26（sampler **+6.59**）。
+* [事實] 兩增益為各自單變數受控對比、**非相加**。aligned-DDIM 各 N 的 P/S2fn 與 `deploy_dpm_sweep` 逐格一致 → 決定性交叉驗證。
+* [決定] aligned-DDIM 為正確 re-baseline；DPM++ sampler 增益一律對 aligned-DDIM（同慣例同 N）報。
+
+### 4. 達標判定 (Assessment)
+* [x] AF-044 要求的「aligned decode re-baseline + 慣例/ sampler 分列」已量化落檔；smoke→4 圖兩階段。未改 past/、audit/、凍結表。
+* 產物：`paper_assets/rq4_redo/{decompose.json,smoke.json}`、`new_model.md §11.4`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 接 item 2：層 A 等價 ablation @ DPM++ N=100（重用 `scripts/reinvert_ablation.py` 的框架）；再 item 3：影像空間安全平價（AF-045）。formal N=200 RQ4 為 item 1 正式交付，GPU 較大，啟動前先 smoke。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* [注意] 沿用 2026-10-27 口頭放寬 CLAUDE.md §3（GPU smoke-first、長度不限），未改 CLAUDE.md。
+
+### 7. 下一步
+* §11.2 item 2（層 A ablation @ DPM++）、item 3（安全平價）。使用者手動 push。

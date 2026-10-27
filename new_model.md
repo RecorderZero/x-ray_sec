@@ -221,3 +221,17 @@
 ### 11.3 策略與工時
 * [決定] **不整套重凍**。保留凍結 DDIM baseline 當參考，DPM++ N=100 以「部署組態」並列，附新 fidelity + 安全平價證據。
 * [推定] 工時：RQ4 重報 + 層 A ablation ~0.5–1 天；影像空間安全 3 cell ~1–2 天；latent/分布重確認 ~0.5 天；**合計 ~2–3.5 天**，GPU 需求小（N=100 快），不涉重訓。
+
+### 11.4 Item 1 基礎：decode 慣例 × sampler 分解（回應 AF-044；`scripts/rq4_redo_decode_sampler.py`）
+
+> 在 RQ4 以新 sampler 重報前，先把「換 decode 慣例」與「換 sampler」兩種增益分離。固定 storage=range-preserving PNG 與 scheme，跑完整 4-pass 部署管線，各 backward 慣例量全指標。dev idx {0,1,10,11}。aligned-DDIM 各 N 的 P/S2fn 與 `deploy_dpm_sweep` 逐格一致（決定性交叉驗證）。
+
+| scheme | legacy-DDIM(499)〔凍結慣例〕 | aligned-DDIM(499) | decode 慣例增益 | aligned-DDIM(100) | aligned-DPM++(100) | sampler 增益@100 |
+|---|---|---|---|---|---|---|
+| P | 38.18 | 40.21 | **+2.03** | 34.62 | 40.39 | **+5.78** |
+| S2fn | 39.13 | 45.63 | **+6.50** | 37.67 | 44.26 | **+6.59** |
+
+* [事實] 兩個增益由**各自單變數受控對比**量得（(a) 同 sampler 同 N、只換 backward 慣例；(b) 同慣例同 N、只換 sampler），**非相加**（兩對比在不同操作點）。
+* [事實] cosine 全 ~1.0、SSIM 0.96–0.999；aligned 全程優於 legacy 慣例。decode 慣例增益在 S2fn（+6.5）遠大於 P（+2.0）—— S2fn 的保值域+fixed-norm 讓 aligned decode 的改善更能留存。
+* [決定/AF-044] **aligned-DDIM 為正確的 re-baseline**；報 DPM++ 的 sampler 增益一律對 aligned-DDIM（同慣例同 N），不對 legacy-decode 凍結數字；與凍結數字相比時明列 decode 慣例分量。
+* [限制] 此為 dev n=4 單次；formal N=200（security_v1，patient-cluster CI、LPIPS）為 item 1 的正式交付，待後續。
