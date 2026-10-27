@@ -2763,3 +2763,20 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 5. 下一步
 * [待辦] 可選在 N=200(~45 分)或 N=400(~90 分)重跑 utility 矩陣,報「設計操作點(42–46 dB)」確認列;預期 recovered utility 只會更貼齊或超越 real。
 * [待辦] 若要跟 GMIA 數字直接比,需評估生成器對其他病理的保留力(超出現 checkpoint 設計)。
+
+## 2026-10-28 · W8 · Track P2 · 更正:utility pipeline sampler 改回 DPM++(對齊現行設定)
+
+### 1. 當前目標 (Objective)
+* 使用者指正:現行 pipeline 已是**對齊 backward + DPM-Solver++ (2M)**,前一條 utility 實驗誤用 aligned-DDIM(plain `Respaced`),recon 只有 37.7 dB。改用 DPM++ 重跑,確認 recon ~44 dB 並重報分類矩陣。
+
+### 2. 執行動作 (Actions Taken)
+* 改 `scripts/classification_utility_anon.py`:sampler 換成 `DPMSolverpp(rs)`(新增 `--sampler {dpm++,ddim}`,預設 `dpm++`;`.forward/.backward` 同介面,encrypt/decrypt 不變);輸出檔名、payload 加 sampler 欄。
+* 指令:`classification_utility_anon --per-class 100 --steps 100 --sampler dpm++`(smoke 3 張先確認 recon 43.5 dB)。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] recon **43.7 dB**、anon ~5.9 dB(per-class 100,N=100,DPM++,S2fn)。與 `deploy_dpm_sweep` 的 DPM++ N=100 S2fn(**44.26 dB**)一致;DDIM N=100 僅 37.67 dB → 前一條的 37.7 是誤用 sampler,非 bug 亦非退步。
+* [事實] utility 矩陣 AUROC(densenet / rad-dino):real→real 0.831/0.824;**real→recovered 0.829/0.819**(≈ real);real→anon 0.608/0.544;anon→anon 0.529/0.416。與 DDIM 版幾乎相同(分類訊號取決於還原保真,兩 sampler 的 recovered 皆 ≈ real)。
+
+### 4. 達標判定 (Assessment)
+* [結論] 結論不變但現落在**正確 DPM++ 操作點(43.7 dB)**:授權還原保全分類 utility(AUROC ≈ real),密文近 chance(隱私)。前一條 DDIM 數據保留不改(只增不改),此條為 sampler 更正。
+* 已達標:將 sampler 修正併入分類 utility feature commit;json/對照圖於 `paper_assets/classification_utility/`(可重現,不入庫)。

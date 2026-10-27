@@ -49,6 +49,7 @@ from sklearn.preprocessing import StandardScaler
 from scripts.classification_utility_pilot import select_balanced, split_by_patient
 from scripts.deploy_s2_sweep import CKPT, decrypt, encrypt
 from scripts.e1_ddim_runner import create_runtime, preprocess
+from scripts.exact_inv_sweep import DPMSolverpp
 from scripts.m1_storage import range_preserving_png_handoff
 from scripts.respaced_ddim_sweep import Respaced, psnr, schedule, SEED
 from scripts.t2bb_m1_frozen_linkage import RAD_DINO_ID, densenet_embeddings, rad_dino_embeddings
@@ -61,14 +62,18 @@ def to_pil(arr01: np.ndarray) -> Image.Image:
 
 
 @torch.inference_mode()
-def anonymize_and_recover(rs, x0: torch.Tensor, boundaries, sid: str):
-    """S2fn deployment pipeline: returns (anon_tensor, recovered_tensor)."""
-    z = rs.forward(x0, boundaries)
+def anonymize_and_recover(sampler, x0: torch.Tensor, boundaries, sid: str):
+    """S2fn deployment pipeline: returns (anon_tensor, recovered_tensor).
+
+    `sampler` exposes the aligned .forward/.backward interface shared by the
+    respaced DDIM (`Respaced`) and DPM-Solver++ 2M (`DPMSolverpp`) samplers.
+    """
+    z = sampler.forward(x0, boundaries)
     zc, orig = encrypt(z, "S2fn", sid)
-    anon = rs.backward(zc, boundaries)
+    anon = sampler.backward(zc, boundaries)
     anon_png, _ = range_preserving_png_handoff(anon)
-    zc2 = rs.forward(anon_png, boundaries)
-    recovered = rs.backward(decrypt(zc2, "S2fn", sid, orig), boundaries)
+    zc2 = sampler.forward(anon_png, boundaries)
+    recovered = sampler.backward(decrypt(zc2, "S2fn", sid, orig), boundaries)
     for name, t in (("anon", anon), ("recovered", recovered)):
         if not bool(torch.isfinite(t).all()):
             raise ValueError(f"non-finite {name} for {sid}")
@@ -90,7 +95,9 @@ def probe(feat_train, y_train, feat_test, y_test) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--per-class", type=int, default=100)
-    ap.add_argument("--steps", type=int, default=200, help="aligned DDIM boundaries (model evals = steps)")
+    ap.add_argument("--steps", type=int, default=100, help="boundaries (model evals = steps)")
+    ap.add_argument("--sampler", choices=["dpm++", "ddim"], default="dpm++",
+                    help="deployment sampler; dpm++ (DPM-Solver++ 2M) matches the current pipeline")
     ap.add_argument("--test-frac", type=float, default=0.3)
     ap.add_argument("--encoders", nargs="+", default=["densenet121_imagenet", "rad_dino"])
     ap.add_argument("--checkpoint", type=Path, default=CKPT)
@@ -124,14 +131,16 @@ def main() -> None:
 
     _, diffusion, model_fn = create_runtime(args.source_root, args.checkpoint, device)
     rs = Respaced(diffusion, model_fn, device)
+    sampler = DPMSolverpp(rs) if args.sampler == "dpm++" else rs
     b = schedule(args.steps)
+    print(f"sampler={args.sampler} steps={args.steps}", flush=True)
 
     real_imgs, anon_imgs, rec_imgs = [], [], []
     recon_psnr, anon_psnr, examples = [], [], []
     t0 = time.perf_counter()
     for i, (pid, path, _lab) in enumerate(entries):
         x0 = preprocess(Path(path))[0].unsqueeze(0).to(device)       # [1,1,256,256] in [0,1]
-        anon, recovered = anonymize_and_recover(rs, x0, b, pid)
+        anon, recovered = anonymize_and_recover(sampler, x0, b, pid)
         real_a = x0[0, 0].detach().float().cpu().numpy()
         anon_a = anon[0, 0].detach().float().cpu().numpy()
         rec_a = recovered[0, 0].detach().float().cpu().numpy()
@@ -170,14 +179,15 @@ def main() -> None:
         "seed": SEED, "design": "A: No Finding (y0) vs Pleural Effusion (y1), binary",
         "split": "patient-disjoint; one image per patient", "per_class": args.per_class,
         "train_n": train_n, "test_n": len(test), "steps": args.steps, "scheme": "S2fn",
+        "sampler": args.sampler,
         "render": "shared [0,1] 256x256 -> grayscale RGB for real/anon/recovered",
-        "pipeline": "aligned respaced DDIM; B(E(F(x0))) anon; B(D(F(PNG(anon)))) recovered",
+        "pipeline": f"aligned {args.sampler}; B(E(F(x0))) anon; B(D(F(PNG(anon)))) recovered",
         "probe": "StandardScaler + LogisticRegression, frozen features",
         "recon_psnr_vs_x0_db": {"mean": round(float(np.mean(recon_psnr)), 3), "min": round(float(np.min(recon_psnr)), 3)},
         "anon_psnr_vs_x0_db": {"mean": round(float(np.mean(anon_psnr)), 3)},
         "generation_seconds": round(gen_seconds, 1), "results": results,
     }
-    out = args.out_dir / f"anon_utility_n{args.per_class}_s{args.steps}.json"
+    out = args.out_dir / f"anon_utility_{args.sampler}_n{args.per_class}_s{args.steps}.json"
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
     print(f"\nwrote {out}")
 
@@ -188,7 +198,7 @@ def main() -> None:
         for r, triple in enumerate(examples):
             for c, arr in enumerate(triple):
                 canvas.paste(to_pil(arr), (c * 256, r * (256 + pad) + pad))
-        sheet = args.out_dir / f"anon_utility_examples_n{args.per_class}_s{args.steps}.png"
+        sheet = args.out_dir / f"anon_utility_examples_{args.sampler}_n{args.per_class}_s{args.steps}.png"
         canvas.save(sheet)
         print(f"wrote {sheet}  (columns: {', '.join(cols)})")
 
