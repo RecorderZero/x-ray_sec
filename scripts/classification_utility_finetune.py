@@ -79,6 +79,8 @@ def evaluate(model, imgs, labels, device, bs=32):
             x = torch.stack([EVAL_TF(im) for im in imgs[i:i + bs]]).to(device)
             probs.append(torch.sigmoid(model(x).squeeze(1)).float().cpu().numpy())
     prob = np.concatenate(probs)
+    if len(set(np.asarray(labels).tolist())) < 2:   # guard tiny one-class val sets
+        return float("nan")
     return float(roc_auc_score(labels, prob))
 
 
@@ -125,17 +127,18 @@ def generate(entries, sampler, b, device):
     return real, anon, rec, float(np.mean(rpsnr)), float(np.mean(apsnr))
 
 
-def make_split(idx_by_class, n, seed, test_frac, val_frac=0.15):
+def make_split(idx_by_class, seed, test_frac, val_frac=0.15):
+    """Stratified per-class split so train/val/test each hold both classes."""
     g = np.random.default_rng(seed)
-    test, trainval = [], []
+    train, val, test = [], [], []
     for c in (0, 1):
-        perm = g.permutation(idx_by_class[c])
+        perm = [int(i) for i in g.permutation(idx_by_class[c])]
         n_test = max(1, int(round(len(perm) * test_frac)))
-        test += [int(i) for i in perm[:n_test]]
-        trainval += [int(i) for i in perm[n_test:]]
-    g.shuffle(trainval)
-    n_val = max(2, int(round(len(trainval) * val_frac)))
-    return np.array(trainval[n_val:]), np.array(trainval[:n_val]), np.array(sorted(test))
+        n_val = max(1, int(round((len(perm) - n_test) * val_frac)))
+        test += perm[:n_test]
+        val += perm[n_test:n_test + n_val]
+        train += perm[n_test + n_val:]
+    return np.array(train), np.array(val), np.array(sorted(test))
 
 
 def summarize(vals):
@@ -181,7 +184,7 @@ def main() -> None:
     conds = [("real", "real"), ("real", "recovered"), ("real", "anon"), ("anon", "anon")]
     collected = {f"train_{a}__test_{b_}": [] for a, b_ in conds}
     for k in range(args.splits):
-        tr, va, te = make_split(idx_by_class, len(entries), SEED + k, args.test_frac)
+        tr, va, te = make_split(idx_by_class, SEED + k, args.test_frac)
         y_tr, y_va, y_te = labels[tr], labels[va], labels[te]
         models_cache = {}
         for tr_type, te_type in conds:

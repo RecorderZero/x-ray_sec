@@ -68,6 +68,16 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
 外部攻擊者（Packhauser Siamese，latent 密文）：plaintext top-1 0.15 → **S2 top-1 0.05 = random**（AUC 0.445）。
 [結論] 同一條 pipeline、同一批 encoder：**讀病理(utility) ~0.9、讀身份(privacy) S2 ~random** —— 隱私與 utility 在同一操作點同時成立。
 
+**4d. Utility vs 重構步數 N（item 6，per-class 100、20 splits、`anon_utility_dpm++_n100_s{50,100,200}_k20.json`、`fig_utility_vs_n_k20.png`）**
+
+| N | recon PSNR | DenseNet real→rec | DenseNet real→real | rad-dino real→rec | rad-dino real→real |
+|---:|---:|---:|---:|---:|---:|
+| 50 | 38.9 dB | 0.882 ±0.019 | 0.903 | 0.903 ±0.016 | 0.895 |
+| 100 | 43.7 dB | 0.894 ±0.019 | 0.903 | 0.897 ±0.017 | 0.895 |
+| 200 | 46.1 dB | 0.901 ±0.020 | 0.903 | 0.895 ±0.016 | 0.895 |
+
+[結論] recovered utility **隨重構品質單調逼近 real**：DenseNet 在 N=50(38.9 dB)仍有小落差(0.882 vs 0.903),N=200(46.1 dB)已實質無損(0.901 vs 0.903);rad-dino(CXR 基礎模型)對 N 不敏感,N=50 即飽和。此把分類 utility 直接綁到 DPM++／步數貢獻:**更好的重構 → 更無損的 utility**,且即使最快設定(N=50)utility 仍 ~0.9。
+
 ## 5. 威脅模型定位（與 GMIA 量化對照，item 4；僅表格比較，未復現 GMIA）
 
 | 維度 | GMIA（refpaper/114，14 類 multi-label） | 本架構 S2fn（二元 No Finding/Effusion） |
@@ -99,7 +109,10 @@ scripts/run_cfg_ddim.sh python -m scripts.build_privacy_utility_table \
     --utility paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json
 scripts/run_cfg_ddim.sh python -m scripts.plot_classification_utility \
     --json paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json --out paper_assets/classification_utility/fig_utility_matrix_k50.png
+for N in 50 100 200; do scripts/run_cfg_ddim.sh python -m scripts.classification_utility_anon \
+    --per-class 100 --steps $N --sampler dpm++ --splits 20 --save-examples 0; done     # item 6 sweep
 scripts/run_cfg_ddim.sh python -m scripts.plot_utility_vs_n \
-    --jsons paper_assets/classification_utility/anon_utility_dpm++_n100_s*_k20.json   # item 6
+    --jsons paper_assets/classification_utility/anon_utility_dpm++_n100_s*_k20.json \
+    --out paper_assets/classification_utility/fig_utility_vs_n_k20.png                 # item 6 figure
 ```
 輸出於 `paper_assets/classification_utility/`（json/png/pdf，可重現，不入庫）；seed=1911。

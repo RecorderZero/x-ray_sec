@@ -2780,3 +2780,38 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 4. 達標判定 (Assessment)
 * [結論] 結論不變但現落在**正確 DPM++ 操作點(43.7 dB)**:授權還原保全分類 utility(AUROC ≈ real),密文近 chance(隱私)。前一條 DDIM 數據保留不改(只增不改),此條為 sampler 更正。
 * 已達標:將 sampler 修正併入分類 utility feature commit;json/對照圖於 `paper_assets/classification_utility/`(可重現,不入庫)。
+
+## 2026-10-28 · W8 · Track P2 · 分類 utility 定稿:多 split CI、privacy-utility 聯合表、微調分類器、utility-vs-N 曲線、GMIA 對照表(items 1-6)
+
+### 1. 當前目標 (Objective)
+* 在正確 DPM++ N=100 S2fn 操作點把分類 utility 這塊貢獻做到定稿。使用者指定補齊五項(其編號 1,2,3,6,4):
+  1. privacy 數字放到同一條 pipeline/同一批 encoder,與 utility 並排;
+  2. 多 split 統計(mean±95%CI);
+  3. 微調/真實訓練分類器 utility(GMIA 式,非只凍結探針);
+  6. utility-vs-N 曲線;
+  4. GMIA 量化對照(僅表格比較,**不復現 GMIA**)。
+
+### 2. 執行動作 (Actions Taken)
+* `scripts/classification_utility_anon.py`:加 `--splits`(K 個 patient-disjoint 重抽,每病人一張 ⇒ 隨機 split 即 patient-disjoint),矩陣值存 mean/std/ci95;item 2 跑 per-class 200、50 splits,item 6 跑 per-class 100、N∈{50,100,200}、20 splits。
+* `scripts/build_privacy_utility_table.py`(新):item 1,join utility json + `t2bb_dpm_parity/parity.json`(匿名↔匿名連結 AUC)+ `table_reid_external.json`(外部 Siamese S2 top-1),輸出 `privacy_utility_table.{json,csv,md}`。
+* `scripts/classification_utility_finetune.py`(新):item 3,微調 DenseNet-121(解凍 denseblock4+norm5+新 1-logit head,backbone 凍結),stratified 分層 train/val/test,訓練於 real、評估 real/recovered/anon,5 splits。
+* `scripts/plot_classification_utility.py`:加 CI error bars。`scripts/plot_utility_vs_n.py`(新):item 6 曲線(recovered AUROC vs N,real 虛線參考,PSNR 標註為文字,單 y 軸)。
+* 指令見 `reports/classification_utility_protocol.md` §7。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] **item 2 凍結探針**(per-class 200、50 splits,AUROC densenet/rad-dino):real→real 0.916/0.937、**real→recovered 0.904/0.937(≈ real)**、real→anon 0.502/0.499、anon→anon 0.510/0.525。大樣本下 real→anon 收斂到 0.50(n100 時的 0.60 殘留為小樣本雜訊)。
+* [事實] **item 3 微調 DenseNet**(5 splits):real→real 0.886±0.026、**real→recovered 0.888±0.027(≈ real)**、real→anon 0.442±0.037、anon→anon 0.494±0.040。真實訓練分類器與凍結探針**結論一致**。
+* [事實] **item 1 privacy-utility 聯合表**(同 pipeline/encoder):DenseNet 病理 real→rec 0.904 vs 身份 S2-link **0.381**;rad-dino 0.937 vs S2-link **0.486**;外部 Packhauser Siamese S2 top-1 **0.05(=random)**。讀病理 ~0.9、讀身份 ~random 在同一操作點同時成立。
+* [事實] **item 6 utility-vs-N**(per-class 100、20 splits):N=50/100/200 → recon 38.9/43.7/46.1 dB;DenseNet real→rec 0.882/0.894/0.901(單調逼近 real 0.903);rad-dino 0.903/0.897/0.895(已飽和,對 N 不敏感)。`fig_utility_vs_n_k20.png`。
+* [事實] **item 4 GMIA 對照表**(僅表格比較):GMIA real 0.774 / anon-utility 0.737 / inner-risk 0.899 / outer-risk 0 / PSNR 24.3(不可逆);本架構 real 0.92/0.94 / recovered-utility 0.904/0.937 / inner+outer ~random / PSNR 43.6(可逆)。
+
+### 4. 達標判定 (Assessment)
+* [結論] 分類 utility 貢獻定稿:**授權還原無損保全 utility(AUROC ≈ real)、密文近 chance(隱私)**,經凍結探針(50 splits 緊 CI)與真實訓練分類器(GMIA 式微調)雙重確認;隱私與 utility 在同一 DPM++/S2 操作點同時成立。
+* [結論] 與 GMIA 為**不同威脅模型**:GMIA 把 utility 留在不可逆匿名圖(代價:高 inner 連結風險 0.899);本架構把匿名圖做成不可連結密文(inner+outer ~random),utility 以授權還原取回。數值因資料集/任務(14 類 vs 二元)不可直接比大小,比**結構性質**:我們多了可逆性、消滅 inner-risk。
+* [限制] 固定 N=100、二元單病理(生成器僅條件過兩類)、CheXpert 單一資料集;待補外部資料集/分類器泛化、本架構自身 MIA 量測(對齊 GMIA 的 MIA 欄)。
+* 已達標:items 1-6 全數完成並寫入 `reports/classification_utility_protocol.md` §4a-4d、§5;新增 3 支腳本 + 2 支繪圖更新;json/csv/png 於 `paper_assets/classification_utility/`(可重現,不入庫)。
+
+### 5. 下一步
+* [待辦] 外部資料集 / 外部分類器泛化驗證。
+* [待辦] 本架構自身 MIA 量測,補齊與 GMIA 對照表的 MIA 欄。
+* [結論] 使用者定稿目標達成:前段貢獻(可逆、安全性 S2 固定 norm、重構品質保值域+DPM++、速度)以學長論文為 baseline;最後一塊(定位→分類)以 GMIA(refpaper/114)為 table-only baseline。
