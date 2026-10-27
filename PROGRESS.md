@@ -2704,3 +2704,31 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 ### 7. 下一步
 * 已詢問是否同意20張validation pilot（10陽性10陰性），依smoke外推GPU佔用約35–45分鐘；**未啟動**。替代4張約7–10分鐘，CPU僅能做工程／指標驗證。
 * 得到裁決後新建managed run；不得覆寫本次資料、以兩張分數挑最優或將S2 fixture說成完整authenticated部署。
+
+## 2026-10-27 · W8 · Track P2 · 定位分支:還原改 null + 偽健康條件掃描 + 學長原始 baseline
+
+### 1. 當前目標 (Objective)
+* 使用者裁決:還原圖改無條件(null,對齊 inversion),偽健康圖掃描找最適條件;先 4 張探索、20 張確認。
+* 回答「定位是不是不準」:跑學長原始定位設定當 baseline,放同一把尺比較。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/recovery_condition_smoke.py`:固定 inversion=null,比較 recovery 用 null vs y=0(N=100,dev 4 張)。
+* 改 `scripts/localization_sampler_smoke.py`:新增 `unconditional_backward`(null 還原,不動共用 `sampler.backward`);`parallel_branches` 改收 recovery_backward 參數;`gs0_sanity` 重定義為「CFG gs=0 == y=0 conditional backward」(影像無關恆等式);更新 config 標記。
+* 改 `scripts/chexlocalize_pilot.py`:recovery 改 `unconditional_backward`;偽健康 guidance 改 CLI 可調(`--cfg-gs`/`--cfgpp-lambda`);gs0 恆等檢查改一次性;expected count 與 summary 迴圈改用 variants。
+* 改 `tests/test_localization_sampler_smoke.py`:配合新簽章與 gs0 語意。
+* 新增 `scripts/chexlocalize_legacy_baseline.py`:學長原始定位(legacy DDIM T=500、inversion null/recovery y=0、偽健康 CFG gs=4、熱圖 |x0−healthy|、e1 前處理)跑 CheXlocalize val GT,同 `chexlocalize_pilot` 計分。
+* 指令:`pytest tests/test_localization_*`;`managed_run --task-id LOC-VAL -- chexlocalize_pilot --per-class {2,10} --cfg-gs 0 1 2 3 --cfgpp-lambda 0 0.5 1`;`chexlocalize_legacy_baseline --per-class 10 --gs 2 4`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] null vs y=0 還原(smoke 4 張,N=100):null 保真更高 +1.11 dB(DDIM)/ +4.28 dB(DPM++),SSIM/cosine 亦高;|recovery−healthy| 差分 mean ~1.5× → null 還原較不被拉向健康、保留病灶。62 CPU 測試全綠。
+* [事實] 新 pipeline 定位(null 還原,20 張 10陽/10陰,threshold 0.5 未校準):最佳 IoU ~0.051(CFG++ λ1,但陰性 raw>.01% 達 90% = 面積假象);pxAP ≤0.11;**pointing_hit = 0/10 全條件**。
+* [事實] 學長原始 baseline(20 張):gs=4 IoU=0.0003、pxAP=0.070、**pointing 0/10**、neg>.01%=57%;gs=2 IoU=0.0028。還原 ~42 dB 正常。
+* [事實] chance pxAP(積液遮罩平均覆蓋率)= 0.037 → 兩邊 pxAP 0.07–0.11 僅 ~2–3× chance(弱、瀰漫),峰值不在遮罩。
+* [事實] 類別方向正確:checkpoint 由 `ChexpertDataset`(`past/SourceCode/guided_diffusion/bratsloader.py:172-173`:No Finding→0、Pleural Effusion→1)訓練,**y=0 = Healthy**;q11 docstring 自述從未用遮罩量化定位。
+
+### 4. 達標判定 (Assessment)
+* [結論] 我們的 pipeline **不是定位退步**:學長原始設定在同一 GT 上同樣 chance 等級(IoU≈0、pointing 0/10)。低分是此「擴散反事實 + 像素遮罩」方法 + 指標的本質,非 null 還原/換 sampler 造成。
+* [決定] 與使用者議定:**保留可逆 + 隱私保護匿名化為核心貢獻**,病灶定位降級為定性/示範,如實報告數字 + chance 基線;**不再掃 guidance** 去追 IoU(打磨 chance 訊號)。
+* [限制] `recovery→null` 僅套用於定位分支;主 pipeline/RQ4 仍 y=0 還原(切換是另一決定,預期 +1~4 dB)。threshold 0.5 未校準、val-only、非 formal。
+* [注意] 外部定位模型(BioViL-T/AFLoc)校準尚未做;S2 僅數值 fixture。
+* 已達標:提交 code+tests(還原分支改動、兩支診斷腳本、legacy baseline);輸出 json 於 `paper_assets/`(可由腳本重現,不入庫)。

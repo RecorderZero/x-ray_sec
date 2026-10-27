@@ -4,7 +4,7 @@ import torch
 
 from scripts.localization_sampler_smoke import (
     canonical_cfg_backward, cfg_data_prediction, gs0_sanity, map_agreement,
-    map_statistics, parallel_branches, recovered_latent,
+    map_statistics, parallel_branches, recovered_latent, unconditional_backward,
 )
 from scripts.respaced_ddim_sweep import Respaced
 from scripts.exact_inv_sweep import DPMSolverpp
@@ -36,7 +36,7 @@ def test_parallel_branches_share_latent_without_reinversion():
         seen.append(value.clone())
         return value.sub_(10 + gs)
 
-    rec, healthy, maps = parallel_branches(s, cfg, z, [0, 1], [0.0, 2.0])
+    rec, healthy, maps = parallel_branches(s, s.backward, cfg, z, [0, 1], [0.0, 2.0])
     assert s.inversions == 1
     assert torch.equal(z, x + 10)
     assert all(torch.equal(v, z) for v in seen + s.backward_inputs)
@@ -52,7 +52,7 @@ def test_gs0_failure_is_not_silently_reported_as_success():
 
 def test_nonfinite_rejected():
     with pytest.raises(ValueError, match="nonfinite"):
-        parallel_branches(Sampler(), lambda z, gs: z, torch.tensor([float("nan")]), [0, 1], [0])
+        parallel_branches(Sampler(), lambda z, b: z, lambda z, gs: z, torch.tensor([float("nan")]), [0, 1], [0])
 
 
 def test_map_stats_and_undefined_correlation():
@@ -86,10 +86,15 @@ def test_actual_sampler_gs0_conditional_identity_with_mock_model(use_dpm):
     sampler = DPMSolverpp(rs) if use_dpm else rs
     boundaries = [0, 1, 2, 3]
     cfg = lambda z, gs: canonical_cfg_backward(sampler, z, boundaries, gs)
+    recovery_fn = lambda z, b: unconditional_backward(sampler, z, b)
     latent = torch.linspace(0.1, 0.7, 4).reshape(1, 1, 2, 2)
-    rec, healthy, maps = parallel_branches(sampler, cfg, latent, boundaries, [0.0, 2.0])
-    assert gs0_sanity(rec, healthy[0.0]) == 0
+    rec, healthy, maps = parallel_branches(sampler, recovery_fn, cfg, latent, boundaries, [0.0, 2.0])
+    # recovery is now the null (unconditional) backward; the gs0 identity is
+    # against the y=0 conditional backward (sampler.backward), not the recovery.
+    assert gs0_sanity(sampler.backward(latent.clone(), boundaries), healthy[0.0]) == 0
     assert float(maps[2.0].max()) > 1e-3
+    # null recovery must actually differ from the y=0 conditional backward here.
+    assert float((rec - sampler.backward(latent.clone(), boundaries)).abs().max()) > 1e-6
 
 
 def test_direct_x0_guidance_preserves_clip_before_mix_and_skips_null_at_gs0():

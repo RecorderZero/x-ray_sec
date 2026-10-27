@@ -79,10 +79,39 @@ def canonical_cfg_backward(sampler, latent, boundaries, gs):
 
 
 @torch.inference_mode()
-def parallel_branches(sampler, cfg_backward, latent, boundaries, guidance):
-    """Clone branch inputs to protect against accidental in-place samplers."""
+def unconditional_backward(sampler, z, boundaries):
+    """Recovery backward matched to the (unconditional) inversion, i.e. null=True.
+
+    The shipped `sampler.backward` conditions on y=0 (an asymmetry vs the null
+    inversion inherited from the predecessor).  For localization the recovery
+    must stay class-neutral so the lesion survives into |recovery - healthy|;
+    recovery_condition_smoke.py showed null recovery gains +1.1 dB (DDIM) /
+    +4.3 dB (DPM++) in fidelity and ~1.5x larger difference signal.  This helper
+    does NOT mutate the shared `sampler.backward` used by the frozen RQ4/linkage
+    results -- it only supplies the null variant for this localization branch.
+    """
+    rs = sampler.rs if isinstance(sampler, DPMSolverpp) else sampler
+    mk = rs._base_kwargs(z.shape[0]); mk["null"] = True
+    if isinstance(sampler, DPMSolverpp):
+        order = [(int(boundaries[k]), int(boundaries[k - 1])) for k in range(len(boundaries) - 1, 0, -1)]
+        return sampler._run(z, order, mk)
+    x = z
+    for k in range(len(boundaries) - 1, 0, -1):
+        x = rs._step(x, boundaries[k], boundaries[k - 1], mk)
+    return x
+
+
+@torch.inference_mode()
+def parallel_branches(sampler, recovery_backward, cfg_backward, latent, boundaries, guidance):
+    """Shared decrypted latent -> null recovery + guided pseudo-healthy branches.
+
+    recovery_backward is the (unconditional) recovery generator -- supplied by the
+    caller rather than hardwired to sampler.backward (y=0), so the recovery stays
+    class-neutral.  The recovery is NEVER re-inverted.  Inputs are cloned to
+    protect against accidental in-place samplers.
+    """
     finite("latent", latent)
-    recovery = finite("recovery", sampler.backward(latent.clone(), boundaries))
+    recovery = finite("recovery", recovery_backward(latent.clone(), boundaries))
     healthy = {}
     maps = {}
     for gs in guidance:
@@ -127,11 +156,16 @@ def map_agreement(a, b):
             "pearson": float(ac.dot(bc)) / denom if denom > 1e-20 else None}
 
 
-def gs0_sanity(recovery, healthy, tolerance=1e-4):
-    """gs=0 is conditional y=0, NOT unconditional, in this repository."""
-    error = float((finite("recovery", recovery) - finite("gs0", healthy)).abs().max())
+def gs0_sanity(y0_reference, healthy_gs0, tolerance=1e-4):
+    """CFG gs=0 must reduce to a single y=0 conditional pass (== sampler.backward).
+
+    Recovery is now the unconditional (null) backward, so it is no longer the gs0
+    reference; the image-independent invariant checked here is the CFG-math
+    identity (1+0)*x0_cond - 0*x0_uncond = x0_cond.
+    """
+    error = float((finite("y0_reference", y0_reference) - finite("gs0", healthy_gs0)).abs().max())
     if error > tolerance:
-        raise ValueError(f"gs=0 backward equivalence failed: {error} > {tolerance}")
+        raise ValueError(f"gs=0 conditional equivalence failed: {error} > {tolerance}")
     return error
 
 
@@ -165,16 +199,16 @@ def main():
                    "model_config": MODEL_CONFIG, "boundaries": b.tolist(),
                    "resumable": False, "gt_available": False,
                    "guidance_convention": "(1+gs)*eps_y0 - gs*eps_null; gs0=conditional",
-                   "recovery_conditioning": "y=0,p_uncond=-1,clf_free=True,null=False",
+                   "recovery_conditioning": "null=True (unconditional, matched to inversion)",
                    "inversion_conditioning": "y=0,p_uncond=-1,clf_free=True,null=True",
                    "difference_map": "abs(recovery-healthy), raw unclipped float, no normalization",
                    "cfg_update": "direct clipped-x0 mixture; clip-before-mix matching layerA convention",
                    "security_scope": "public test key and deterministic fixture nonce; norm held in RAM; no AEAD"})
     config["model_calls_per_sample_per_sampler"] = {
-        scheme: ((3 if scheme == "S2fn-transform-only" else 1) + 1 + sum(1 if gs == 0 else 2 for gs in guidance)) * (len(b)-1)
+        scheme: ((3 if scheme == "S2fn-transform-only" else 1) + 1 + 1 + sum(1 if gs == 0 else 2 for gs in guidance)) * (len(b)-1)
         for scheme in schemes
     }
-    config["pass_accounting"] = "prefix original=1 or S2=3; recovery=1; healthy gs0=1, gs2=2 model calls/step; optional legacy diagnostic adds 4N calls per original branch"
+    config["pass_accounting"] = "prefix original=1 or S2=3; null recovery=1; y0 gs0-sanity reference=1; healthy gs0=1, gs2=2 model calls/step; optional legacy diagnostic adds 4N calls per original branch"
     context = open_run("LOC-SMOKE", config, Path("artifacts/runs"))
     started = time.perf_counter()
     checkpoint_hash = sha256_file(args.checkpoint)
@@ -198,8 +232,9 @@ def main():
                 torch.cuda.synchronize()
                 tick = time.perf_counter()
                 z = recovered_latent(sampler, x, b, scheme, sid)
-                recovery, healthy, maps = parallel_branches(sampler, cfg, z, b, guidance)
-                sanity = gs0_sanity(recovery, healthy[0.0])
+                recovery, healthy, maps = parallel_branches(
+                    sampler, lambda zz, bb: unconditional_backward(sampler, zz, bb), cfg, z, b, guidance)
+                sanity = gs0_sanity(sampler.backward(z.clone(), b), healthy[0.0])
                 torch.cuda.synchronize()
                 elapsed = time.perf_counter() - tick
                 rec = image_pair_metrics("recovery", x, recovery)

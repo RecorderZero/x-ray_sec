@@ -23,7 +23,9 @@ from scripts.e2_anonymization_runner import image_pair_metrics
 from scripts.exact_inv_sweep import CKPT, DPMSolverpp
 from scripts.localization_cfgpp import VARIANT, ddim_cfgpp_backward, dpm_cfgpp_backward
 from scripts.localization_metrics import mask_metrics
-from scripts.localization_sampler_smoke import canonical_cfg_backward, finite, gs0_sanity, recovered_latent
+from scripts.localization_sampler_smoke import (
+    canonical_cfg_backward, finite, gs0_sanity, recovered_latent, unconditional_backward,
+)
 from scripts.respaced_ddim_sweep import Respaced, SEED, schedule
 from scripts.run_artifacts import open_run, finalize_run
 
@@ -105,8 +107,17 @@ def main():
     p.add_argument('--per-class', type=int, default=1)
     p.add_argument('--steps', type=int, default=100)
     p.add_argument('--include-s2', action='store_true')
+    p.add_argument('--cfg-gs', type=float, nargs='+', default=[0.0, 1.0, 2.0, 3.0],
+                   help='pseudo-healthy CFG guidance scales to sweep (gs=0 is the y=0 conditional)')
+    p.add_argument('--cfgpp-lambda', type=float, nargs='+', default=[0.0, 0.5, 1.0],
+                   help='pseudo-healthy CFG++ paper-variant interpolation scales in [0,1]')
     p.add_argument('--checkpoint', type=Path, default=CKPT)
     args = p.parse_args()
+    if any(not 0.0 <= s for s in args.cfg_gs) or any(not 0.0 <= l <= 1.0 for l in args.cfgpp_lambda):
+        p.error('cfg-gs must be >=0 and cfgpp-lambda in [0,1]')
+    if 0.0 not in args.cfg_gs:
+        p.error('cfg-gs must include 0.0 for the gs0 conditional identity check')
+    variants = [('CFG', s) for s in args.cfg_gs] + [('CFG++', s) for s in args.cfgpp_lambda]
     if not os.environ.get('EXPERIMENT_RUN_DIR'):
         p.error('Use managed_run --task-id LOC-VAL --validate-artifacts')
     if not 1 <= args.per_class <= 10 or not 1 <= args.steps <= 499:
@@ -127,15 +138,15 @@ def main():
               'checkpoint_sha256': sha256(args.checkpoint), 'selected_ids': [r['sample_id'] for r in selected],
               'steps': args.steps, 'boundaries': b.tolist(), 'seed': SEED, 'formal': False,
               'split': 'val', 'schemes': schemes, 'samplers': ['aligned-DDIM', 'DPM++2M'],
-              'cfg_gs': [0.0, 2.0], 'cfgpp_lambda': [0.0, 0.5, 1.0], 'cfgpp_variant': VARIANT,
+              'cfg_gs': args.cfg_gs, 'cfgpp_lambda': args.cfgpp_lambda, 'cfgpp_variant': VARIANT,
               'threshold': 0.5, 'threshold_policy': 'fixed exploratory, NOT validation-tuned',
               'heatmap': 'abs(recovery-healthy), original GT geometry, bilinear align_corners=False',
               'normalization': 'per-map minmax; constants zero; raw amplitude also reported',
               'cohort': 'first sorted independent patients per GT-mask class; positive/negative balanced',
               'metrics': 'all GT-positive incl empty predictions; GT-negatives overlap/AP null; no probability gating',
               'preprocessing': 'e1 grayscale/equalizeHist/INTER_AREA256/JPEG100/minmax; no crop',
-              'flow': 'shared decrypted latent -> recovery + healthy; no recovery reinversion',
-              'recovery_condition': 'y=0 conditional, NOT unconditional',
+              'flow': 'shared decrypted latent -> null recovery + healthy; no recovery reinversion',
+              'recovery_condition': 'null (unconditional), matched to inversion; was y=0 conditional',
               'security_scope': 'S2 numerical fixture, rounds2/permutation/fixednorm/rangePNG; no AEAD',
               'runtime_scope': 'prototype wall time includes finite checks/CPU metrics; not speed ranking',
               'resumable': False}
@@ -156,9 +167,8 @@ def main():
         for name, sampler in [('aligned-DDIM', rs), ('DPM++2M', dpm)]:
             for scheme in schemes:
                 z = recovered_latent(sampler, x, b, scheme, item['sample_id'])
-                rec = finite('recovery', sampler.backward(z.clone(), b))
+                rec = finite('recovery', unconditional_backward(sampler, z.clone(), b))
                 rec_metrics = image_pair_metrics('recovery', x, rec)
-                variants = [('CFG', s) for s in (0.0, 2.0)] + [('CFG++', s) for s in (0.0, 0.5, 1.0)]
                 for kind, scale in variants:
                     tick = time.perf_counter()
                     if kind == 'CFG':
@@ -167,8 +177,9 @@ def main():
                         fn = dpm_cfgpp_backward if name == 'DPM++2M' else ddim_cfgpp_backward
                         healthy = fn(sampler, z.clone(), b, scale)
                     finite('healthy', healthy)
-                    if kind == 'CFG' and scale == 0:
-                        gs0_sanity(rec, healthy)
+                    if kind == 'CFG' and scale == 0 and sample_no == 0:
+                        # Image-independent identity: CFG gs=0 == y=0 conditional backward.
+                        gs0_sanity(sampler.backward(z.clone(), b), healthy)
                     heat = (rec - healthy).abs()
                     metrics = evaluate_map(heat, gt)
                     ident = f'{item["sample_id"]}/{name}/{scheme}/{kind}/{scale}'
@@ -184,13 +195,13 @@ def main():
                     if scale != 0:
                         save_panel(ctx.run_dir / (stem+'.png'), x, rec, healthy, heat, gt, ident)
                     print(json.dumps(row, allow_nan=False), flush=True)
-    expected = len(selected)*2*len(schemes)*5
+    expected = len(selected)*2*len(schemes)*len(variants)
     if len(records) != expected or len({r['sample_id'] for r in records}) != expected:
         raise ValueError('Missing or duplicate result rows')
     groups = []
     for name in ('aligned-DDIM', 'DPM++2M'):
         for scheme in schemes:
-            for kind, scale in [('CFG', 0.0), ('CFG', 2.0), ('CFG++', 0.0), ('CFG++', 0.5), ('CFG++', 1.0)]:
+            for kind, scale in variants:
                 rr = [r for r in records if (r['sampler'],r['scheme'],r['guidance'],r['scale']) == (name,scheme,kind,scale)]
                 pos, neg = [r for r in rr if r['gt_positive']], [r for r in rr if not r['gt_positive']]
                 groups.append({'sampler': name, 'scheme': scheme, 'guidance': kind, 'scale': scale,
