@@ -1,0 +1,44 @@
+{
+  "round": "AUD-20261023-01",
+  "sha256sums": {
+    "n_listed": 337,
+    "ok": 337,
+    "mismatch": 0,
+    "missing": 0,
+    "bad": []
+  },
+  "combined_fingerprint": {
+    "recomputed": "3f2d6836f0d71b0dda8fcb9aa254bc0d9312dc3939926d12f65ee7c441a03621",
+    "manifest": "3f2d6836f0d71b0dda8fcb9aa254bc0d9312dc3939926d12f65ee7c441a03621",
+    "match": true,
+    "n_recomputed": 337,
+    "n_manifest": 337
+  },
+  "overclaim_scan_expanded": {
+    "terms_added_vs_p11_scanner": [
+      "exact-recovery(zh)",
+      "exact-recovery",
+      "zero-leakage"
+    ],
+    "unscoped_hits": [
+      {
+        "file": "paper_assets/claim_audit_p11.md",
+        "line": 17,
+        "term": "exact-recovery(zh)",
+        "text": "distinguishing phrase `精確還原 / exact-recover`, so one image-space over-claim"
+      },
+      {
+        "file": "paper_assets/claim_audit_p11.md",
+        "line": 18,
+        "term": "exact-recovery(zh)",
+        "text": "escaped it — `method_comparison.md:10` claimed the key-holder \"精確還原原圖\""
+      },
+      {
+        "file": "reports/method_comparison.md",
+        "line": 27,
+        "term": "exact-recovery(zh)",
+        "text": "| Secret-key diffusion | Face (CelebA-HQ/LFW) | **是（正確金鑰精確還原）** | 是 | 去識別臉 | 優於 RiDDLE/G2-Face/iFADIT | — | 確定性正逆向 diffusion 注入 secret key | arXiv 2510.01031（2025/10） |"
+      }
+    ]
+  }
+}

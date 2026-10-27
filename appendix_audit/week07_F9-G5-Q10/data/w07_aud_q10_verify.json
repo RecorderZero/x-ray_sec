@@ -1,0 +1,306 @@
+{
+  "audit_round": "AUD-20261019-01",
+  "scope": "Q10.1-Q10.5 independent spec-first verification (CPU)",
+  "Q10_2_numeric_precision": {
+    "configs": [
+      {
+        "dim": 4096,
+        "dtype": "float32",
+        "rounds": 1,
+        "perm": false,
+        "roundtrip_max_abs": 5.960464477539062e-07,
+        "forward_norm_dev": 1.4772261636153416e-07,
+        "cosine_min": 0.9999999999999922
+      },
+      {
+        "dim": 4096,
+        "dtype": "float32",
+        "rounds": 1,
+        "perm": true,
+        "roundtrip_max_abs": 5.960464477539062e-07,
+        "forward_norm_dev": 2.3596049913976458e-07,
+        "cosine_min": 0.9999999999999926
+      },
+      {
+        "dim": 4096,
+        "dtype": "float32",
+        "rounds": 4,
+        "perm": false,
+        "roundtrip_max_abs": 1.0728836059570312e-06,
+        "forward_norm_dev": 4.878140487107885e-07,
+        "cosine_min": 0.9999999999999657
+      },
+      {
+        "dim": 4096,
+        "dtype": "float32",
+        "rounds": 4,
+        "perm": true,
+        "roundtrip_max_abs": 1.2191012501716614e-06,
+        "forward_norm_dev": 4.347245265989841e-07,
+        "cosine_min": 0.9999999999999656
+      },
+      {
+        "dim": 4096,
+        "dtype": "float64",
+        "rounds": 1,
+        "perm": false,
+        "roundtrip_max_abs": 9.992007221626409e-16,
+        "forward_norm_dev": 2.842170943040401e-14,
+        "cosine_min": 0.9999999999999997
+      },
+      {
+        "dim": 4096,
+        "dtype": "float64",
+        "rounds": 1,
+        "perm": true,
+        "roundtrip_max_abs": 1.1102230246251565e-15,
+        "forward_norm_dev": 2.842170943040401e-14,
+        "cosine_min": 0.9999999999999991
+      },
+      {
+        "dim": 4096,
+        "dtype": "float64",
+        "rounds": 4,
+        "perm": false,
+        "roundtrip_max_abs": 1.9984014443252818e-15,
+        "forward_norm_dev": 2.842170943040401e-14,
+        "cosine_min": 0.9999999999999998
+      },
+      {
+        "dim": 4096,
+        "dtype": "float64",
+        "rounds": 4,
+        "perm": true,
+        "roundtrip_max_abs": 2.1094237467877974e-15,
+        "forward_norm_dev": 1.4210854715202004e-14,
+        "cosine_min": 0.9999999999999997
+      },
+      {
+        "dim": 65536,
+        "dtype": "float32",
+        "rounds": 1,
+        "perm": false,
+        "roundtrip_max_abs": 7.748603820800781e-07,
+        "forward_norm_dev": 3.918058268936875e-07,
+        "cosine_min": 0.9999999999999702
+      },
+      {
+        "dim": 65536,
+        "dtype": "float32",
+        "rounds": 1,
+        "perm": true,
+        "roundtrip_max_abs": 7.301568984985352e-07,
+        "forward_norm_dev": 2.6647632012100075e-07,
+        "cosine_min": 0.9999999999999714
+      },
+      {
+        "dim": 65536,
+        "dtype": "float32",
+        "rounds": 4,
+        "perm": false,
+        "roundtrip_max_abs": 1.4454126358032227e-06,
+        "forward_norm_dev": 6.261753924263758e-07,
+        "cosine_min": 0.9999999999999349
+      },
+      {
+        "dim": 65536,
+        "dtype": "float32",
+        "rounds": 4,
+        "perm": true,
+        "roundtrip_max_abs": 1.430511474609375e-06,
+        "forward_norm_dev": 6.293262231338304e-07,
+        "cosine_min": 0.999999999999934
+      },
+      {
+        "dim": 65536,
+        "dtype": "float64",
+        "rounds": 1,
+        "perm": false,
+        "roundtrip_max_abs": 1.7763568394002505e-15,
+        "forward_norm_dev": 3.979039320256561e-13,
+        "cosine_min": 0.9999999999999987
+      },
+      {
+        "dim": 65536,
+        "dtype": "float64",
+        "rounds": 1,
+        "perm": true,
+        "roundtrip_max_abs": 1.5543122344752192e-15,
+        "forward_norm_dev": 6.252776074688882e-13,
+        "cosine_min": 0.9999999999999976
+      },
+      {
+        "dim": 65536,
+        "dtype": "float64",
+        "rounds": 4,
+        "perm": false,
+        "roundtrip_max_abs": 2.6645352591003757e-15,
+        "forward_norm_dev": 5.684341886080801e-13,
+        "cosine_min": 0.9999999999999973
+      },
+      {
+        "dim": 65536,
+        "dtype": "float64",
+        "rounds": 4,
+        "perm": true,
+        "roundtrip_max_abs": 2.9004576518332215e-15,
+        "forward_norm_dev": 9.947598300641403e-13,
+        "cosine_min": 0.9999999999999978
+      }
+    ],
+    "independent_seed": 20261019,
+    "float32_worst_max_abs": 1.4454126358032227e-06,
+    "float64_worst_max_abs": 2.9004576518332215e-15,
+    "float32_worst_norm_dev": 6.293262231338304e-07,
+    "float64_worst_norm_dev": 9.947598300641403e-13,
+    "float32_cosine_min": 0.999999999999934,
+    "float64_cosine_min": 0.9999999999999973,
+    "judgement_lossless_to_float_precision": true,
+    "determinism_cross_check": [
+      {
+        "cell": {
+          "dimension": 4096,
+          "dtype": "float32",
+          "rounds": 1,
+          "permutation": false
+        },
+        "auditor_max_abs": 5.960464477539062e-07,
+        "impl_max_abs": 5.960464477539062e-07,
+        "reproduced": true
+      },
+      {
+        "cell": {
+          "dimension": 65536,
+          "dtype": "float32",
+          "rounds": 4,
+          "permutation": true
+        },
+        "auditor_max_abs": 1.5497207641601562e-06,
+        "impl_max_abs": 1.5497207641601562e-06,
+        "reproduced": true
+      }
+    ]
+  },
+  "Q10_4_aead_reference": {
+    "rows": [
+      {
+        "payload": "rand_1B",
+        "n": 1,
+        "byte_exact": true,
+        "rej_ct": true,
+        "rej_tag": true,
+        "rej_nonce": true,
+        "rej_key": true,
+        "rej_aad": true
+      },
+      {
+        "payload": "rand_1KB",
+        "n": 1024,
+        "byte_exact": true,
+        "rej_ct": true,
+        "rej_tag": true,
+        "rej_nonce": true,
+        "rej_key": true,
+        "rej_aad": true
+      },
+      {
+        "payload": "latent_f32_4096",
+        "n": 16384,
+        "byte_exact": true,
+        "rej_ct": true,
+        "rej_tag": true,
+        "rej_nonce": true,
+        "rej_key": true,
+        "rej_aad": true
+      },
+      {
+        "payload": "latent_f64_65536",
+        "n": 524288,
+        "byte_exact": true,
+        "rej_ct": true,
+        "rej_tag": true,
+        "rej_nonce": true,
+        "rej_key": true,
+        "rej_aad": true
+      },
+      {
+        "payload": "empty",
+        "n": 0,
+        "byte_exact": true,
+        "rej_ct": true,
+        "rej_tag": true,
+        "rej_nonce": true,
+        "rej_key": true,
+        "rej_aad": true
+      }
+    ],
+    "all_byte_exact": true,
+    "all_tamper_rejected": true,
+    "distinct_key_per_payload_no_nonce_reuse": true
+  },
+  "Q10_1_error_attribution": {
+    "checks": [
+      {
+        "method": "P",
+        "m2_ceiling_psnr": 41.8695,
+        "sampler_drop_recompute": -4.2902,
+        "impl_sampler_drop": -4.2902,
+        "sampler_drop_match": true,
+        "legacy_drop_recompute": -0.1222,
+        "impl_legacy_drop": -0.1222,
+        "legacy_drop_match": true,
+        "s2_legacy_status_not_applicable": null
+      },
+      {
+        "method": "S0",
+        "m2_ceiling_psnr": 41.8695,
+        "sampler_drop_recompute": -3.587,
+        "impl_sampler_drop": -3.587,
+        "sampler_drop_match": true,
+        "legacy_drop_recompute": -7.135,
+        "impl_legacy_drop": -7.135,
+        "legacy_drop_match": true,
+        "s2_legacy_status_not_applicable": null
+      },
+      {
+        "method": "S1",
+        "m2_ceiling_psnr": 41.8695,
+        "sampler_drop_recompute": -3.0985,
+        "impl_sampler_drop": -3.0985,
+        "sampler_drop_match": true,
+        "legacy_drop_recompute": -7.35,
+        "impl_legacy_drop": -7.35,
+        "legacy_drop_match": true,
+        "s2_legacy_status_not_applicable": null
+      },
+      {
+        "method": "S2",
+        "m2_ceiling_psnr": 41.8695,
+        "sampler_drop_recompute": -3.0505,
+        "impl_sampler_drop": -3.0505,
+        "sampler_drop_match": true,
+        "legacy_drop_recompute": 0.0,
+        "impl_legacy_drop": 0.0,
+        "legacy_drop_match": true,
+        "s2_legacy_status_not_applicable": true
+      }
+    ],
+    "m2_ceiling_equal_across_methods": true,
+    "all_deltas_match_frozen": true,
+    "note": "P attribution 之 latent cosine=0.37（frozen）為影像空間殘差，非 Q10 計算；ladder 以 image PSNR 為主軸"
+  },
+  "Q10_5_partial_key": {
+    "sampled_bits": 8,
+    "subkey_hamming_mean": 0.50146484375,
+    "subkey_hamming_range": [
+      0.46875,
+      0.55078125
+    ],
+    "sign_pre_flip_mean": 0.49997901916503906,
+    "perm_change_mean": 0.9999847412109375,
+    "ciphertext_cos_abs_mean": 0.0035211762700283044,
+    "ciphertext_cos_abs_max": 0.005154034696596882,
+    "same_key_control_cosine_min": 0.9999999999999821,
+    "judgement_diffusion_ok": true
+  }
+}

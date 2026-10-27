@@ -1,0 +1,6 @@
+condition,scheme,storage,auc,top1,random_top1,n_patients,source
+plaintext,-,-,0.9819736842105263,0.85,0.05,20,/data2/external_gpl/reid_original_weights_sanity.json (out-of-tree GPL sanity); AUD-20261022-02
+plaintext_latent_range_preserving,identity,range_preserving,0.55,0.05,0.05,20,/data2/external_gpl/reid_original_weights_sanity.json (out-of-tree GPL sanity); AUD-20261022-02
+S0_range_preserving,S0,range_preserving,0.5598684210526316,0.1,0.05,20,/data2/external_gpl/reid_original_weights_sanity.json (out-of-tree GPL sanity); AUD-20261022-02
+S1_range_preserving,S1,range_preserving,0.4926315789473684,0.05,0.05,20,/data2/external_gpl/reid_original_weights_sanity.json (out-of-tree GPL sanity); AUD-20261022-02
+S2_range_preserving,S2,range_preserving,0.4772368421052632,0.1,0.05,20,/data2/external_gpl/reid_original_weights_sanity.json (out-of-tree GPL sanity); AUD-20261022-02

@@ -1,0 +1,5 @@
+method,deployment_storage,deploy_psnr_db,range_preserving_psnr_db,n,source
+P,legacy,37.4571,37.5793,200,paper_assets/tables/table_error_attribution.csv; AUD-20261017-01/-019-01
+S0,legacy,31.1475,38.2825,200,paper_assets/tables/table_error_attribution.csv; AUD-20261017-01/-019-01
+S1,legacy,31.4211,38.7711,200,paper_assets/tables/table_error_attribution.csv; AUD-20261017-01/-019-01
+S2,range-preserving,38.819,38.819,200,paper_assets/tables/table_error_attribution.csv; AUD-20261017-01/-019-01

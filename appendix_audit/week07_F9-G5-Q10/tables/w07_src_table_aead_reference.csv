@@ -1,0 +1,7 @@
+payload,n_bytes,tag_bytes,roundtrip_byte_exact,roundtrip_byte_equality_rate,tamper_ciphertext_rejected,tamper_tag_rejected,tamper_nonce_rejected,tamper_key_rejected,tamper_aad_rejected,all_tamper_rejected
+random_32B,32,16,True,1.0,True,True,True,True,True,True
+random_4096B,4096,16,True,1.0,True,True,True,True,True,True
+latent_d4096_float32,16384,16,True,1.0,True,True,True,True,True,True
+latent_d4096_float64,32768,16,True,1.0,True,True,True,True,True,True
+latent_d65536_float32,262144,16,True,1.0,True,True,True,True,True,True
+latent_d65536_float64,524288,16,True,1.0,True,True,True,True,True,True

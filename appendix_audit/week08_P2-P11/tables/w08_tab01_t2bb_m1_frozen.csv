@@ -1,0 +1,9 @@
+method,encoder,auc,auc_permutation_p,significant_p05,n_patients,source
+P,densenet121_imagenet,0.81,0.0001999600079984003,True,20,paper_assets/tables/table_t2bb_m1_frozen.json; recompute audit/out/t2bb_m1_recompute.json
+P,rad_dino,0.9756578947368421,0.0001999600079984003,True,20,paper_assets/tables/table_t2bb_m1_frozen.json; recompute audit/out/t2bb_m1_recompute.json
+S0,densenet121_imagenet,0.4344736842105263,0.9402119576084783,False,20,paper_assets/tables/table_t2bb_m1_frozen.json; recompute audit/out/t2bb_m1_recompute.json
+S0,rad_dino,0.5322368421052631,0.16056788642271547,False,20,paper_assets/tables/table_t2bb_m1_frozen.json; recompute audit/out/t2bb_m1_recompute.json
+S1,densenet121_imagenet,0.4785526315789474,0.6420715856828634,False,20,paper_assets/tables/table_t2bb_m1_frozen.json; recompute audit/out/t2bb_m1_recompute.json
+S1,rad_dino,0.4975,0.5124975004999001,False,20,paper_assets/tables/table_t2bb_m1_frozen.json; recompute audit/out/t2bb_m1_recompute.json
+S2,densenet121_imagenet,0.5575,0.09758048390321936,False,20,paper_assets/tables/table_t2bb_m1_frozen.json; recompute audit/out/t2bb_m1_recompute.json
+S2,rad_dino,0.5098684210526315,0.3743251349730054,False,20,paper_assets/tables/table_t2bb_m1_frozen.json; recompute audit/out/t2bb_m1_recompute.json

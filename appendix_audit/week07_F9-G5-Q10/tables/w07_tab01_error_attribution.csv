@@ -1,0 +1,5 @@
+method,m2_exact_latent_db,m1_sampler_range_db,m1_deploy_legacy_db,n,source
+P,41.8695,37.5793,37.4571,200,paper_assets/tables/table_error_attribution.csv; AUD-20261019-01
+S0,41.8695,38.2825,31.1475,200,paper_assets/tables/table_error_attribution.csv; AUD-20261019-01
+S1,41.8695,38.7711,31.4211,200,paper_assets/tables/table_error_attribution.csv; AUD-20261019-01
+S2,41.8695,38.819,38.819,200,paper_assets/tables/table_error_attribution.csv; AUD-20261019-01

@@ -1,0 +1,7 @@
+kind,pair,mean_psnr_db,n_images,source
+parity_restored,S2-S0,46.01,10,paper_assets/tables/table_localization_parity.csv; AUD-20261023-01
+parity_restored,S0-S1,46.39,10,paper_assets/tables/table_localization_parity.csv; AUD-20261023-01
+parity_healthy,S2-S0,43.63,10,paper_assets/tables/table_localization_parity.csv; AUD-20261023-01
+parity_healthy,S0-S1,43.46,10,paper_assets/tables/table_localization_parity.csv; AUD-20261023-01
+parity_heatmap,S2-S0,34.65,10,paper_assets/tables/table_localization_parity.csv; AUD-20261023-01
+parity_heatmap,S0-S1,36.58,10,paper_assets/tables/table_localization_parity.csv; AUD-20261023-01
