@@ -32,43 +32,74 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
   - `train anon → test anon`：能否**訓練**出可用的密文分類器（GMIA 式 train-on-anon）。
 - 腳本：`scripts/classification_utility_anon.py`（GPU，產三版本 + 矩陣 + 對照圖）；`scripts/classification_utility_pilot.py`（CPU，raw-PNG real-only baseline）；`scripts/plot_classification_utility.py`（論文長條圖）。
 
-## 4. 結果（DPM++，N=100，S2fn，per-class 100；AUROC densenet / rad-dino）
+## 4. 結果（DPM++，N=100，S2fn，per-class 200；AUROC，50 patient-splits，mean±95%CI）
+
+**4a. 凍結特徵 linear probe（item 2，`anon_utility_dpm++_n200_s100_k50.json`）**
 
 | Probe | DenseNet | rad-dino | 解讀 |
 |---|---:|---:|---|
-| train real → test real | 0.831 | 0.824 | 任務可學控制組 |
-| train real → test recovered | 0.829 | 0.819 | **≈ real → utility 保全** |
-| train real → test anon | 0.608 | 0.544 | 近 chance，密文讀不出病理 |
-| train anon → test anon | 0.529 | 0.416 | ≈ chance，訓不出密文分類器 |
+| train real → test real | 0.916 ±0.005 | 0.937 ±0.004 | 任務可學控制組 |
+| train real → test recovered | **0.904 ±0.006** | **0.937 ±0.004** | **≈ real → utility 保全** |
+| train real → test anon | 0.502 ±0.012 | 0.499 ±0.015 | = chance，密文讀不出病理 |
+| train anon → test anon | 0.510 ±0.013 | 0.525 ±0.011 | = chance，訓不出密文分類器 |
 
-- [事實] recon PSNR **43.7 dB**（= `deploy_dpm_sweep` DPM++ N=100 S2fn 44.26）、anon PSNR ~6 dB。DDIM N=100 僅 37.67 dB —— sampler 差異，非退步。
+**4b. 微調分類器（item 3，GMIA 式訓練 DenseNet-121，5 splits，`finetune_utility_dpm++_n200_s100_k5.json`）**
+
+| Probe | 微調 DenseNet AUROC |
+|---|---:|
+| train real → test real | 0.886 ±0.026 |
+| train real → test recovered | **0.888 ±0.027**（≈ real） |
+| train real → test anon | 0.442 ±0.037（chance） |
+| train anon → test anon | 0.494 ±0.040（chance） |
+
+凍結探針與真實訓練分類器**結論一致**：還原保全 utility、密文 = chance。
+
+- [事實] recon PSNR **43.6 dB**（400 張；= `deploy_dpm_sweep` DPM++ N=100 S2fn 44.26 級距）、anon PSNR ~5.9 dB。DDIM N=100 僅 37.67 dB —— 為 sampler 差異，非退步。
 - [事實] raw-PNG real-only baseline（sampler 無關，per-class 200）：densenet AUROC 0.884、rad-dino 0.914。
-- [注意] baseline AUROC（~0.82）低於 raw-PNG（~0.88），因本實驗 real 與 recovered 走相同 e1 render（正確 apples-to-apples）。
-- [待更新] per-class 200 確認中（test n=120），數字與圖將以 200 版定稿。
+- [注意] 本實驗 real 與 recovered 走相同 e1 render（正確 apples-to-apples）。
 
-## 5. 威脅模型定位（與 GMIA 對照）
+**4c. Privacy–Utility 聯合表（item 1，同 DPM++/S2 pipeline、同凍結 encoder；`privacy_utility_table.md`）**
 
-| | GMIA（refpaper/114） | 本架構 S2fn |
+| Encoder | 病理 real→recovered | 身份 P 連結 AUC | 身份 **S2** 連結 AUC |
+|---|---:|---:|---:|
+| DenseNet-121 | 0.904 | 0.821 | **0.381** |
+| rad-dino | 0.937 | 0.975 | **0.486** |
+
+外部攻擊者（Packhauser Siamese，latent 密文）：plaintext top-1 0.15 → **S2 top-1 0.05 = random**（AUC 0.445）。
+[結論] 同一條 pipeline、同一批 encoder：**讀病理(utility) ~0.9、讀身份(privacy) S2 ~random** —— 隱私與 utility 在同一操作點同時成立。
+
+## 5. 威脅模型定位（與 GMIA 量化對照，item 4；僅表格比較，未復現 GMIA）
+
+| 維度 | GMIA（refpaper/114，14 類 multi-label） | 本架構 S2fn（二元 No Finding/Effusion） |
 |---|---|---|
-| 匿名圖 | 合理胸片、換身份（可訓練） | 不可辨識密文（雜訊狀） |
-| 可逆 | ✗（PSNR ~24） | ✓（~44 dB，latent+影像兩空間） |
-| utility 所在 | 匿名圖本身 | **授權還原端** |
-| 隱私所在 | 身份被替換 | **密文端**（讀不出也訓不出病理） |
+| 匿名化型態 | 不可逆合成、換身份 | **可逆加密密文**（雜訊狀、不可辨識） |
+| 重構/還原 PSNR | 24.3 dB（不可逆） | **43.6 dB（可逆，latent+影像兩空間）** |
+| real 分類 AUROC | 0.774 | 0.92 / 0.94（densenet / rad-dino） |
+| utility 保全 AUROC | 0.737（**在匿名圖**） | 0.904 / 0.937（**在還原圖**） |
+| 匿名/密文圖可訓練性 | 可（匿名圖 utility 0.737） | **= chance（密文,設計使然）** |
+| inner 連結風險（匿名↔匿名） | **高 0.899（Acc）** | **~random（AUC 0.38–0.49）** |
+| outer 連結風險（匿名↔真實） | ~0（去識別） | ~random（S2 外部 top-1 0.05） |
+| MIA（評估階段） | 0.0 | （未量，另列） |
 
-[結論] 兩者為**不同且互補**的威脅模型：GMIA 用不可逆合成保 utility；本架構用可逆加密密文 + 授權還原，utility 在還原端、隱私在密文端。因此 GMIA 作為「匿名化—分類 utility」文獻 baseline 比較時，須標明本架構額外提供**可逆性**與**密文對病理的零洩漏**，非單純 utility 數字高低之爭。
+[結論] GMIA 把 utility 留在**匿名圖**，代價是**高 inner 連結風險**且**不可逆**；本架構把匿名圖做成**不可連結密文**（inner 與 outer 風險皆 ~random）、utility 以**授權還原無損取回**。兩者威脅模型不同；數值 AUROC 因資料集/任務（14 類 vs 二元）不同不可直接比大小，應比**結構性質**：我們多了可逆性、消滅了 inner-risk。
 
 ## 6. 限制與待補
 
-- [限制] 單一 split、單 seed、固定 N=100、凍結特徵無微調、二元單病理。
-- [限制] `train real → test anon` densenet 0.608 略高於 chance → 密文殘留少量解剖輪廓洩漏（對照圖第 2 欄可見），rad-dino（0.544）更接近 chance。
-- [待辦] 見 §下方「新架構定稿前建議補齊的實驗」（另於 PROGRESS 追蹤）。
+- [限制] 固定 N=100、二元單病理（生成器僅條件過兩類，無法如 GMIA 做 14 類）；CheXpert 單一資料集。
+- [事實] 大樣本（50 splits、per-class 200）下 `train real → test anon` 已收斂到 0.50（n100 時的 0.61 殘留為小樣本雜訊）；密文無顯著病理洩漏。
+- [待辦] 外部資料集 / 外部分類器泛化；本架構自身的 MIA 量測（對齊 GMIA 的 MIA 欄）。
 
 ## 7. 重現指令
 
 ```
-scripts/run_cfg_ddim.sh python -m scripts.classification_utility_pilot --per-class 200
-scripts/run_cfg_ddim.sh python -m scripts.classification_utility_anon --per-class 200 --steps 100 --sampler dpm++
+scripts/run_cfg_ddim.sh python -m scripts.classification_utility_pilot --per-class 200          # raw-PNG baseline
+scripts/run_cfg_ddim.sh python -m scripts.classification_utility_anon --per-class 200 --steps 100 --sampler dpm++ --splits 50
+scripts/run_cfg_ddim.sh python -m scripts.classification_utility_finetune --per-class 200 --steps 100 --splits 5
+scripts/run_cfg_ddim.sh python -m scripts.build_privacy_utility_table \
+    --utility paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json
 scripts/run_cfg_ddim.sh python -m scripts.plot_classification_utility \
-    --json paper_assets/classification_utility/anon_utility_dpm++_n200_s100.json
+    --json paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json --out paper_assets/classification_utility/fig_utility_matrix_k50.png
+scripts/run_cfg_ddim.sh python -m scripts.plot_utility_vs_n \
+    --jsons paper_assets/classification_utility/anon_utility_dpm++_n100_s*_k20.json   # item 6
 ```
 輸出於 `paper_assets/classification_utility/`（json/png/pdf，可重現，不入庫）；seed=1911。

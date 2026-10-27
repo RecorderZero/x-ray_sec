@@ -51,11 +51,14 @@ def main() -> None:
 
     for i, enc in enumerate(encoders):
         vals = [results[enc]["matrix"][key][args.metric] for key, _ in PROBES]
+        cis = [results[enc]["matrix"][key].get(args.metric + "_ci95", 0) or 0 for key, _ in PROBES]
         offset = (i - (n - 1) / 2) * width
         bars = axis.bar(x + offset, vals, width * 0.92, color=SERIES[enc],
-                        label=SERIES_LABEL[enc], zorder=3)
-        for rect, v in zip(bars, vals):
-            axis.text(rect.get_x() + rect.get_width() / 2, v + 0.012, f"{v:.2f}",
+                        label=SERIES_LABEL[enc], zorder=3,
+                        yerr=cis if any(cis) else None, capsize=3,
+                        error_kw={"ecolor": INK2, "elinewidth": 1.1, "zorder": 4})
+        for rect, v, c in zip(bars, vals, cis):
+            axis.text(rect.get_x() + rect.get_width() / 2, v + c + 0.012, f"{v:.2f}",
                       ha="center", va="bottom", fontsize=8.5, color=INK2, zorder=4)
 
     axis.axhline(0.5, ls=(0, (4, 3)), lw=1.4, color=INK2, zorder=2)
