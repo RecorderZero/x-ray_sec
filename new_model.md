@@ -176,3 +176,39 @@
 * [事實] N=50（10×、~3.9s）DPM++/S2fn 38.62 dB 仍勝過 DDIM/S2fn 的 N=100（37.67）。端到端 recon 幾乎不隨步數退化。
 * [事實] S2 ≥ P 的既有現象在 DPM++ 下維持（DPM++/S2fn > DPM++/P 全 N）。range-preserving PNG 對 DPM++ 幾乎無損。
 * [決定] **部署採 DPM-Solver++(2M)、操作點 N=100（5×，~7.5s/4pass，端到端 ~44 dB）**；對速度更硬可到 N=50（10×，~3.9s，~38.6 dB，仍 ≥ 原凍結 DDIM baseline）。
+
+## 11. Pipeline 切換重做計畫（DPM++ N=100 + 4-pass 定案後）
+
+> [決定] 新標準 pipeline：**取樣器 DPM-Solver++(2M)、N=100**；**4-pass**（層 A：最後一趟從解出的 latent 分岔同生「還原圖 + 偽健康圖」，省掉 reinvert 那趟）。
+> 本節盤點切換後**哪些實驗要重做**。來源為 `scripts/p11_experiment_matrix.py` 的實際登錄表。
+
+### 11.0 原則
+* [事實] 本次只改**取樣器 + flow**，**模型權重與密碼本身未變** → 非 §4「換 checkpoint 全重凍」情境。
+* [事實] 潛碼邊際分布實測不變（degeneracy check：DDIM/BDIA/DPM++ 三者 z mean +0.140、std 0.958–0.964 一致）。
+* [事實] **發布物是匿名圖 anon = decode(加密後 latent)**，其殘留身分**由加密決定、非取樣器精度**；`anon vs x0` 三取樣器完全一致（5.91 dB）。**還原圖 x_rec 的高保真只有持鑰者可見 → 是效用提升、非隱私風險**。
+* [決定] 故安全**預期維持**；但「影像空間」攻擊指標仍須在新設定**重跑實證**（方向上保真↑ 可能利敵，必須用數據堵住，不能以「預期」交差）。攻防雙方重跑時**一致採 DPM++ N=100**。
+
+### 11.1 分類（依登錄表）
+
+| 類別 | cell | 取樣器相依 | 動作 | 理由 |
+|---|---|---|---|---|
+| 密碼不變量 | RQ2/RQ3 D5/D6/D7、M2 byte-exact、QᵀQ=I、S0/S1 bit-exact、KPA/nonce | 否 | 沿用 | 線代/密碼性質，作用於 z 代數，與 z 來源無關 |
+| 分布不變 | RQ2 加密後 ~N(0,1)（KS/動差） | 否* | 便宜重確認 | z 分布實測不變，預期過 |
+| latent-space linkage | T2BB-1（直接 latent cos） | 否* | 重確認 | cos 結構依 z 分布，預期不變 |
+| 影像空間攻擊 | T2BB-3（M1 frozen linkage）、T2BB-4（image control）、MC-2（外部 re-id）、MC-3、T2-WB inversion | 是 | **重跑** | 指標作用於 anon/重建影像，取樣器會變 → 須證攻擊未變易 |
+| RQ1 攻擊 | A3/A4/A4.6 | 視實作 | 查後重跑影像相關者 | latent-view 沿用、image-view 重跑 |
+| 保真/可逆主表 | RQ4 Q8_FORMAL（fidelity/runtime/storage） | 是 | **重報** | PSNR/SSIM/latent-cos/runtime 全變（更好），主結果 |
+| 層 A 等價 | ABL-2 reinvert ablation | 是 | **重做** | 4-pass 即此條；須在 DPM++ N=100 重證分岔不損、偽健康圖品質不變 |
+| sampler ablation | ABL-1 BDIA 2x2 | — | 被 §10 取代 | 新三取樣器對比已涵蓋 |
+| 定位 | MC-1（對外文獻） | 否 | 沿用 | 外部數字 |
+
+\* 預期不變，屬「便宜就重確認」級。
+
+### 11.2 必做三項（最小可辯護集）
+1. [待辦] **RQ4 重報**：DPM++ N=100（主）+ N=200（對照）下 fidelity/runtime/storage；凍結 DDIM baseline 保留為參考，DPM++ 另列為「部署最佳化組態」。
+2. [待辦] **層 A 等價 ablation 重做**：DPM++ N=100 證「分岔生成 ≈ 不分岔」（還原圖 cos/PSNR、偽健康圖品質不變）。
+3. [待辦] **影像空間安全平價檢查**：T2BB-3/4 + MC-2，攻防皆 DPM++ N=100，證「更快更清晰但攻擊未變強」。
+
+### 11.3 策略與工時
+* [決定] **不整套重凍**。保留凍結 DDIM baseline 當參考，DPM++ N=100 以「部署組態」並列，附新 fidelity + 安全平價證據。
+* [推定] 工時：RQ4 重報 + 層 A ablation ~0.5–1 天；影像空間安全 3 cell ~1–2 天；latent/分布重確認 ~0.5 天；**合計 ~2–3.5 天**，GPU 需求小（N=100 快），不涉重訓。
