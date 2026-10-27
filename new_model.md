@@ -25,10 +25,10 @@
 
 | 方法 | 可精確反演 | 每步成本 | 需重訓 | 狀態 |
 |---|---|---|---|---|
-| **B1 respaced DDIM（減步）** | 近似，隨步數退化 | 1×/步 | 否 | 本回合起手（見 §8） |
-| **B2 BELM**（[NeurIPS 2024, 2410.07273](https://arxiv.org/pdf/2410.07273)） | **精確**（雙向顯式線性多步） | 1×/步 | 否 | 未試，最佳升級 |
-| **B3 exact-inv DPM-Solver++**（[CVPR 2024](https://openaccess.thecvf.com/content/CVPR2024/papers/Hong_On_Exact_Inversion_of_DPM-Solvers_CVPR_2024_paper.pdf)） | 精確 | 1×/步 | 否 | pixel-space 測過，較複雜 |
-| BDIA（[ECCV 2024, 2307.10829](https://arxiv.org/pdf/2307.10829)） | 精確 | 1×/步 | 否 | **已做**：同 NFE、<0.4 dB，被 BELM 取代 |
+| **B1 respaced DDIM（減步）** | 近似，隨步數退化 | 1×/步 | 否 | 基準線（見 §8/§9） |
+| **B3 DPM-Solver++(2M)**（[CVPR 2024 exact-inv](https://openaccess.thecvf.com/content/CVPR2024/papers/Hong_On_Exact_Inversion_of_DPM-Solvers_CVPR_2024_paper.pdf)；本專案用 2 階近似反演） | 近似（2 階，往返非 bit-exact） | 1×/步 | 否 | **本回合實作 → 最佳**：N=100(5×) 45.6 dB（DDIM 38.9），見 §10 |
+| BDIA（[ECCV 2024, 2307.10829](https://arxiv.org/pdf/2307.10829)，γ=1） | 精確（leapfrog） | 1×/步 | 否 | **對齊 backward 重做**：N=200 +2.4 dB、N≤50 崩，見 §10 |
+| B2 BELM（[NeurIPS 2024, 2410.07273](https://arxiv.org/pdf/2410.07273)） | **精確**（雙向顯式線性多步） | 1×/步 | 否 | 本設定整數-timestep 下**不穩定/非單調**，擱置（§前述 smoke） |
 | EDICT | 精確 | **2×/步** | 否 | 更慢，不採 |
 
 * [決定] 層 B 的**驗證關卡**：任何新取樣器在 full-density（≈499 步）必須重現既有數字（無加密往返 P≈42 dB、full M1≈37 dB）才可信；seed 1911、雙空間報告、不改 `past/SourceCode/`。
@@ -119,3 +119,42 @@
 * [事實] S2 ≥ P 一路到 N=50；N=25 才跌破 P（~28 dB，不可用）。
 * [推定] 操作點：N=200（~13.5s）S2fn 41.8>凍結 38.8；**N=100（~6.8s,~5×）37.7≈凍結**；N=50（~10×）33 仍 ≥ P。
 * 「P 46→40」=單輪往返（匿名圖=P 輸出，N=499 單輪 46.62）vs 雙輪 recon（40.21）；非異常。
+
+## 10. 層 B 取樣器對比：BDIA（對齊重做）與 DPM-Solver++（本回合）
+
+> 目的：回答「換取樣器能不能在同 NFE 下比 DDIM 更準／更快」。全部用對齊 respaced forward/backward（修掉 legacy decode 偏移）、key-free 往返 PSNR(x_rec,x0)（加密 bit-exact 與步數正交）、seed 1911、dev idx {0,1,10,11}。腳本 `scripts/exact_inv_sweep.py`。
+>
+> **為何 BDIA 要重做**：前作 BDIA 附錄（`scripts/bdia_backend.py`）在 T=500/Δt=1 且與 **legacy backward**（有 ~4.5 dB decode-grid 偏移）相比，結論「<0.4 dB、被取代」。對齊 backward 後結論改變。
+
+### 10.1 三取樣器 × 步數（4 圖平均；同 NFE＝evals/pass）
+
+| N | evals | DDIM | BDIA | **DPM++** | s/pass | 加速 |
+|---|---|---|---|---|---|---|
+| 499 | 499 | 46.62 | 47.78 | **48.08** | 9.09 | 1× |
+| 200 | 200 | 43.38 | 45.75 | **47.79** | 3.64 | 2.5× |
+| 100 | 100 | 38.85 | 39.26 | **45.64** | 1.80 | 5× |
+| 50 | 50 | 33.89 | 30.97 | **40.55** | 0.90 | 10× |
+| 25 | 25 | 28.65 | 27.05 | **33.64** | 0.46 | 20× |
+
+* 驗證關卡全綠：三者 full-density ≥ legacy anchor(42.35)−1、單調、全有限。
+* [事實] **DPM-Solver++(2M) 完勝**：同 NFE 下 **N=100（5×）45.64 dB ≈ full-density**（DDIM 僅 38.85，差 +6.79）；N=50（10×）40.55 dB 仍勝過 DDIM 的 N=100；幾乎不隨步數退化（二階指數積分器每步更準）。
+* [事實] **BDIA（γ=1 leapfrog）對齊後**：N=200 +2.36、N=100 +0.41 dB 小勝 DDIM，但 N≤50 二階 leapfrog 在超粗整數格點崩（−2.9/−1.6）。遠優於舊 legacy-backward 的「<0.4 dB」。
+* [限制] DPM++ 2M 的 bit-exact 反演有乘多步 buffer 方向障礙（反演往噪方向需尚未算出的 `x0_prev`，同 BELM 風險級），故採**對稱二階近似反演**（diffusers inverse-scheduler 同款），往返非 bit-exact；公平比較的是同 NFE 的往返 PSNR。
+
+### 10.2 非退化確認（`scripts/exact_inv_degeneracy_check.py`，N=100）
+
+「DPM++ +8 dB 太好」必查是否潛碼退化（z 保留影像結構 → decode 虛高還原、無法加密）。結果**洗清**：
+
+| 取樣器 | z mean | z std | z absmax | recon | anon(sign-flip) vs x0 |
+|---|---|---|---|---|---|
+| DDIM | +0.140 | 0.958 | 5.55 | 38.83 | 5.91 |
+| BDIA | +0.140 | 0.964 | 5.67 | 40.96 | 5.93 |
+| DPM++ | +0.140 | 0.958 | 5.57 | 46.92 | 5.91 |
+
+* [事實] 三者 z 分布**相同**（~N(0,1)：mean +0.14、std ~0.96）、加密後 decode 偏離 x0 **一致（5.91 dB）** → 潛碼同樣可加密、匿名力道相同。DPM++ 的高還原純來自取樣器精度，非退化。
+
+### 10.3 決定與後續
+
+* [決定] **採 DPM-Solver++(2M) 作為層 B 的加速取樣器**；B1 respaced DDIM 留作基準、B2 BELM/EDICT 擱置。
+* [推定] 建議操作點 **N=100（5×，~45.6 dB）**；對速度更硬可到 N=50（10×，~40.6 dB，仍 ≥ legacy baseline）。
+* [待辦] 把 DPM++ 接上**部署真實**管線（range-preserving PNG + S2 加密、`deploy_s2_sweep` 同框架）確認端到端 recon 與 §9.2 一致或更好；接著可與層 A（省 reinvert pass）疊加。

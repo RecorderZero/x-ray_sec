@@ -2471,3 +2471,38 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 待使用者裁決：(a) 投入做穩定 BELM（連續 σ̄ 排程 + 次整數內插，多天）/ (b) 鎖定 B1 為輕量化結論、B2/B3 擱置。S2 的 S0/S1 legacy 對照、fixed-norm 容器完整版（AEAD）為可選。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · B3 DPM-Solver++ + BDIA（對齊 backward 重做）取樣器對比
+
+### 1. 目標 (Goal)
+* 使用者裁決：B2(BELM) 擱置，改測 **B3(DPM-Solver++)** 與 **BDIA**，在同 NFE 下看是否勝過 respaced DDIM。BDIA 需重做，因前作是與 legacy backward（~4.5 dB 偏移）相比。
+
+### 2. 執行內容 (Actions)
+* `scripts/exact_inv_sweep.py`（新）：`BDIARespaced`（γ=1 leapfrog 移植到 respaced 格點，一次 eval 得 G→b[i-1]/R→b[i+1]，邊界步純 DDIM）與 `DPMSolverpp`（2M data-pred，descending 生成 / ascending 近似反演，1 eval/步，λ 指數積分器）。三取樣器 key-free 往返 PSNR 掃描 N={499,200,100,50,25}，附 legacy dense anchor + 單調/有限/≥anchor gate。--smoke 2 圖、full 4 圖。
+* `scripts/exact_inv_degeneracy_check.py`（新）：查 DPM++ 高還原是否潛碼退化（z 統計 + sign-flip 加密後 anon vs x0）。
+* new_model.md：更新 §2 層 B 表狀態、新增 §10（三取樣器對比 + 非退化確認 + 決定）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 三取樣器對齊往返（4 圖平均，同 NFE；gate 全綠 anchor=42.35）：
+  - N=499：DDIM 46.62 / BDIA 47.78 / **DPM++ 48.08**
+  - N=200：43.38 / 45.75 / **47.79**（2.5×）
+  - N=100：38.85 / 39.26 / **45.64**（5×，≈ full-density）
+  - N=50 ：33.89 / 30.97 / **40.55**（10×，仍 ≥ legacy baseline）
+  - N=25 ：28.65 / 27.05 / **33.64**（20×）
+* [事實] **DPM-Solver++(2M) 完勝**：N=100(5×) 比 DDIM +6.79 dB、幾乎不隨步數退化。BDIA 對齊後 N=200 +2.36/N=100 +0.41 小勝、N≤50 崩（二階 leapfrog 在超粗整數格點不穩）。
+* [事實] 非退化確認（N=100）：DDIM/BDIA/DPM++ 三者 z 分布相同（mean +0.140、std 0.958–0.964）、sign-flip 加密後 anon vs x0 一致（5.91/5.93/5.91 dB）→ 潛碼同樣可加密、匿名力道相同；DPM++ 高還原純屬取樣器精度，非作弊。
+* [限制] DPM++ 2M bit-exact 反演有乘多步 buffer 方向障礙（同 BELM 風險），故採對稱二階近似反演（往返非 bit-exact）；公平比較指標為同 NFE 往返 PSNR。
+
+### 4. 達標判定 (Assessment)
+* [x] B3 與 BDIA 皆 smoke-first（2 圖通過）再放大 4 圖；驗證 gate 全綠；「太好」數字先做非退化檢查才記為發現。未改 past/SourceCode/、audit/；未碰凍結表。
+* 產物：`paper_assets/exact_inv_sweep/{sweep.json,smoke.json,degeneracy_check.json}`、`new_model.md §10`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 使用者「對齊 backward 後 BDIA 需重做」的判斷正確：結論從「<0.4 dB」翻成「N=200 +2.4 dB」。
+* DPM++ 是本加速線最大發現：5× 近乎零保真代價。smoke-first + 非退化檢查雙關卡避免誤採或誤拒。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* [注意] 沿用 2026-10-27 口頭放寬 CLAUDE.md §3（GPU smoke-first、長度不限），未改 CLAUDE.md。
+
+### 7. 下一步
+* [待辦] 把 DPM++ 接上部署真實管線（range-preserving PNG + S2 加密，`deploy_s2_sweep` 框架）確認端到端 recon；可與層 A（省 reinvert pass）疊加。待使用者裁決是否進行。使用者手動 push。

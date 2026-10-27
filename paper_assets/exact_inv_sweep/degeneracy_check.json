@@ -1,0 +1,31 @@
+{
+  "seed": 1911,
+  "N": 100,
+  "indices": [
+    0,
+    1
+  ],
+  "samplers": {
+    "DDIM": {
+      "z_mean": 0.1401,
+      "z_std": 0.9575,
+      "z_absmax": 5.547,
+      "recon_psnr_db": 38.83,
+      "anon_vs_x0_psnr_db": 5.91
+    },
+    "BDIA": {
+      "z_mean": 0.1402,
+      "z_std": 0.9635,
+      "z_absmax": 5.665,
+      "recon_psnr_db": 40.96,
+      "anon_vs_x0_psnr_db": 5.93
+    },
+    "DPM++": {
+      "z_mean": 0.1401,
+      "z_std": 0.9583,
+      "z_absmax": 5.574,
+      "recon_psnr_db": 46.92,
+      "anon_vs_x0_psnr_db": 5.91
+    }
+  }
+}
