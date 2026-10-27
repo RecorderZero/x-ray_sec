@@ -46,7 +46,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.preprocessing import StandardScaler
 
-from scripts.classification_utility_pilot import select_balanced, split_by_patient
+from scripts.classification_utility_pilot import select_balanced
 from scripts.deploy_s2_sweep import CKPT, decrypt, encrypt
 from scripts.e1_ddim_runner import create_runtime, preprocess
 from scripts.exact_inv_sweep import DPMSolverpp
@@ -99,6 +99,8 @@ def main() -> None:
     ap.add_argument("--sampler", choices=["dpm++", "ddim"], default="dpm++",
                     help="deployment sampler; dpm++ (DPM-Solver++ 2M) matches the current pipeline")
     ap.add_argument("--test-frac", type=float, default=0.3)
+    ap.add_argument("--splits", type=int, default=1,
+                    help="patient-disjoint resamples; >1 reports mean & 95%% CI (images generated once)")
     ap.add_argument("--encoders", nargs="+", default=["densenet121_imagenet", "rad_dino"])
     ap.add_argument("--checkpoint", type=Path, default=CKPT)
     ap.add_argument("--source-root", type=Path, default=Path("past/SourceCode"))
@@ -110,7 +112,6 @@ def main() -> None:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     torch.manual_seed(SEED)
     torch.backends.cudnn.benchmark = False
-    rng = np.random.default_rng(SEED)
     device = torch.device("cuda:0")
 
     picks = select_balanced(args.per_class)
@@ -119,21 +120,15 @@ def main() -> None:
         raise SystemExit(f"insufficient images resolved on disk: {got}")
     print(f"selected healthy(y0)={got[0]} effusion(y1)={got[1]}", flush=True)
 
-    tr0, te0 = split_by_patient(picks[0], args.test_frac, rng)
-    tr1, te1 = split_by_patient(picks[1], args.test_frac, rng)
-    train = [(pid, path, 0) for pid, path in tr0] + [(pid, path, 1) for pid, path in tr1]
-    test = [(pid, path, 0) for pid, path in te0] + [(pid, path, 1) for pid, path in te1]
-    entries = train + test
-    train_n = len(train)
+    entries = [(pid, path, 0) for pid, path in picks[0]] + [(pid, path, 1) for pid, path in picks[1]]
     labels = np.array([lab for _p, _path, lab in entries])
-    y_train, y_test = labels[:train_n], labels[train_n:]
-    print(f"train n={train_n} (y1={int(y_train.sum())}) | test n={len(test)} (y1={int(y_test.sum())})", flush=True)
+    idx_by_class = {c: np.where(labels == c)[0] for c in (0, 1)}
 
     _, diffusion, model_fn = create_runtime(args.source_root, args.checkpoint, device)
     rs = Respaced(diffusion, model_fn, device)
     sampler = DPMSolverpp(rs) if args.sampler == "dpm++" else rs
     b = schedule(args.steps)
-    print(f"sampler={args.sampler} steps={args.steps}", flush=True)
+    print(f"sampler={args.sampler} steps={args.steps} splits={args.splits} n_images={len(entries)}", flush=True)
 
     real_imgs, anon_imgs, rec_imgs = [], [], []
     recon_psnr, anon_psnr, examples = [], [], []
@@ -154,6 +149,26 @@ def main() -> None:
                   f"({(time.perf_counter() - t0) / (i + 1):.2f}s/img)", flush=True)
     gen_seconds = time.perf_counter() - t0
 
+    # K patient-disjoint splits; one image per patient => a random split IS patient-disjoint.
+    def make_split(seed: int):
+        g = np.random.default_rng(seed)
+        test = []
+        for c in (0, 1):
+            perm = g.permutation(idx_by_class[c])
+            n_test = max(1, int(round(len(perm) * args.test_frac)))
+            test.extend(int(i) for i in perm[:n_test])
+        test_set = set(test)
+        train_idx = np.array([i for i in range(len(entries)) if i not in test_set])
+        return train_idx, np.array(sorted(test_set))
+    splits = [make_split(SEED + k) for k in range(args.splits)]
+    print(f"splits={args.splits}  per-split train={len(splits[0][0])} test={len(splits[0][1])}", flush=True)
+
+    def summarize(vals):
+        a = np.asarray(vals, dtype=float)
+        mean = float(a.mean()); std = float(a.std(ddof=1)) if len(a) > 1 else 0.0
+        ci = float(1.96 * std / np.sqrt(len(a))) if len(a) > 1 else 0.0
+        return round(mean, 4), round(std, 4), round(ci, 4)
+
     image_sets = {"real": real_imgs, "anon": anon_imgs, "recovered": rec_imgs}
     matrix = [("real", "real"), ("real", "anon"), ("real", "recovered"), ("anon", "anon")]
     results = {}
@@ -169,25 +184,36 @@ def main() -> None:
             continue
         enc_res = {}
         for tr_type, te_type in matrix:
-            m = probe(feats[tr_type][:train_n], y_train, feats[te_type][train_n:], y_test)
-            enc_res[f"train_{tr_type}__test_{te_type}"] = m
+            aurocs, accs, f1s = [], [], []
+            for tr_idx, te_idx in splits:
+                m = probe(feats[tr_type][tr_idx], labels[tr_idx], feats[te_type][te_idx], labels[te_idx])
+                aurocs.append(m["auroc"]); accs.append(m["acc"]); f1s.append(m["f1"])
+            au_m, au_s, au_ci = summarize(aurocs)
+            ac_m, _, _ = summarize(accs); f1_m, _, _ = summarize(f1s)
+            enc_res[f"train_{tr_type}__test_{te_type}"] = {
+                "auroc": au_m, "auroc_std": au_s, "auroc_ci95": au_ci,
+                "acc": ac_m, "f1": f1_m, "n_splits": args.splits}
+            pm = f" (95%CI ±{au_ci:.3f})" if args.splits > 1 else ""
             print(f"{enc:>22}  train {tr_type:>9} -> test {te_type:>9}  "
-                  f"acc={m['acc']:.3f} auroc={m['auroc']:.3f} f1={m['f1']:.3f}", flush=True)
+                  f"auroc={au_m:.3f}{pm} acc={ac_m:.3f}", flush=True)
         results[enc] = {"feat_dim": int(feats["real"].shape[1]), "matrix": enc_res}
 
     payload = {
         "seed": SEED, "design": "A: No Finding (y0) vs Pleural Effusion (y1), binary",
         "split": "patient-disjoint; one image per patient", "per_class": args.per_class,
-        "train_n": train_n, "test_n": len(test), "steps": args.steps, "scheme": "S2fn",
-        "sampler": args.sampler,
+        "n_images": len(entries), "n_splits": args.splits, "test_frac": args.test_frac,
+        "train_n": int(len(splits[0][0])), "test_n": int(len(splits[0][1])),
+        "steps": args.steps, "scheme": "S2fn", "sampler": args.sampler,
         "render": "shared [0,1] 256x256 -> grayscale RGB for real/anon/recovered",
         "pipeline": f"aligned {args.sampler}; B(E(F(x0))) anon; B(D(F(PNG(anon)))) recovered",
-        "probe": "StandardScaler + LogisticRegression, frozen features",
+        "probe": f"StandardScaler + LogisticRegression, frozen features; "
+                 f"{args.splits} patient-disjoint split(s), mean & 95% CI",
         "recon_psnr_vs_x0_db": {"mean": round(float(np.mean(recon_psnr)), 3), "min": round(float(np.min(recon_psnr)), 3)},
         "anon_psnr_vs_x0_db": {"mean": round(float(np.mean(anon_psnr)), 3)},
         "generation_seconds": round(gen_seconds, 1), "results": results,
     }
-    out = args.out_dir / f"anon_utility_{args.sampler}_n{args.per_class}_s{args.steps}.json"
+    suffix = f"_k{args.splits}" if args.splits > 1 else ""
+    out = args.out_dir / f"anon_utility_{args.sampler}_n{args.per_class}_s{args.steps}{suffix}.json"
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
     print(f"\nwrote {out}")
 
