@@ -157,4 +157,22 @@
 
 * [決定] **採 DPM-Solver++(2M) 作為層 B 的加速取樣器**；B1 respaced DDIM 留作基準、B2 BELM/EDICT 擱置。
 * [推定] 建議操作點 **N=100（5×，~45.6 dB）**；對速度更硬可到 N=50（10×，~40.6 dB，仍 ≥ legacy baseline）。
-* [待辦] 把 DPM++ 接上**部署真實**管線（range-preserving PNG + S2 加密、`deploy_s2_sweep` 同框架）確認端到端 recon 與 §9.2 一致或更好；接著可與層 A（省 reinvert pass）疊加。
+* [事實] DPM++ 已接上**部署真實**管線（見 §10.4），端到端同樣拿到 5× 紅利。
+* [待辦] 可與層 A（省 reinvert pass）疊加，進一步 1.5×。
+
+### 10.4 部署真實版 DPM++ vs DDIM（range-preserving PNG + S2 加密；`scripts/deploy_dpm_sweep.py`）
+
+> 完整 4-pass 管線（`z=F(x0); anon=B(E(z)); anon_png=PNG(anon); ẑ'=F(anon_png); x_rec=B(D(ẑ'))`），兩取樣器同介面、同 NFE。4 圖平均 recon PSNR vs x0。crypto-sanity 綠（P max|D(E(z))−z|=0、S2fn 9.5e-7）。DDIM/S2fn 逐格**完全重現 §9.2**（45.63/41.77/37.67/33.01/27.83）→ 決定性驗證通過。
+
+| N | 加速 | DDIM/P | DPM++/P | DDIM/S2fn | **DPM++/S2fn** | Δ(S2fn) | s/4pass |
+|---|---|---|---|---|---|---|---|
+| 499 | 1× | 40.21 | 41.96 | 45.63 | **46.90** | +1.27 | 36.0 |
+| 200 | 2.5× | 37.41 | 41.70 | 41.77 | **46.62** | +4.85 | 14.6 |
+| 100 | 5× | 34.62 | 40.39 | 37.67 | **44.26** | +6.59 | 7.5 |
+| 50 | 10× | 32.27 | 36.57 | 33.01 | **38.62** | +5.61 | 3.9 |
+| 25 | 20× | 28.88 | 33.59 | 27.83 | **32.65** | +4.82 | 2.1 |
+
+* [事實] **DPM++/S2fn 在 N=200（2.5×、~14.6s）46.62 dB 已勝過 DDIM/S2fn full-density（45.63）**；N=100（5×、~7.5s）44.26 dB 仍遠勝 DDIM 同步數的 37.67，也勝過 DDIM full-density。
+* [事實] N=50（10×、~3.9s）DPM++/S2fn 38.62 dB 仍勝過 DDIM/S2fn 的 N=100（37.67）。端到端 recon 幾乎不隨步數退化。
+* [事實] S2 ≥ P 的既有現象在 DPM++ 下維持（DPM++/S2fn > DPM++/P 全 N）。range-preserving PNG 對 DPM++ 幾乎無損。
+* [決定] **部署採 DPM-Solver++(2M)、操作點 N=100（5×，~7.5s/4pass，端到端 ~44 dB）**；對速度更硬可到 N=50（10×，~3.9s，~38.6 dB，仍 ≥ 原凍結 DDIM baseline）。

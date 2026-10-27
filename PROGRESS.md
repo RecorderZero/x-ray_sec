@@ -2506,3 +2506,34 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * [待辦] 把 DPM++ 接上部署真實管線（range-preserving PNG + S2 加密，`deploy_s2_sweep` 框架）確認端到端 recon；可與層 A（省 reinvert pass）疊加。待使用者裁決是否進行。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · 部署真實版 DPM-Solver++ vs DDIM（range-preserving PNG + S2 加密）
+
+### 1. 目標 (Goal)
+* 使用者確認「DPM++ 速度≈DDIM 但更準」後裁示：測實際部署下 DPM++ 效果。
+
+### 2. 執行內容 (Actions)
+* `scripts/deploy_dpm_sweep.py`（新）：沿用 `deploy_s2_sweep` 的 encrypt/decrypt/nonce + range-preserving PNG handoff，參數化取樣器（DDIM respaced / DPM++ 2M，同 .forward/.backward 介面），跑完整 4-pass 管線 × {P, S2fn} × N={499,200,100,50,25}。--smoke 2 圖、full 4 圖；含每取樣器 crypto-sanity 與 pipeline 牆鐘。
+* new_model.md §10.3 更新（部署已接上）、新增 §10.4 部署對比表。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] crypto-sanity 綠：P max|D(E(z))−z|=0；S2fn DDIM 8.9e-7 / DPM++ 9.5e-7。
+* [事實] DDIM/S2fn 逐格**完全重現 §9.2**（45.63/41.77/37.67/33.01/27.83）→ 決定性驗證通過。
+* [事實] 4 圖部署 recon PSNR（DPM++/S2fn，加速，s/4pass）：
+  - N=499：46.90（1×，36.0s）  N=200：46.62（2.5×，14.6s）  N=100：44.26（5×，7.5s）
+  - N=50：38.62（10×，3.9s）   N=25：32.65（20×，2.1s）
+* [事實] vs DDIM/S2fn 同步數：+1.27 / +4.85 / +6.59 / +5.61 / +4.82 dB。**DPM++/S2fn 在 N=200(2.5×) 已勝過 DDIM full-density(45.63)；N=100(5×) 44.26 遠勝**。N=50(10×) 38.62 仍勝 DDIM 的 N=100。
+* [事實] S2 ≥ P 現象在 DPM++ 維持（DPM++/S2fn > DPM++/P 全 N）；range-preserving PNG 對 DPM++ 幾乎無損。
+
+### 4. 達標判定 (Assessment)
+* [x] smoke-first（2 圖通過）再放大 4 圖；crypto-sanity + 與 §9.2 決定性比對雙重驗證。未改 past/SourceCode/、audit/、凍結表。
+* 產物：`paper_assets/deploy_dpm_sweep/{sweep.json,sweep.csv,smoke.json}`、`new_model.md §10.4`。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* 加速線收斂：**部署採 DPM-Solver++(2M)、操作點 N=100（5×、~7.5s/4pass、~44 dB）**，速度與 DDIM 齊平而端到端多 ~5–7 dB。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* [注意] 沿用 2026-10-27 口頭放寬 CLAUDE.md §3（GPU smoke-first、長度不限），未改 CLAUDE.md。
+
+### 7. 下一步
+* [待辦] 可選：(a) 疊加層 A（省 reinvert pass，再 1.5×）；(b) 視覺化 grid（DPM++ × N）；(c) 把 DPM++ 納入正式 formal/attack 重跑前的加速取樣器。待使用者裁決。使用者手動 push。
