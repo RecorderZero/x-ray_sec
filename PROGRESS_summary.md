@@ -854,7 +854,7 @@
 |---|---|---|---|
 | AF-040 | Q10.2 精度註記與資料漂移修正（float32 1.55e-6／float64 3.05e-15）＋ stage-1 bit-exact 精確化 | 待複驗（提交修正） | `fix: AF-040` |
 | T2-BB inner | 匿名圖 anon↔anon linkage pilot 定稿（image control／latent linkage／學習式） | Achieved（AUD-20261022-01 相關） | 見 W7-T13/14/15 |
-| T2-BB-M1-frozen | 實際公開 PNG 的黑箱 linkage pilot（N=20）＋單元測試 | PASS（AUD-20261022-01） | **未入庫（見 8.7）** |
+| T2-BB-M1-frozen | 實際公開 PNG 的黑箱 linkage pilot（N=20）＋單元測試（W8-T3） | PASS（AUD-20261022-01） | `464e4a7` |
 | P11.1 | 最終實驗矩陣（34 cells，run id/provenance；W8-T1） | Achieved | `d41e2b0` |
 | P11.4 | 機械性向量匯出（PDF，無損；W8-F1/F2） | Achieved | 見 P11 收尾 |
 | AF-043 | exact-recovery 詞表缺口＋一處影像端過度宣稱修正 | 待複驗 | `fix: AF-043` |
@@ -880,6 +880,10 @@
 **sampler ablation（W8-T2）**
 * BDIA/DDIM 2×2（N=200，legacy backward）：sampler 軸 m1 PSNR Δ<0.4 dB，NFE parity 1996 → 當時結論「精確反演在 single-shot 無實質增益」。**更正見下**。
 
+**實際公開 M1 PNG 的黑箱 linkage（W8-T3）**
+* 威脅模型 T2-BB/no-model/no-key/no-plaintext/anonymous-PNG-only（N=20 pilot）：target 端只匯出攻擊者可見灰階 PNG（真值表留在匯出目錄外、S2 master key 每輪隨機不落盤只記 SHA-256），scorer 只讀匯出目錄用凍結 encoder（densenet121-imagenet／rad-dino）評分。
+* [事實] P 對照**有訊號**（rad-dino AUC 0.976、densenet AUC 0.81），S0/S1/S2 **全塌到 ~隨機**（AUC 0.43–0.56、top1 ≤0.1，random 0.05，null_auc_mean≈0.50）→ 釋出的匿名 PNG 不可被凍結 encoder 連結。單元測試 4 passed（完美檢索 + 竄改/truth-leak/path-escape 拒絕）。
+
 **P2 RQ4 端到端彙整**
 * `results_index.md` 新增節，將可逆性拆成 (a) 密碼層 transform-only（S0/S1 bit-exact、S2 max_abs 8.3e-7）、(b) as-shipped 部署、(c) 同存檔 encryption-only、(d) M2 byte-exact 上界，避免把存檔協定效應誤歸因為加密。
 
@@ -889,6 +893,7 @@
 |---|---|---|---|
 | W8-T1 | 最終實驗矩陣（34 cells，run id/provenance） | 正文 | Discussion／實驗凍結 |
 | W8-T2 | BDIA/DDIM 2×2 保真消融（N=200） | 附錄 | Results／sampler ablation |
+| W8-T3 | 實際公開 M1 PNG 黑箱 linkage（N=20，4 法×2 encoder） | 正文 | Results／T2-BB inner-risk |
 | W8-F1 | P8 視覺 grid 向量匯出（PDF，無損） | 正文 | Results／visual grid |
 | W8-F2 | reinvert ablation grid 向量匯出（PDF） | 附錄 | Results／層 A |
 | W8-F3 | latent 方向≠大小 demo（並排生成圖） | 附錄 | Results／metric semantics |
@@ -908,8 +913,8 @@
 
 ### 8.7 限制與未解問題
 
-* **[待處理] T2-BB-M1-frozen 頭牌成果未入庫**：`paper_assets/tables/table_t2bb_m1_frozen.{csv,json}`、`scripts/t2bb_m1_*.py`、`tests/unit/test_t2bb_m1_frozen_linkage.py` 目前為 untracked。因未入庫，本週附錄未將其列為凍結素材（`final_experiment_matrix` T2BB-3 列的 provenance 仍指向它）；須先 commit 才能納入 appendix 並在摘要引用其 Top-1/AUC。
-* 樣本數：T2-BB inner/M1-frozen 為 pilot（victim 20×2），非 formal N=200。
+* [已解決] T2-BB-M1-frozen 實作方檔案（table/scripts/test/env）於 `464e4a7` 入庫，已納入 appendix（W8-T3）並在 8.3 回填 AUC。稽核方 `audit/t2bb_m1_recompute.*` 仍為稽核方所有（實作方未碰）。
+* 樣本數：T2-BB inner/M1-frozen 為 pilot（victim 20×2），非 formal N=200；若新 pipeline（DPM++）定案，此 linkage 屬影像空間、需在新設定重跑（見 `new_model.md §11.1`）。
 * BDIA 2×2 的「<0.4 dB」結論為 legacy backward 下所得；W9 已以對齊 respaced 版改寫（見 8.8／W9）。
 
 ### 8.8 下週計畫（Week 9）

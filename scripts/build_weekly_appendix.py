@@ -906,6 +906,10 @@ WEEKS: dict[int, list[Item]] = {
              "BDIA 精確反演在 T=500 single-shot 對 m1 PSNR 無實質增益（<0.4 dB）；robustness／negative。註：此為 legacy backward 下的結論，W9 §10 的對齊 respaced 版已改寫（N=200 +2.4 dB）",
              ["paper_assets/tables/table_bdia_2x2.csv"],
              ["BDIA2X2_20261020T182731Z_efbf6f85"]),
+        Item("W8-T3", "table", "W8-T3_t2bb_m1_frozen.csv", "正文", "Results／T2-BB inner-risk（實際 M1）",
+             "實際公開 M1 PNG 的黑箱 anon↔anon linkage pilot（N=20，無模型/金鑰/明文）：P/S0/S1/S2 × densenet121-imagenet/rad-dino 的 Top-1/Top-5/AUC、conditional-query bootstrap CI 與 label-permutation null。",
+             "P 對照有訊號（rad-dino AUC 0.976／densenet 0.81），S0/S1/S2 全塌到 ~隨機（AUC 0.43–0.56、top1 ≤0.1、random 0.05）→ 釋出匿名 PNG 不可被凍結 encoder 連結；pilot N=20 探索性（AUD-20261022-01 PASS，AF-041 scope 註）",
+             ["paper_assets/tables/table_t2bb_m1_frozen.csv"]),
         # --- P11.4 lossless vector exports + P2 figure ---
         Item("W8-F1", "figure", "W8-F1_P8_visual_grid.pdf", "正文", "Results／visual grid（向量）",
              "P11.4 P8 視覺 grid 的機械性無損向量匯出（PDF，2560×1178 RGB，8.53×3.93 in）。",
