@@ -2732,3 +2732,34 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * [限制] `recovery→null` 僅套用於定位分支;主 pipeline/RQ4 仍 y=0 還原(切換是另一決定,預期 +1~4 dB)。threshold 0.5 未校準、val-only、非 formal。
 * [注意] 外部定位模型(BioViL-T/AFLoc)校準尚未做;S2 僅數值 fixture。
 * 已達標:提交 code+tests(還原分支改動、兩支診斷腳本、legacy baseline);輸出 json 於 `paper_assets/`(可由腳本重現,不入庫)。
+
+## 2026-10-27 · W8 · Track P2 · 分類 utility:real baseline + S2 匿名/還原 utility-preservation
+
+### 1. 當前目標 (Objective)
+* 定位為 chance 等級後,受 GMIA(refpaper/114)啟發,改以**分類**當 utility 軸;回答使用者「改做分類會不會比較準」與「匿名/還原圖分類準不準」。
+* [決定] Design A(使用者裁決):二元 **No Finding(y0)vs Pleural Effusion(y1)**,即生成器 CFG 僅條件過的兩類;選樣時只收純 No Finding 與有積水者,其餘(骨折-only 等)丟棄。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/classification_utility_pilot.py`:CPU、real-only linear probe(凍結特徵 densenet121_imagenet / rad-dino + StandardScaler+LogisticRegression),patient-disjoint;`select_balanced`/`split_by_patient`。
+* 新增 `scripts/classification_utility_anon.py`:GPU,接 S2fn 部署 pipeline(`deploy_s2_sweep` 的 encrypt/decrypt + `range_preserving_png_handoff` + aligned Respaced DDIM),每張產 real/anon/recovered 並走**相同 render**([0,1] 256² → 灰階 RGB);跑 4-probe 矩陣 + 對照圖。
+* 指令:`classification_utility_pilot --per-class 200`(real-only);`classification_utility_anon --per-class 100 --steps 100`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] real baseline(raw PNG,per-class 200):densenet AUROC **0.884**、rad-dino **0.914**(acc 0.817)→ 分類可學,遠勝 chance 定位。
+* [事實] preservation(per-class 100,N=100,S2fn):recon **37.7 dB**、anon **~6 dB**。recon 與 `deploy_s2_sweep` 的 N=100 S2fn(**37.67 dB**)完全吻合 → 非 bug,是低 N 操作點;PSNR 隨 N:100→37.7、200→41.8、400→45.3、499→45.6。
+* [事實] utility 矩陣 AUROC(test n=60;densenet / rad-dino):
+  - `train real → test real` = 0.831 / 0.824
+  - `train real → test recovered` = **0.823 / 0.838**(≈ real→real)
+  - `train real → test anon` = 0.598 / 0.542(近 chance)
+  - `train anon → test anon` = 0.519 / 0.432(≈ chance)
+
+### 4. 達標判定 (Assessment)
+* [結論] **還原保全 utility、密文保護隱私**:授權還原後分類 AUROC 幾乎等同原圖(配合 37.7 dB,latent+影像兩空間近無損);未授權者拿到密文既讀不出(real→anon 近 chance)也訓不出(anon→anon = chance)病理。
+* [結論] 與 GMIA 不同威脅模型:GMIA 用**不可逆合成換身份圖**把 utility 留在匿名圖;我們用**可逆加密密文 + 授權還原**,utility 在還原端、隱私在密文端 —— 互補而非競爭。
+* [限制] 單一 split、固定 N=100、凍結特徵無微調、二元單病理(生成器僅條件過兩類,無法如 GMIA 做 14 類);`train real→test anon` densenet 0.598 略高 chance → 密文殘留少量解剖輪廓洩漏(對照圖第2欄可見),rad-dino(0.542)更接近 chance。
+* [事實] baseline AUROC(~0.82)低於 real-only pilot(~0.88),因本實驗 real 走 e1 前處理(直方圖均衡+256+JPEG)與 recovered 相同 render(正確 apples-to-apples 控制組)。
+* 已達標:提交兩支 utility 腳本;json/對照圖於 `paper_assets/classification_utility/`(可由腳本重現,不入庫)。
+
+### 5. 下一步
+* [待辦] 可選在 N=200(~45 分)或 N=400(~90 分)重跑 utility 矩陣,報「設計操作點(42–46 dB)」確認列;預期 recovered utility 只會更貼齊或超越 real。
+* [待辦] 若要跟 GMIA 數字直接比,需評估生成器對其他病理的保留力(超出現 checkpoint 設計)。
