@@ -1,0 +1,36 @@
+{
+  "seed": 1911,
+  "smoke": true,
+  "sampler": "DPM++",
+  "N": 100,
+  "pairs": 6,
+  "s2_key_sha256": "05824447bb75bcac1ac482b4c9a07390b2e1b5779a4622102dac63e0df4f144c",
+  "s2_rounds": 1,
+  "s2_use_permutation": false,
+  "results": [
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "P",
+      "encoder": "densenet121_imagenet",
+      "pairs": 6,
+      "top1": 0.3333,
+      "auc": 0.6833,
+      "random_top1": 0.1667,
+      "null_auc_mean": 0.5003,
+      "auc_permutation_p": 0.0374
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "S2",
+      "encoder": "densenet121_imagenet",
+      "pairs": 6,
+      "top1": 0.1667,
+      "auc": 0.3778,
+      "random_top1": 0.1667,
+      "null_auc_mean": 0.5011,
+      "auc_permutation_p": 0.9222
+    }
+  ]
+}

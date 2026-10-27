@@ -248,3 +248,19 @@
 * [事實] DPM++ 下 re-inversion 完全冗餘：A≈B 的 cos **0.99997**（還原與偽健康皆是），追平並超過前作 legacy DDIM 的 0.9999（ABL-2）。→ **4-pass 層 A 對新 sampler 成立**，可安全省掉一趟 inversion。
 * [事實] DPM++ 的 A-vs-B 一致度（cos/psnr）高於 aligned-DDIM，與其較緊的 latent 往返一致。
 * [決定] 新標準 pipeline 的 4-pass 分岔（item 2）**已實證**；偽健康圖品質（A vs B）在 gs=0/2 均不受省趟影響。
+
+### 11.6 Item 3：影像空間 linkage 安全平價 @ DPM++ N=100（回應 AF-045；`scripts/t2bb_dpm_parity.py`）
+
+> 防禦端改用 DPM++ N=100 端到端（invert x0→z、加密、anon=backward(E(z))），發布表徵與出貨一致（P/S0/S1→legacy PNG、S2→private-range public-q）。攻擊端為凍結預訓練 encoder（densenet121-imagenet、rad-dino；sampler-agnostic）。anon↔anon 同病患配對 linkage，t2bb_inner_v1 20 對，label-permutation null。
+
+| encoder | 法 | DPM++ top1 / auc | legacy top1 / auc（凍結表） |
+|---|---|---|---|
+| densenet | P | 0.550 / **0.821** | 0.50 / 0.81 |
+| densenet | S0 / S1 / S2 | 0.446 / 0.481 / 0.381（auc） | 0.434 / 0.479 / 0.558 |
+| rad-dino | P | 0.750 / **0.975** | 0.75 / 0.976 |
+| rad-dino | S0 / S1 / S2 | 0.539 / 0.504 / 0.486（auc） | 0.532 / 0.498 / 0.510 |
+
+* [事實] P 對照在 DPM++ 下幾乎逐格重現凍結 legacy（densenet 0.821 vs 0.81、rad-dino 0.975 vs 0.976）→ 攻擊管線一致、對照有效。
+* [事實] **S0/S1/S2 在 DPM++ 下全維持 ~隨機**（auc 0.38–0.54，null_auc≈0.50、random top1=0.05），無一上升；S2 甚至略低於 legacy。→ **換 sampler 未提高釋出匿名圖的可連結性**。
+* [結論] AF-045 的 T2BB frozen-encoder linkage（T2BB-3/4 等價）在 DPM++ N=100 下**安全平價成立**：高還原保真只利持鑰者還原、不利凍結 encoder 連結攻擊（與 degeneracy check 的「anon 洩漏由加密決定」一致）。
+* [限制] S2 用單次隨機金鑰 + per-image nonce 抽樣（與凍結表同政策，金鑰不落盤只記 SHA-256）；「~隨機」結論穩健、精確 auc 隨金鑰抽樣微動。**MC-2 外部學習式 re-id（Siamese shadow-1000）在 DPM++ 下的重跑仍待做**，為完全關閉 AF-045 的最後一塊。

@@ -2620,3 +2620,30 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * §11.2 item 3（影像空間安全平價，DPM++）。使用者手動 push。
+
+## 2026-10-27 · W9 · Track P2 · §11.2 item 3：影像空間 linkage 安全平價 @ DPM++（AF-045）
+
+### 1. 當前目標 (Objective)
+* 執行 §11.2 item 3（回應 AF-045）：防禦端換 DPM++ N=100 後，重測釋出匿名圖的 frozen-encoder linkage，證攻擊未變強。
+
+### 2. 執行動作 (Actions Taken)
+* `scripts/t2bb_dpm_parity.py`（新，自含、不改已審核的 export/score 腳本）：DPM++ N=100 端到端生成防禦端 anon（P/S0/S1/S2），發布表徵與出貨一致（legacy PNG / private-range public-q），凍結 densenet121-imagenet + rad-dino 評 anon↔anon 配對 linkage（t2bb_inner_v1 20 對），重用 `t2bb_m1_frozen_linkage` 的 embedding/evaluate。--smoke 6 對、full 20 對。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] DPM++ vs 凍結 legacy（auc）：densenet P 0.821/0.81、S0 0.446/0.434、S1 0.481/0.479、S2 0.381/0.558；rad-dino P 0.975/0.976、S0 0.539/0.532、S1 0.504/0.498、S2 0.486/0.510。
+* [事實] P 對照逐格重現 legacy → 攻擊管線有效；**S0/S1/S2 全維持 ~隨機，無一上升**（S2 甚至更低）。
+* [結論] 換 sampler 未提高可連結性；高還原只利持鑰者。T2BB frozen-encoder linkage 安全平價成立。
+
+### 4. 達標判定 (Assessment)
+* [x] smoke→20 對兩階段；發布表徵與凍結表一致、truth 由 pair_id/role 配對、label-permutation null。S2 單次隨機金鑰（同凍結表政策，不落盤只記 SHA-256）。未改 past/、audit/、凍結表。
+* 產物：`paper_assets/t2bb_dpm_parity/{parity.json,smoke.json}`、`new_model.md §11.6`。
+* [待辦] **MC-2 外部學習式 re-id（Siamese shadow-1000）在 DPM++ 下重跑**為完全關閉 AF-045 的最後一塊（較大 GPU，啟動前先 smoke）。
+
+### 5. 歸因分析與下一輪修正策略 (Reflection & Next Action)
+* §11.2 item 1（decode/sampler 分解 re-baseline）、item 2（層 A 等價）、item 3 主體（frozen linkage 平價）皆完成；RQ4 formal N=200 與 MC-2 re-id 為兩塊較大的正式交付，待使用者裁示啟動。
+
+### 6. ⚠ 與 CLAUDE.md/WORKFLOW.md 不符
+* [注意] 沿用 2026-10-27 口頭放寬 CLAUDE.md §3，未改 CLAUDE.md。
+
+### 7. 下一步
+* 待使用者裁示：RQ4 formal N=200 重報（item 1 正式交付）＋ MC-2 re-id @ DPM++（item 3 收尾）。使用者手動 push。
