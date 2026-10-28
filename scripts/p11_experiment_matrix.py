@@ -53,7 +53,7 @@ P2_ROWS = [
      "done", "P2; FINAL deploy point (null backward, forward/backward aligned), replaces DDIM N=200 (kept as historical Q8-FORMAL); N=100 S2fn recon 47.06 dB, ~5x faster; same-compute N=499 S2fn 54.35 dB"),
     ("Classif utility", "CU-1", "No Finding vs Effusion preservation, frozen probe (DPM++ N=100, S2fn, 50 patient-splits)",
      "classification_utility/anon_utility_dpm++_n200_s100_k50.json", "classification_utility_anon (seed 1911)",
-     "done", "P2; real->rec 0.904/0.937 ~= real 0.916/0.937; anon & anon->anon = chance"),
+     "done", "P2 (null backward); real->rec 0.909/0.937 ~= real 0.916/0.937 @ recon 46.7 dB; anon 0.501/0.497 & anon->anon = chance"),
     ("Classif utility", "CU-2", "trained-classifier utility, DenseNet-121 fine-tune (GMIA-style, 5 splits)",
      "classification_utility/finetune_utility_dpm++_n200_s100_k5.json", "classification_utility_finetune (seed 1911)",
      "done", "P2; real->rec 0.888 ~= real 0.886; anon = chance; confirms frozen-probe conclusion"),
