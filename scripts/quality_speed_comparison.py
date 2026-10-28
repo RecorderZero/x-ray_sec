@@ -134,16 +134,20 @@ def main() -> None:
                     "evals_per_pass": 499})
         pred_records.append(rec)
 
+        # ours latent lossless-crypto check once per image (N-independent property
+        # of enc/dec), at the deploy N -- avoids a redundant forward per N.
+        lat_n = 100 if 100 in boundaries else max(ours_sweep)
+        z_ref = dpm.forward(x0, boundaries[lat_n])
+        zc, orig = encrypt(z_ref, "S2fn", pid)
+        ours_latcos = _latent_cos(z_ref, decrypt(zc, "S2fn", pid, orig))
+
         # --- ours final: DPM++ null + S2fn + range-preserving, per N ---
         for n in ours_sweep:
             b = boundaries[n]
             (anon_o, rec_o), t_o = _timed(anonymize_and_recover, dpm, x0, b, pid)
-            zo = dpm.forward(x0, b)
-            zc, orig = encrypt(zo, "S2fn", pid)
-            zo_dec = decrypt(zc, "S2fn", pid, orig)
             rec = _img_metrics(rec_o, x0)
             rec.update({"sample_id": pid, "pipeline_seconds": round(t_o, 4),
-                        "latent_crypto_cosine": _latent_cos(zo, zo_dec),
+                        "latent_crypto_cosine": ours_latcos,
                         "evals_per_pass": int(len(b) - 1)})
             ours_records[n].append(rec)
         print(f"  {pid}: pred psnr={pred_records[-1]['psnr_db']:.2f} "
