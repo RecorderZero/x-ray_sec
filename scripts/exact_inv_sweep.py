@@ -91,6 +91,8 @@ class BDIARespaced:
     def backward(self, z, b):
         """Generation z -> x_rec (descending over the same grid b)."""
         mk = self.rs._base_kwargs(z.shape[0])  # guidance -1, no null
+        if self.rs.backward_null:
+            mk["null"] = True  # align generation with the unconditional inversion
         M = len(b) - 1
         prev, curr = None, z  # curr at grid index i
         for i in range(M, 0, -1):
@@ -113,7 +115,8 @@ class DPMSolverpp:
     opposite directions on the two passes, same obstruction BELM sidesteps and the
     reason we do not claim exactness here) -- it is the diffusers-style approximate
     inverse, compared fairly at matched NFE on the round-trip PSNR.  Conditioning
-    mirrors Respaced (inversion null=True, generation no null).
+    mirrors Respaced: inversion null=True; generation y=0 unless rs.backward_null
+    (then null, aligned with the inversion -- the final-deployment convention).
     """
 
     def __init__(self, rs: Respaced):
@@ -159,6 +162,8 @@ class DPMSolverpp:
 
     def backward(self, z, b):
         mk = self.rs._base_kwargs(z.shape[0])
+        if self.rs.backward_null:
+            mk["null"] = True  # align generation with the unconditional inversion
         order = [(int(b[i]), int(b[i - 1])) for i in range(len(b) - 1, 0, -1)]  # descending
         return self._run(z, order, mk)
 

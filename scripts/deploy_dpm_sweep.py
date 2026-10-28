@@ -59,6 +59,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--out-dir", type=Path, default=Path("paper_assets/deploy_dpm_sweep"))
+    ap.add_argument("--legacy-y0-backward", action="store_true",
+                    help="generate under y=0 (pre-2026-10-28 convention) instead of the "
+                         "deployment default null backward aligned with the inversion")
     args = ap.parse_args()
     if not torch.cuda.is_available():
         raise SystemExit("CUDA required")
@@ -68,7 +71,7 @@ def main() -> None:
     indices = list(SMOKE_INDICES if args.smoke else FULL_INDICES)
 
     _, diffusion, model_fn = create_runtime(Path("past/SourceCode"), CKPT, device)
-    rs = Respaced(diffusion, model_fn, device)
+    rs = Respaced(diffusion, model_fn, device, backward_null=not args.legacy_y0_backward)
     samplers = {"DDIM": rs, "DPM++": DPMSolverpp(rs)}
 
     rows = list(csv.DictReader(Path("splits/dev_v1.1.csv").open(encoding="utf-8")))
@@ -126,6 +129,7 @@ def main() -> None:
     (args.out_dir / name).write_text(json.dumps(
         {"seed": SEED, "smoke": args.smoke, "indices": indices, "samplers": list(samplers),
          "schemes": list(SCHEMES), "storage": "range_preserving_png/v1",
+         "backward_conditioning": "y0" if args.legacy_y0_backward else "null",
          "summary": summary, "per_sample": records}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if not args.smoke:
         with (args.out_dir / "sweep.csv").open("w", newline="", encoding="utf-8") as f:

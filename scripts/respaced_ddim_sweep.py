@@ -64,10 +64,17 @@ def disp(t: torch.Tensor) -> np.ndarray:
 class Respaced:
     """Respaced DDIM forward/backward sharing the legacy model + math."""
 
-    def __init__(self, diffusion, model_fn, device):
+    def __init__(self, diffusion, model_fn, device, backward_null: bool = False):
         self.d = diffusion
         self.m = model_fn
         self.dev = device
+        # backward_null: generate under the SAME (unconditional) model the inversion
+        # used, i.e. mk["null"]=True on backward, so forward/backward are aligned on
+        # conditioning (not just on the decode grid).  Default False preserves the
+        # legacy y=0 convention (AF-018/021, 2026-10-09) that the frozen RQ4/linkage
+        # tables depend on; the final deployment opts in to True (superseding that
+        # decision 2026-10-28) -- see PROGRESS.
+        self.backward_null = backward_null
         self.abar = torch.tensor(diffusion.alphas_cumprod, dtype=torch.float64, device=device)
 
     def _base_kwargs(self, b: int) -> dict:
@@ -97,6 +104,8 @@ class Respaced:
     @torch.inference_mode()
     def backward(self, z, boundaries):
         mk = self._base_kwargs(z.shape[0])  # guidance -1 => no diffusion-level clf_free
+        if self.backward_null:
+            mk["null"] = True  # align generation with the unconditional inversion
         x = z
         for k in range(len(boundaries) - 1, 0, -1):
             x = self._step(x, boundaries[k], boundaries[k - 1], mk)

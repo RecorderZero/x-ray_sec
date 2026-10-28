@@ -125,7 +125,9 @@ def main() -> None:
     idx_by_class = {c: np.where(labels == c)[0] for c in (0, 1)}
 
     _, diffusion, model_fn = create_runtime(args.source_root, args.checkpoint, device)
-    rs = Respaced(diffusion, model_fn, device)
+    # Final deployment: generation aligned with the unconditional inversion
+    # (backward_null), superseding the legacy y=0 convention (2026-10-28 decision).
+    rs = Respaced(diffusion, model_fn, device, backward_null=True)
     sampler = DPMSolverpp(rs) if args.sampler == "dpm++" else rs
     b = schedule(args.steps)
     print(f"sampler={args.sampler} steps={args.steps} splits={args.splits} n_images={len(entries)}", flush=True)
