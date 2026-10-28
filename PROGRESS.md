@@ -2923,3 +2923,25 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 5. 下一步
 * 續 null 重量：deploy_dpm_sweep（矩陣 DEP-1）、classification_utility_anon（recovered + 圖）、t2bb_dpm_parity（聯合表身份欄）；再推 AF-046/047/045。
+
+## 2026-10-29 · W8 · Track P2 · AF-046 收斂：HF-FIDELITY 全跑（null）+ 三點 limitation 入文
+
+### 1. 當前目標 (Objective)
+* 關閉 AF-046（MINOR, CLAIM/DOC）：照 AUD-20261028-02 §3 規格跑 HF-FIDELITY（影像端高頻保真 proxy，非臨床偵測），並把三點 utility limitation 寫入論文 §6。
+
+### 2. 執行動作 (Actions Taken)
+* `scripts/run_cfg_ddim.sh python -m scripts.hf_fidelity_check --per-class 100 --steps 100`（200 張 patient-disjoint、兩類各 100；DPM++ N=100、S2fn、range-preserving、null backward、seed 1911、e1 render）。輸出 `paper_assets/hf_fidelity/hf_fidelity.json`（per-sample+aggregate+C1/C2/C3+engineering_gate；不入庫）。修一個收尾 print 的 `hi` NameError（json 已先寫出，數據完整）。
+* report §4g（HF 結果表+C1–C3+C2 模糊尺）與 §6（AF-046 三點 limitation）入文；§4f 文獻定位 recovered 區間 0.887–0.904→0.887–0.909。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] recovered vs x0（null）：RAPSD 高頻帶 retention **0.964**（headline）、中 0.998 / 低 0.999；HP-SSIM(σ=1) **0.988**；Sobel-r 0.997；Laplacian 變異比 0.896;32×32 分塊 HF retention mean 0.946 / p05 0.799 / **min 0.650**。
+* [事實] 控制組：C1(x0,x0) 全 1.000（到頂）；C3(anon,x0) HP-SSIM 0.068、Sobel-r 0.006（結構觸底；高頻 retention 6.756 因密文為高頻噪聲,故 C3 以結構指標判定）。C2 模糊尺:σ=0.5 高頻 0.678/HP-SSIM 0.971、σ=1.0 0.407/0.800、σ=2.0 0.374/0.677。
+* [事實] `engineering_gate.pass=true`（all_finite、C1_tops、C3_structural_collapse、operating_point_matches_deploy）。
+* [結論] 還原高頻 retention 0.964、HP-SSIM 0.988 **比最輕 σ=0.5 模糊還銳** → 未系統性平滑高頻;影像端間接佐證,不等於小病灶臨床偵測保全（limitation 已明載）。
+* [事實] limitation#2 據實改寫:null 還原已移除原裁決所指「健康條件還原」機制(最可能傷小病灶者),僅餘擴散平滑;supersede AF-018/021。
+
+### 4. 達標判定 (Assessment)
+* [決定] AF-046 收斂條件達成（HF 照報 + 三點 limitation 入文）→ 實作方視為可關;待稽核方複驗後於 AUDIT 關閉。
+
+### 5. 下一步
+* 續 null 重量:item-6 utility-vs-N 掃（進行中,§4d）、finetune（§4b）、t2bb_dpm_parity（§4c + AF-047）、MC-2（AF-045）;完成後統一把 §4a/b/d/e 與聯合表數字更新為 null。

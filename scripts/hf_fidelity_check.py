@@ -264,7 +264,7 @@ def main() -> None:
     print("\n=== HF-FIDELITY (recovered vs x0; DPM++ N={}, S2fn, null) ===".format(args.steps))
     print(f"RAPSD retention  low={recovered_agg['rapsd_retention']['low']['mean']:.3f} "
           f"mid={recovered_agg['rapsd_retention']['mid']['mean']:.3f} "
-          f"HIGH={hi:.3f} (headline)")
+          f"HIGH={recovered_agg['rapsd_retention']['high']['mean']:.3f} (headline)")
     print(f"HP-SSIM={recovered_agg['hp_ssim']['mean']:.3f}  Sobel-r={recovered_agg['sobel_grad_r']['mean']:.3f}  "
           f"Lap-var-ratio={recovered_agg['lap_var_ratio']['mean']:.3f}")
     print(f"block HF retention  mean={recovered_agg['block_hf_retention_mean']['mean']:.3f} "
