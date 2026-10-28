@@ -2902,3 +2902,24 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 5. 下一步
 * 依序完成上列 null 重量與三 findings;每步原子 commit,數字進 PROGRESS。
+
+## 2026-10-29 · W8 · Track P2 · 品質/速度對照正式版（null,60 張,同算力確認）
+
+### 1. 當前目標 (Objective)
+* 使用者質疑 smoke 的「同算力 +16 dB」：同算力（同 NFE）應對學長 native 的 N=499,非 N=100。確認並補正式數字。
+
+### 2. 執行動作 (Actions Taken)
+* `scripts/run_cfg_ddim.sh python -m scripts.quality_speed_comparison --per-class 30`（60 張病患不相交,ours DPM++ null + S2fn + range-preserving;學長 legacy dense DDIM T=500 + S1 + legacy storage）。輸出 `paper_assets/quality_speed/comparison.{json,csv}`（可重現不入庫）。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 同算力 **N=499**（兩者 ~499 NFE,時間對齊 30.8 s/張）：ours **54.17 dB** vs 學長 **32.07 dB** = **+22.1 dB**。smoke 的 +16 dB 是 N=100（非同算力,ours 僅 1/5 步）；高 N 時 ours 爬到 ~54 dB 加密保真上限,學長被 legacy min-max 儲存釘在 ~32 dB（儲存丟值域,非算力）。
+* [事實] 掃 N（PSNR/SSIM/MAE/MSE/cos/sec）：ours N=200 52.81/0.999/12.44s、N=100（部署點）46.93/0.995/6.30s、N=50 39.86/0.973/3.23s、N=25 32.71/0.866/1.70s。
+* [事實] 同品質（matched-PSNR 32.07 dB）：ours 於 **N=25** 達標 → **18.15×** 加速（30.85→1.70 s）。
+* [事實] 加解密 lossless：`lat-cos = cos(z, decrypt(encrypt(z)))`,z=inversion(x0),S2fn，全列 **1.000000**（latent 空間無損,殘差 ~1e-6）。影像端到端 cos 0.99898–1.0。
+
+### 4. 達標判定 (Assessment)
+* [決定] 對外三框架分欄呈現：(A) 同算力 N=499 = +22.1 dB；(B) 同品質 = 18.15× 加速；(C) 1/5 算力 N=100 = +14.9 dB 且 4.9× 快。
+* [事實] +22 dB 為多因（DPM++ sampler + null 對齊 + range-preserving 儲存,光儲存 ~+7 dB §4e）；最乾淨單因結論為 (B) 速度。不得寫成單一來源。
+
+### 5. 下一步
+* 續 null 重量：deploy_dpm_sweep（矩陣 DEP-1）、classification_utility_anon（recovered + 圖）、t2bb_dpm_parity（聯合表身份欄）；再推 AF-046/047/045。
