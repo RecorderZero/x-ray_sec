@@ -28,7 +28,7 @@ ENC_LABEL = {"densenet121_imagenet": "DenseNet-121 (ImageNet)", "rad_dino": "rad
 def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--utility", type=Path,
-                    default=Path("paper_assets/classification_utility/anon_utility_dpm++_n200_s100.json"))
+                    default=Path("paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json"))
     ap.add_argument("--parity", type=Path, default=Path("paper_assets/t2bb_dpm_parity/parity.json"))
     ap.add_argument("--reid", type=Path, default=Path("paper_assets/tables/table_reid_external.json"))
     ap.add_argument("--out-dir", type=Path, default=Path("paper_assets/classification_utility"))
@@ -61,17 +61,28 @@ def main() -> None:
 
     meta = {
         "sampler": util.get("sampler"), "steps": util.get("steps"),
+        "backward": "null (forward/backward aligned)",
         "utility_per_class": util.get("per_class"), "utility_test_n": util.get("test_n"),
+        "utility_n_splits": util.get("n_splits"), "utility_scheme": util.get("scheme"),
         "recon_psnr_db": util.get("recon_psnr_vs_x0_db", {}).get("mean"),
-        "parity_sampler": parity.get("sampler"), "parity_N": parity.get("N"), "parity_pairs": parity.get("pairs"),
+        "parity_sampler": parity.get("sampler"), "parity_N": parity.get("N"),
+        "parity_pairs": parity.get("pairs"), "parity_scheme": "S2",
         "external_attacker": reid.get("architecture"),
         "external_S2_top1": reid_s2.get("top1"), "external_S2_auc": round(reid_s2.get("auc", 0), 3) if reid_s2 else None,
         "external_random_top1": reid_s2.get("random_top1"),
         "external_plaintext_top1": reid_pt.get("top1"), "external_plaintext_auc": round(reid_pt.get("auc", 0), 3) if reid_pt else None,
-        "note": ("Same DPM++ N=100 S2fn pipeline and same frozen encoders throughout. "
-                 "Pathology (utility) AUROC near real after recovery; identity linkage AUC near "
-                 "random (0.5) for S2; external latent-ciphertext attacker S2 at random top-1. "
-                 "P (no encryption) is the identity-leak control."),
+        "per_column_n": {
+            "pathology_utility": f"per_class {util.get('per_class')} (test {util.get('test_n')}/split x {util.get('n_splits')} patient-splits)",
+            "identity_linkage": f"{parity.get('pairs')} patient pairs (gallery+query), scheme S2",
+            "external_reid": f"{reid.get('architecture')} Siamese, latent ciphertext",
+        },
+        "note": ("Same DPM++ N=100 pipeline (null backward) and same frozen encoders throughout. "
+                 "Pathology (utility) uses the S2fn deployment recovery; identity linkage is scored on the "
+                 "S2 scheme (same per-image-nonce orthogonal family; S2fn is its fixed-norm fidelity variant, "
+                 "both yield noise-like anon). Pathology AUROC near real after recovery; identity linkage AUC "
+                 "near random (0.5) for S2; external latent-ciphertext attacker S2 at random top-1. "
+                 "P (no encryption) is the identity-leak control. Per-column n differs by source and is stated "
+                 "above (AF-047): utility n is per-class x splits, identity n is patient pairs."),
     }
     payload = {"meta": meta, "rows": rows}
     (args.out_dir / "privacy_utility_table.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
@@ -89,7 +100,12 @@ def main() -> None:
     md += ["", f"External attacker ({meta['external_attacker']}): plaintext top-1 "
            f"{meta['external_plaintext_top1']} (AUC {meta['external_plaintext_auc']}) → "
            f"**S2 top-1 {meta['external_S2_top1']}** (AUC {meta['external_S2_auc']}; random "
-           f"{meta['external_random_top1']}).", "", meta["note"]]
+           f"{meta['external_random_top1']}).", "",
+           "**Per-column n (AF-047; sources differ, stated explicitly):**",
+           f"- Pathology (utility): {meta['per_column_n']['pathology_utility']}",
+           f"- Identity (linkage): {meta['per_column_n']['identity_linkage']}",
+           f"- External (re-id): {meta['per_column_n']['external_reid']}",
+           "", meta["note"]]
     (args.out_dir / "privacy_utility_table.md").write_text("\n".join(md) + "\n")
 
     print("\n".join(md))

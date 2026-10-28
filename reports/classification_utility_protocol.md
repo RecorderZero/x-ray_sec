@@ -32,29 +32,31 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
   - `train anon → test anon`：能否**訓練**出可用的密文分類器（GMIA 式 train-on-anon）。
 - 腳本：`scripts/classification_utility_anon.py`（GPU，產三版本 + 矩陣 + 對照圖）；`scripts/classification_utility_pilot.py`（CPU，raw-PNG real-only baseline）；`scripts/plot_classification_utility.py`（論文長條圖）。
 
-## 4. 結果（DPM++，N=100，S2fn，per-class 200；AUROC，50 patient-splits，mean±95%CI）
+## 4. 結果（DPM++，N=100，S2fn，**null backward**，per-class 200；AUROC，50 patient-splits，mean±95%CI）
 
-**4a. 凍結特徵 linear probe（item 2，`anon_utility_dpm++_n200_s100_k50.json`）**
+> [事實] 本節全數於最終部署條件（反演/生成皆 null、forward/backward 對齊，2026-10-29 重量）量測，supersede 先前 y=0 數字。對照：null 比 y=0 recon +~3 dB（N=100 43.7→46.7 dB），二元 utility 結論不變（架構/保真不敏感），且密文病理洩漏更乾淨（real→anon 由 y=0 的 0.60 殘留降到 null 的 0.50 chance）。
+
+**4a. 凍結特徵 linear probe（item 2，`anon_utility_dpm++_n200_s100_k50.json`；recon 46.7 dB）**
 
 | Probe | DenseNet | rad-dino | 解讀 |
 |---|---:|---:|---|
 | train real → test real | 0.916 ±0.005 | 0.937 ±0.004 | 任務可學控制組 |
-| train real → test recovered | **0.904 ±0.006** | **0.937 ±0.004** | **≈ real → utility 保全** |
-| train real → test anon | 0.502 ±0.012 | 0.499 ±0.015 | = chance，密文讀不出病理 |
-| train anon → test anon | 0.510 ±0.013 | 0.525 ±0.011 | = chance，訓不出密文分類器 |
+| train real → test recovered | **0.909 ±0.006** | **0.937 ±0.004** | **≈ real → utility 保全** |
+| train real → test anon | 0.501 ±0.011 | 0.497 ±0.016 | = chance，密文讀不出病理 |
+| train anon → test anon | 0.507 ±0.013 | 0.525 ±0.012 | = chance，訓不出密文分類器 |
 
 **4b. 微調分類器（item 3，GMIA 式訓練 DenseNet-121，5 splits，`finetune_utility_dpm++_n200_s100_k5.json`）**
 
 | Probe | 微調 DenseNet AUROC |
 |---|---:|
-| train real → test real | 0.886 ±0.026 |
-| train real → test recovered | **0.888 ±0.027**（≈ real） |
-| train real → test anon | 0.442 ±0.037（chance） |
-| train anon → test anon | 0.494 ±0.040（chance） |
+| train real → test real | 0.883 ±0.029 |
+| train real → test recovered | **0.884 ±0.028**（≈ real） |
+| train real → test anon | 0.452 ±0.025（chance） |
+| train anon → test anon | 0.500 ±0.035（chance） |
 
 凍結探針與真實訓練分類器**結論一致**：還原保全 utility、密文 = chance。
 
-- [事實] recon PSNR **43.6 dB**（400 張；= `deploy_dpm_sweep` DPM++ N=100 S2fn 44.26 級距）、anon PSNR ~5.9 dB。DDIM N=100 僅 37.67 dB —— 為 sampler 差異，非退步。
+- [事實] recon PSNR **46.7 dB**（400 張；= `deploy_dpm_sweep` DPM++ N=100 S2fn null 47.06 級距）、anon PSNR ~5.9 dB。DDIM N=100 僅 ~38 dB —— 為 sampler 差異，非退步。
 - [事實] raw-PNG real-only baseline（sampler 無關，per-class 200）：densenet AUROC 0.884、rad-dino 0.914。
 - [注意] 本實驗 real 與 recovered 走相同 e1 render（正確 apples-to-apples）。
 
@@ -62,21 +64,22 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
 
 | Encoder | 病理 real→recovered | 身份 P 連結 AUC | 身份 **S2** 連結 AUC |
 |---|---:|---:|---:|
-| DenseNet-121 | 0.904 | 0.821 | **0.381** |
-| rad-dino | 0.937 | 0.975 | **0.486** |
+| DenseNet-121 | 0.909 | 0.811 | **0.481** |
+| rad-dino | 0.937 | 0.977 | **0.513** |
 
-外部攻擊者（Packhauser Siamese，latent 密文）：plaintext top-1 0.15 → **S2 top-1 0.05 = random**（AUC 0.445）。
-[結論] 同一條 pipeline、同一批 encoder：**讀病理(utility) ~0.9、讀身份(privacy) S2 ~random** —— 隱私與 utility 在同一操作點同時成立。
+外部攻擊者（Packhauser Siamese，latent 密文）：plaintext top-1 0.15（AUC 0.764）→ **S2 top-1 0.05 = random**（AUC 0.445）。
+- [事實/AF-047] 各欄 n 與方案不同，明確標註：病理 utility = per-class 200（test 120/split × 50 patient-splits，S2fn）；身份連結 = 20 patient pairs（gallery+query，S2）；外部 re-id = Packhauser Siamese（latent 密文）。身份用 S2、utility 用 S2fn（同 per-image-nonce 正交族，S2fn 為其固定 norm 保真變體，匿名圖皆雜訊狀）。單一 null run 組裝，無跨來源拼接（`privacy_utility_table.{md,csv,json}`）。
+[結論] 同一條 null pipeline、同一批 encoder：**讀病理(utility) ~0.9、讀身份(privacy) S2 ~random（0.48–0.51）** —— 隱私與 utility 在同一操作點同時成立。
 
 **4d. Utility vs 重構步數 N（item 6，per-class 100、20 splits、`anon_utility_dpm++_n100_s{50,100,200}_k20.json`、`fig_utility_vs_n_k20.png`）**
 
 | N | recon PSNR | DenseNet real→rec | DenseNet real→real | rad-dino real→rec | rad-dino real→real |
 |---:|---:|---:|---:|---:|---:|
-| 50 | 38.9 dB | 0.882 ±0.019 | 0.903 | 0.903 ±0.016 | 0.895 |
-| 100 | 43.7 dB | 0.894 ±0.019 | 0.903 | 0.897 ±0.017 | 0.895 |
-| 200 | 46.1 dB | 0.901 ±0.020 | 0.903 | 0.895 ±0.016 | 0.895 |
+| 50 | 39.8 dB | 0.889 ±0.018 | 0.903 | 0.902 ±0.016 | 0.895 |
+| 100 | 46.8 dB | 0.900 ±0.019 | 0.903 | 0.898 ±0.016 | 0.895 |
+| 200 | 52.5 dB | 0.904 ±0.019 | 0.903 | 0.896 ±0.016 | 0.895 |
 
-[結論] recovered utility **隨重構品質單調逼近 real**：DenseNet 在 N=50(38.9 dB)仍有小落差(0.882 vs 0.903),N=200(46.1 dB)已實質無損(0.901 vs 0.903);rad-dino(CXR 基礎模型)對 N 不敏感,N=50 即飽和。此把分類 utility 直接綁到 DPM++／步數貢獻:**更好的重構 → 更無損的 utility**,且即使最快設定(N=50)utility 仍 ~0.9。
+[結論] recovered utility **隨重構品質單調逼近 real**：DenseNet 在 N=50(39.8 dB)仍有小落差(0.889 vs 0.903),N=200(52.5 dB)已實質無損(0.904 vs 0.903);rad-dino(CXR 基礎模型)對 N 不敏感,N=50 即飽和。此把分類 utility 直接綁到 DPM++／步數貢獻:**更好的重構 → 更無損的 utility**,且即使最快設定(N=50)utility 仍 ~0.9。
 
 **4e. 學長架構 baseline(同任務、同 render、同凍結 encoder;`classification_utility_legacy.py`、`legacy_utility_S1*_n100_t500_k20.json`)**
 
@@ -84,15 +87,15 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
 
 | 架構 | sampler | 加密 | storage | recon PSNR | 速度 | DenseNet real→rec | rad-dino real→rec |
 |---|---|---|---|---:|---:|---:|---:|
-| **本架構** | DPM++ N=100 | S2fn | 保值域 | 43.7 dB | **6.3 s/img** | 0.894 | 0.897 |
+| **本架構** | DPM++ N=100 (null) | S2fn | 保值域 | 46.7 dB | **6.3 s/img** | 0.900 | 0.898 |
 | 學長(+我們儲存) | legacy DDIM T=500 | S1 | 保值域 | 38.9 dB | 30.8 s/img | 0.887 ±0.021 | 0.900 ±0.017 |
 | 學長原生 | legacy DDIM T=500 | S1 | 原生(值域丟棄) | **31.8 dB** | 30.8 s/img | 0.899 ±0.017 | 0.893 ±0.019 |
 
 (三者 real→real 參考一致:DenseNet 0.903、rad-dino 0.895;real→anon 0.535/0.553、anon→anon 0.520/0.492 在學長兩版完全相同,因 anon 影像與 storage 無關。)
 
-- [事實] 學長原生儲存 recon **31.8 dB**,與學長論文自報的 ~30 dB 吻合 → 忠實重現;換成我們的保值域儲存升到 38.9 dB(**儲存貢獻 ~+7 dB**),再換 DPM++ 升到 43.7 dB(**sampler 貢獻 再 +5 dB**)。
-- [結論] **二元分類 utility 對架構不敏感**:recon 橫跨 31.8→38.9→43.7 dB,recovered AUROC 都 ≈ real(~0.90)。即二元肺積水分類不需要 PSNR 所量的高頻細節,**utility 保留是「可逆匿名化家族」的共通性質,非本架構改進獨有**。
-- [結論] 因此本架構的差異化**不在「分類能否存活」,而在**:(i) **速度 ~4.9×**(6.3 vs 30.8 s/img,DPM++ N=100 取代 dense T=500);(ii) **重構保真** 31.8→43.7 dB(保值域 + DPM++);(iii) **安全性**(S2 固定 norm + per-image nonce vs S1 固定全域 key;量化見 §4c 與 t2bb 連結實驗)。此為誠實定位,不過度宣稱 utility 為本架構獨佔。
+- [事實] 學長原生儲存 recon **31.8 dB**,與學長論文自報的 ~30 dB 吻合 → 忠實重現;換成我們的保值域儲存升到 38.9 dB(**儲存貢獻 ~+7 dB**),再換 DPM++ null 升到 46.7 dB(**sampler+對齊貢獻 再 ~+7.8 dB**)。
+- [結論] **二元分類 utility 對架構不敏感**:recon 橫跨 31.8→38.9→46.7 dB,recovered AUROC 都 ≈ real(~0.90)。即二元肺積水分類不需要 PSNR 所量的高頻細節,**utility 保留是「可逆匿名化家族」的共通性質,非本架構改進獨有**。
+- [結論] 因此本架構的差異化**不在「分類能否存活」,而在**:(i) **速度 ~4.9×**(6.3 vs 30.8 s/img,DPM++ N=100 取代 dense T=500);(ii) **重構保真** 31.8→46.7 dB(保值域 + DPM++ + null 對齊;同算力 N=499 達 54.2 dB);(iii) **安全性**(S2 固定 norm + per-image nonce vs S1 固定全域 key;量化見 §4c 與 t2bb 連結實驗)。此為誠實定位,不過度宣稱 utility 為本架構獨佔。
 
 **4f. 外部資料集泛化 + 文獻定位(`classification_utility_external.py`、`external_utility_nih_n150.json`)**
 
@@ -130,11 +133,11 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
 | 維度 | GMIA（refpaper/114，14 類 multi-label） | 本架構 S2fn（二元 No Finding/Effusion） |
 |---|---|---|
 | 匿名化型態 | 不可逆合成、換身份 | **可逆加密密文**（雜訊狀、不可辨識） |
-| 重構/還原 PSNR | 24.3 dB（不可逆） | **43.6 dB（可逆，latent+影像兩空間）** |
+| 重構/還原 PSNR | 24.3 dB（不可逆） | **46.7 dB（可逆，latent+影像兩空間；同算力 N=499 達 54.2 dB）** |
 | real 分類 AUROC | 0.774 | 0.92 / 0.94（densenet / rad-dino） |
-| utility 保全 AUROC | 0.737（**在匿名圖**） | 0.904 / 0.937（**在還原圖**） |
+| utility 保全 AUROC | 0.737（**在匿名圖**） | 0.909 / 0.937（**在還原圖**） |
 | 匿名/密文圖可訓練性 | 可（匿名圖 utility 0.737） | **= chance（密文,設計使然）** |
-| inner 連結風險（匿名↔匿名） | **高 0.899（Acc）** | **~random（AUC 0.38–0.49）** |
+| inner 連結風險（匿名↔匿名） | **高 0.899（Acc）** | **~random（S2 AUC 0.48–0.51）** |
 | outer 連結風險（匿名↔真實） | ~0（去識別） | ~random（S2 外部 top-1 0.05） |
 | MIA（membership inference） | 0.0（學習式匿名器需量測） | **結構性 N/A（見下）** |
 
@@ -151,7 +154,7 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
 3. [限制] **不宣稱一般診斷 utility 保全**；NIH 泛化（§4f）只支持「偵測任務」跨資料集，不支持「還原保全」跨資料集（NIH 跑的是真實影像，非走過本匿名/還原 pipeline 的 NIH）。
 
 - [限制] 固定 N=100、二元單病理（生成器僅條件過兩類，無法如 GMIA 做 14 類）；匿名/還原 pipeline 僅在 CheXpert（生成器訓練集）上評估。
-- [事實] 大樣本（50 splits、per-class 200）下 `train real → test anon` 已收斂到 0.50（n100 時的 0.61 殘留為小樣本雜訊）；密文無顯著病理洩漏。
+- [事實] 大樣本（50 splits、per-class 200）下 `train real → test anon` = 0.501/0.497（null）；y=0 舊版曾有 0.60 殘留，null 對齊後降到 chance，密文無顯著病理洩漏。
 - [事實] 外部資料集泛化已補（§4f）：train-real 探針零重訓搬到 NIH ChestX-ray14,AUROC 0.823/0.836（落差僅 ~0.07），分類器學到真實病理特徵。
 - [決定] MIA 不量測、改結構性說明（§5）：本架構加密端無訓練集,membership 概念不成立,風險由不可連結密文結構性緩解,與 GMIA 不對等。
 

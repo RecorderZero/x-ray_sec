@@ -2945,3 +2945,27 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 5. 下一步
 * 續 null 重量:item-6 utility-vs-N 掃（進行中,§4d）、finetune（§4b）、t2bb_dpm_parity（§4c + AF-047）、MC-2（AF-045）;完成後統一把 §4a/b/d/e 與聯合表數字更新為 null。
+
+## 2026-10-29 · W8 · Track P2 · §4b/§4c/§4d/§4e null 重量 + AF-047 聯合表單一來源重算
+
+### 1. 當前目標 (Objective)
+* 把分類 utility report §4（微調、聯合表、utility-vs-N、架構對照）與 §5（GMIA 對照）全數更新為 null 部署數字;關閉 AF-047（聯合表跨來源拼接 DOC）。
+
+### 2. 執行動作 (Actions Taken)
+* null 重跑：`classification_utility_finetune --per-class 200 --steps 100 --splits 5`（§4b）、`classification_utility_anon --per-class 100 --steps {50,100,200} --splits 20`（§4d，重畫 `fig_utility_vs_n_k20`）、`t2bb_dpm_parity`（§4c 身份欄,已把部署 backward 對齊 null）。
+* AF-047：`build_privacy_utility_table` 預設 utility 改指 k50 null json、加記 backward=null、各欄 n 與 scheme（utility S2fn、identity S2，附同族說明）、md 增「Per-column n」區塊;以單一 null run 組裝重算 `privacy_utility_table.{md,csv,json}`。
+* report §4 加 null banner;§4a/§4b/§4c/§4d/§4e 本架構列、§5 GMIA 表（recon/utility/inner-risk）全部換 null 數字;§6 anon-收斂註記更新。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] §4b 微調（null）：real→real 0.883、real→rec **0.884**（≈real）、real→anon 0.452、anon→anon 0.500。與 y=0（0.888/0.442/0.494）幾乎相同 → 微調 utility 對 null 不敏感。
+* [事實] §4d utility-vs-N（null,per-class 100 k20）：N=50 39.8 dB rec 0.889/0.902、N=100 46.8 dB rec 0.900/0.898、N=200 52.5 dB rec 0.904/0.896;單調逼近 real 結論不變。
+* [事實] §4c 身份連結（DPM++ null,20 pairs）：P top1 0.65/0.80 AUC 0.811/0.977（洩漏對照）、**S2 top1 0.05/0.15 AUC 0.481/0.513 ≈ random**。y=0 舊版 S2 AUC 0.381/0.486 → null 後 0.48–0.51，皆 ~random。
+* [事實] 聯合表（單一 null run）：DenseNet 病理 real/rec/anon 0.916/**0.909**/0.501、身份 P/S2 0.811/**0.481**;rad-dino 0.937/**0.937**/0.497、0.977/**0.513**;外部 S2 top1 0.05（AUC 0.445,random 0.05）。各欄 n 明載（utility per-class 200×50 splits、identity 20 pairs、external Siamese）。
+* [事實] §4e 本架構列 recon 43.7→**46.7 dB**、rec 0.900/0.898;儲存 +7 dB、sampler+對齊 +7.8 dB;同算力 N=499 達 54.2 dB。
+
+### 4. 達標判定 (Assessment)
+* [決定] AF-047 收斂：聯合表以單一 null run 組裝、各欄 n/scheme 明載、無跨來源拼接 → 實作方視為可關,待稽核複驗。
+* [事實] 全 §4/§5 數字現一致為 null 部署條件;utility 結論（recovered≈real、cipher=chance、隱私-utility 同點並存）在 null 下不變且更乾淨。
+
+### 5. 下一步
+* AF-045（MC-2 學習式 re-id）：查證發現該攻擊只吃**反演 latent**（forward,兩版皆 null,未動 backward）→ null 切換不影響 MC-2;唯一待確認變項為反演 sampler（cache 為 legacy dense T=500 vs 部署 DPM++ N=100）。此為安全宣稱的研究設計判斷,待與使用者確認是否重建 DPM++ 反演 cache 再跑學習式攻擊。
