@@ -2876,3 +2876,29 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 4. 達標判定 (Assessment)
 * 已達標:兩支繪圖腳本 + report §8/§7 本條 commit;圖檔不入庫(可重現)。
+
+## 2026-10-28 · W8 · Track P2 · 最終部署條件對齊 null（supersede AF-018/021 y=0）+ 品質/速度對照 + HF-FIDELITY
+
+### 1. 當前目標 (Objective)
+* 使用者確認最終部署參數時發現:稽核方 AUD-20261028-02 §1 指出分類 utility 的「還原」生成用 **y=0 條件**（guidance −1），而使用者認知的最終版應是「反演、生成皆 null、forward/backward 對齊」。經查證 `Respaced`/`BDIARespaced`/`DPMSolverpp` 三 sampler 的 `backward()` 一律 y=0（繼承學長 legacy 慣例,整條主 pipeline 一致,非 bug),只有 `forward()` 加 `null=True`。
+* 使用者裁決:**主 pipeline backward 切成 null,全對齊後重量**。此即推翻 2026-10-09 的 AF-018/AF-021 guidance −1/y=0 裁決(稽核軌跡明記 supersede)。定位支線先前已切 null([[recovery-null-condition]]),本次把主 pipeline 一併對齊。
+* 另兩項使用者需求:確認已量指標;做「最終版 vs 學長原版」還原品質+速度對照表(同 N / 同 PSNR 加速)。
+
+### 2. 執行動作 (Actions Taken)
+* `respaced_ddim_sweep.Respaced` 加 `backward_null` flag（預設 **False**：純加法 guard,凍結 RQ4/linkage 消費者 by construction 不變),`exact_inv_sweep` 的 BDIA/DPM++ backward 同步接 `rs.backward_null`。部署腳本 opt-in：`classification_utility_anon`（寫死 True）、`deploy_dpm_sweep`（預設 null,`--legacy-y0-backward` 可復現舊慣例,payload 記 `backward_conditioning`）。commit `1007611`。
+* 新增 `scripts/quality_speed_comparison.py`：ours（DPM++ null + S2fn + range-preserving）掃 N vs 學長原版（legacy dense DDIM T=500 + S1 + legacy storage）。每圖報 recovery-vs-x0 PSNR/SSIM/MAE/MSE/cos/L∞ + 加解密 latent round-trip cos（lossless 檢查）+ 整條 pipeline 秒數;自動算 (A) 同 N 正面對決、(B) 同 PSNR → ours 需多少 N → 加速幾倍。commit `1b91692`/`(perf)`。
+* 新增 `scripts/hf_fidelity_check.py`（回應 AF-046,照稽核 AUD-20261028-02 §3 規格）：影像端高頻保真 proxy（RAPSD 分帶 retention、HP-SSIM、Sobel-r、Laplacian 變異比、32×32 分塊 HF retention mean/p05/min）+ 控制組 C1/C2(模糊尺)/C3。非臨床、不下診斷。工程門檻:C1 到頂 + C3 結構崩塌（anon 為高頻噪聲,崩塌在 HP-SSIM/Sobel-r 而非功率 retention）。commit `1b91692`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] null backward smoke(deploy,range-preserving,2 圖):DPM++/S2fn N=100 **44.3→48.4 dB**(+4,與 recovery-null smoke 預測的 +4.28 dB 一致);S2fn 封頂 ~53 dB(其 ~1e-6 WHT 加密殘差設下保真上限),恆等金鑰 P 無此 floor(71 dB)。
+* [事實] 品質/速度 smoke(4 圖):學長原版 30.34 dB / 30.95 s vs ours N=100 **46.35 dB / 6.33 s**(+16 dB,端到端含儲存);同 PSNR(30 dB)ours 於 **N=25** 達標 → **18×** 加速(30.95→1.71 s)。latent-cos 兩者皆 1.000000(S1 bit-exact、S2fn ~9e-7 無損)。
+* [事實] HF-FIDELITY smoke(4 圖):recovered 高頻帶 retention **0.976**、HP-SSIM 0.984、Sobel-r 0.996、分塊 HF retention min 0.645;比 σ=0.5 Gaussian blur(0.704)更銳 → 還原未系統性抹平高頻。C1 到頂(1.000)、C3 結構崩塌(HP-SSIM 0.068、Sobel-r −0.007)。
+* [事實] 已量指標盤點:recovery-vs-x0 PSNR/SSIM/MAE/(MSE=RMSE²)/cos/L∞ 皆已有(`image_pair_metrics`/`rq4_redo_decode_sampler`);latent 加解密 cos 早測過（crypto-sanity：P/S0/S1 bit-exact、S2fn ~9e-7）。
+
+### 4. 達標判定 (Assessment)
+* [決定] 最終部署條件 = 反演 null + 生成 null（forward/backward 全對齊）,supersede AF-018/021。y=0 慣例仍可用 `--legacy-y0-backward` 復現作對照。
+* [待辦] 正式 null 重量進行中:品質/速度對照(per-class 30)、`deploy_dpm_sweep`(null,更新矩陣 DEP-1)、`classification_utility_anon`(null,更新 recovered + 圖)、`t2bb_dpm_parity`(null,聯合表身份欄)。
+* [待辦] findings:AF-046(HF-FIDELITY 正式跑 + 三點 limitation 入文;null 還原已移除「健康條件」機制,limitation#2 據實改寫)、AF-047(聯合表以單一 null run/單一 n 重算並標註各欄 n)、AF-045(MC-2 學習式 Siamese shadow-1000 re-id 於 DPM++ null 重測,最重)。
+
+### 5. 下一步
+* 依序完成上列 null 重量與三 findings;每步原子 commit,數字進 PROGRESS。
