@@ -94,6 +94,19 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
 - [結論] **二元分類 utility 對架構不敏感**:recon 橫跨 31.8→38.9→43.7 dB,recovered AUROC 都 ≈ real(~0.90)。即二元肺積水分類不需要 PSNR 所量的高頻細節,**utility 保留是「可逆匿名化家族」的共通性質,非本架構改進獨有**。
 - [結論] 因此本架構的差異化**不在「分類能否存活」,而在**:(i) **速度 ~4.9×**(6.3 vs 30.8 s/img,DPM++ N=100 取代 dense T=500);(ii) **重構保真** 31.8→43.7 dB(保值域 + DPM++);(iii) **安全性**(S2 固定 norm + per-image nonce vs S1 固定全域 key;量化見 §4c 與 t2bb 連結實驗)。此為誠實定位,不過度宣稱 utility 為本架構獨佔。
 
+**4f. 外部資料集泛化 + 文獻定位(`classification_utility_external.py`、`external_utility_nih_n150.json`)**
+
+把 CheXpert 上 train 好的 **train-real 凍結探針直接搬到外部資料集 NIH ChestX-ray14**(不同醫院/機器/人群,**完全不重訓**)測試。Design A 標籤跨集乾淨對映(NIH "No Finding"=y0、"Effusion"=y1);兩集走相同 e1 preprocess 與 render,唯一變數是資料集。per-class 150、patient-disjoint(已下載 images_001 archive,NIH 本機 `dataset/nih-cxr14/`)。
+
+| encoder | in-domain CheXpert→CheXpert | **external CheXpert→NIH** | 落差 |
+|---|---:|---:|---:|
+| DenseNet-121 | 0.900 | **0.823** (acc 0.730) | −0.077 |
+| rad-dino | 0.902 | **0.836** (acc 0.767) | −0.066 |
+
+- [結論] 跨資料集 AUROC 僅掉 ~0.07(0.90→0.82–0.84),對零重訓的 cross-dataset CXR 泛化屬**良好**(文獻 domain-shift 落差常 0.05–0.15)。→ 分類器學到的是**真實病理特徵、非 CheXpert 專屬 artifact**,佐證 utility 的外部效度。
+- [限制/範圍] 本測試在**真實 NIH 影像**上評估「utility 分類器是否泛化」(使用者所問),**非**把我們的匿名/還原 pipeline 跑在 NIH 上(生成器未在 NIH 訓練,超出範圍)。
+- [文獻定位] CheXpert 肺積水分類公開水準:原始 baseline **0.928**、ResNet-152 **0.937**、DenseNet-169 **0.934**(2020 架構比較,全資料集/14 類多標籤/完整測試集)。我們:real→real 0.903–0.916 / rad-dino **0.937**;recovered 0.887–0.904 / 0.937 —— **落在公開正常區間(0.90–0.94)**,rad-dino 貼 SOTA 級,DenseNet 略低屬合理(小子集 per-class 100–200 的凍結線性探針,非全資料微調)。→ 我們的 utility 精準度為**臨床典型水準**,非離群。
+
 ## 5. 威脅模型定位（與 GMIA 量化對照，item 4；僅表格比較，未復現 GMIA）
 
 | 維度 | GMIA（refpaper/114，14 類 multi-label） | 本架構 S2fn（二元 No Finding/Effusion） |
@@ -105,15 +118,18 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
 | 匿名/密文圖可訓練性 | 可（匿名圖 utility 0.737） | **= chance（密文,設計使然）** |
 | inner 連結風險（匿名↔匿名） | **高 0.899（Acc）** | **~random（AUC 0.38–0.49）** |
 | outer 連結風險（匿名↔真實） | ~0（去識別） | ~random（S2 外部 top-1 0.05） |
-| MIA（評估階段） | 0.0 | （未量，另列） |
+| MIA（membership inference） | 0.0（學習式匿名器需量測） | **結構性 N/A（見下）** |
+
+[MIA 定位] GMIA 的匿名器是**在病患群體上訓練的生成模型**,故「某病患是否在匿名器訓練集」可被攻擊,須量 MIA(其報 0.0)。本架構的匿名化是 **per-image 線性自逆加密 + 公開預訓練 diffusion**,加密端**沒有訓練集**,membership 概念不成立;唯一可談的是 diffusion 預訓練資料的 membership,但它是公開固定模型、與匿名/還原操作無關。更實際的是:攻擊者無金鑰時只看到**雜訊狀密文**(§4c 已證連結 inner/outer 皆 ~random、外部 re-id top-1 0.05=random),還原需授權金鑰 —— 故本架構對「從發佈影像推斷 membership」的風險由**不可連結密文**結構性緩解,非靠學習式匿名器的隱私-utility 取捨。因此此欄與 GMIA 不對等,不強行給可比數字。
 
 [結論] GMIA 把 utility 留在**匿名圖**，代價是**高 inner 連結風險**且**不可逆**；本架構把匿名圖做成**不可連結密文**（inner 與 outer 風險皆 ~random）、utility 以**授權還原無損取回**。兩者威脅模型不同；數值 AUROC 因資料集/任務（14 類 vs 二元）不同不可直接比大小，應比**結構性質**：我們多了可逆性、消滅了 inner-risk。
 
 ## 6. 限制與待補
 
-- [限制] 固定 N=100、二元單病理（生成器僅條件過兩類，無法如 GMIA 做 14 類）；CheXpert 單一資料集。
+- [限制] 固定 N=100、二元單病理（生成器僅條件過兩類，無法如 GMIA 做 14 類）；匿名/還原 pipeline 僅在 CheXpert（生成器訓練集）上評估。
 - [事實] 大樣本（50 splits、per-class 200）下 `train real → test anon` 已收斂到 0.50（n100 時的 0.61 殘留為小樣本雜訊）；密文無顯著病理洩漏。
-- [待辦] 外部資料集 / 外部分類器泛化；本架構自身的 MIA 量測（對齊 GMIA 的 MIA 欄）。
+- [事實] 外部資料集泛化已補（§4f）：train-real 探針零重訓搬到 NIH ChestX-ray14,AUROC 0.823/0.836（落差僅 ~0.07），分類器學到真實病理特徵。
+- [決定] MIA 不量測、改結構性說明（§5）：本架構加密端無訓練集,membership 概念不成立,風險由不可連結密文結構性緩解,與 GMIA 不對等。
 
 ## 7. 重現指令
 
@@ -134,5 +150,9 @@ scripts/run_cfg_ddim.sh python -m scripts.classification_utility_legacy \
     --per-class 100 --noise-level 500 --splits 20 --scheme S1 --storage range-preserving  # §4e 學長+我們儲存
 scripts/run_cfg_ddim.sh python -m scripts.classification_utility_legacy \
     --per-class 100 --noise-level 500 --splits 20 --scheme S1 --storage legacy            # §4e 學長原生儲存
+scripts/run_cfg_ddim.sh python -m scripts.classification_utility_external \
+    --per-class 150 --nih-root dataset/nih-cxr14                                          # §4f 外部泛化 (NIH)
+scripts/run_cfg_ddim.sh python -m scripts.p11_experiment_matrix                          # 重生實驗矩陣 (41 cells)
 ```
 輸出於 `paper_assets/classification_utility/`（json/png/pdf，可重現，不入庫）；seed=1911。
+NIH 取得:`dataset/nih-cxr14/`(Data_Entry_2017_v2020.csv + images_001 archive,HF/NIH Box 直連,不入庫)。

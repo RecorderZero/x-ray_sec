@@ -2837,3 +2837,27 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 5. 下一步
 * [結論] 學長架構 baseline 完成,補強了「分類 utility」這塊的誠實比較 —— 與前段(速度/安全/保真)對學長的量化差異一致。
+
+## 2026-10-28 · W8 · Track P2 · 定稿收尾:實驗矩陣重生(DPM N=100 統一)、MIA 改結構性說明、外部資料集泛化(NIH)
+
+### 1. 當前目標 (Objective)
+* 使用者定稿前裁決四事:(1) 實驗矩陣過期 → 把這幾天 DPM++ 部署/分類資料補成 cell,舊 cell 不刪;(3) 統一操作點為 **DPM++ N=100**(DDIM N=200 為舊部署,棄用但保留);(2) GMIA 對照表 MIA 空格 → **改寫成結構性說明**(不量測);外部資料集 → **直接下載** NIH 放 `dataset/`,用 train-real model 零重訓測泛化;另查相關論文定位我們精準度。
+
+### 2. 執行動作 (Actions Taken)
+* 矩陣:`scripts/p11_experiment_matrix.py` 的 `P2_ROWS` 新增 7 列(DEP-1 DPM++ 最終部署點、CU-1~5 分類 utility、MC-4 GMIA 對照),重跑 → `paper_assets/final_experiment_matrix.{md,csv}` 34→**41 cells**。
+* MIA:`reports/classification_utility_protocol.md` §5 表格 MIA 列改為「結構性 N/A」+ 說明段(per-image 加密無訓練集、membership 不成立、不可連結密文結構性緩解)。
+* 外部資料集:下載 NIH ChestX-ray14 `Data_Entry_2017_v2020.csv`(HF repo)+ `images_001` archive(NIH Box 直連,~2GB,4999 張)到 `dataset/nih-cxr14/`(git-ignored,不入庫)。新增 `scripts/classification_utility_external.py`:CheXpert real 訓練的凍結探針零重訓評估 NIH real(Design A 標籤跨集對映:No Finding=y0、Effusion=y1;同 e1 preprocess/render)。指令 `--per-class 150`(NIH 可用 Effusion patients 177)。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 外部泛化(AUROC,in-domain CX→CX / external CX→NIH):DenseNet **0.900 / 0.823**、rad-dino **0.902 / 0.836** —— 跨資料集零重訓僅掉 ~0.07。
+* [事實] 文獻定位:CheXpert 肺積水公開水準 baseline 0.928 / ResNet-152 0.937 / DenseNet-169 0.934(全資料集 14 類)。我們 real 0.903–0.937、recovered 0.887–0.937 落在 **0.90–0.94 正常區間**,非離群。
+* [事實] 矩陣 DEP-1 讀 n=20(deploy_dpm_sweep)、CU-4 n=2(privacy_utility_table);json-backed cell n="-"(與既有 MC-1 一致)。
+
+### 4. 達標判定 (Assessment)
+* [結論] 定稿收尾四事完成。外部泛化落差 ~0.07 屬良好(文獻 domain-shift 常 0.05–0.15)→ 分類器學真實病理特徵、非 CheXpert artifact,補強 utility 外部效度。
+* [範圍] 外部測試在**真實 NIH 影像**上測「分類器是否泛化」(使用者所問),非把匿名/還原 pipeline 跑在 NIH(生成器未在 NIH 訓練,超出範圍)。
+* [決定] MIA 不量測、改結構性說明:本架構與 GMIA 威脅模型不對等,不強給可比數字。
+* 已達標:`classification_utility_external.py`、`p11_experiment_matrix.py`、report §4f/§5/§6/§7、矩陣 md/csv、本條 commit;NIH 資料與 paper_assets json 不入庫(可重現)。
+
+### 5. 下一步
+* [結論] 使用者列出的定稿缺口(矩陣、操作點統一、MIA、外部泛化)全數收斂,分類 utility 貢獻連同外部效度與文獻定位到位。剩餘純屬未來工作(更多外部集 / 匿名 pipeline 跨集)。

@@ -47,6 +47,28 @@ P2_ROWS = [
     ("Ablation", "ABL-2", "redundant re-inversion in predecessor healthy-gen (N=10)",
      "reinvert_ablation/reinvert_ablation.csv", "reinvert-ablation (seed 1911)",
      "done", "P2; A~=B psnr 47.5 dB cos 0.9999, B 1.50x faster"),
+    # --- W8-W9: final DPM++ deployment point + classification-utility contribution ---
+    ("Deploy DPM++", "DEP-1", "final deployment operating point: DPM-Solver++ 2M N=100 + S2fn + range-preserving PNG (fidelity/speed sweep)",
+     "deploy_dpm_sweep/sweep.csv", "deploy_dpm_sweep (seed 1911)",
+     "done", "P2; FINAL deploy point, replaces DDIM N=200 (kept as historical Q8-FORMAL); N=100 S2fn recon 44.26 dB, ~5x faster"),
+    ("Classif utility", "CU-1", "No Finding vs Effusion preservation, frozen probe (DPM++ N=100, S2fn, 50 patient-splits)",
+     "classification_utility/anon_utility_dpm++_n200_s100_k50.json", "classification_utility_anon (seed 1911)",
+     "done", "P2; real->rec 0.904/0.937 ~= real 0.916/0.937; anon & anon->anon = chance"),
+    ("Classif utility", "CU-2", "trained-classifier utility, DenseNet-121 fine-tune (GMIA-style, 5 splits)",
+     "classification_utility/finetune_utility_dpm++_n200_s100_k5.json", "classification_utility_finetune (seed 1911)",
+     "done", "P2; real->rec 0.888 ~= real 0.886; anon = chance; confirms frozen-probe conclusion"),
+    ("Classif utility", "CU-3", "utility vs reconstruction steps N (DPM++ N=50/100/200, 20 splits)",
+     "classification_utility/anon_utility_dpm++_n100_s100_k20.json", "classification_utility_anon vs-N (seed 1911)",
+     "done", "P2; recovered AUROC tracks recon PSNR; ~0.90 even at N=50"),
+    ("Classif utility", "CU-4", "privacy-utility joint (same pipeline/encoder): pathology vs identity linkage",
+     "classification_utility/privacy_utility_table.csv", "build_privacy_utility_table",
+     "done", "P2; read-pathology ~0.9 vs read-identity S2 ~random (0.381/0.486); external top-1 0.05"),
+    ("Classif utility", "CU-5", "predecessor-architecture baseline (legacy DDIM T=500 + S1; range-preserving & native storage)",
+     "classification_utility/legacy_utility_S1_n100_t500_k20.json", "classification_utility_legacy (seed 1911)",
+     "done", "P2; recovered ~0.90 across 31.8-43.7 dB (utility architecture-insensitive); native storage 31.8 dB matches predecessor ~30 dB"),
+    ("Method comp", "MC-4", "GMIA (refpaper/114) quantitative comparison, table-only (not reproduced)",
+     "classification_utility_protocol.md 5 (no table)", "refpaper/114 body numbers",
+     "done", "P2; threat-model contrast: ours reversible + inner-risk eliminated vs GMIA irreversible high inner-risk 0.899"),
 ]
 
 

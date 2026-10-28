@@ -3,7 +3,7 @@
 > Built by `scripts/p11_experiment_matrix.py` from the frozen claim packages (attack/defense, run_ids inside), the Q8_FORMAL quality parent, and the P2/appendix tracks added after F9. `n` read from the live table files; numbers never hand-copied.
 > RQ1-4 core evidence + Section-5 claim limits live in `claim_matrix/index.md` (10 claims).
 
-Total cells: 34 (RQ1-4 frozen main + P2/appendix).
+Total cells: 41 (RQ1-4 frozen main + P2/appendix).
 
 | track | cell | experiment | run id / provenance | n | status |
 |---|---|---|---|---|---|
@@ -41,6 +41,13 @@ Total cells: 34 (RQ1-4 frozen main + P2/appendix).
 | Method comp | MC-3 | original-weights cross-set sanity + identity control | Packhauser GPL checkpoint (out-of-tree) | - | done |
 | Ablation | ABL-1 | BDIA/DDIM x asym/symnull 2x2 fidelity ablation (N=200) | BDIA2X2_20261020T182731Z_efbf6f85 | 4 | done |
 | Ablation | ABL-2 | redundant re-inversion in predecessor healthy-gen (N=10) | reinvert-ablation (seed 1911) | 10 | done |
+| Deploy DPM++ | DEP-1 | final deployment operating point: DPM-Solver++ 2M N=100 + S2fn + range-preserving PNG (fidelity/speed sweep) | deploy_dpm_sweep (seed 1911) | 20 | done |
+| Classif utility | CU-1 | No Finding vs Effusion preservation, frozen probe (DPM++ N=100, S2fn, 50 patient-splits) | classification_utility_anon (seed 1911) | - | done |
+| Classif utility | CU-2 | trained-classifier utility, DenseNet-121 fine-tune (GMIA-style, 5 splits) | classification_utility_finetune (seed 1911) | - | done |
+| Classif utility | CU-3 | utility vs reconstruction steps N (DPM++ N=50/100/200, 20 splits) | classification_utility_anon vs-N (seed 1911) | - | done |
+| Classif utility | CU-4 | privacy-utility joint (same pipeline/encoder): pathology vs identity linkage | build_privacy_utility_table | 2 | done |
+| Classif utility | CU-5 | predecessor-architecture baseline (legacy DDIM T=500 + S1; range-preserving & native storage) | classification_utility_legacy (seed 1911) | - | done |
+| Method comp | MC-4 | GMIA (refpaper/114) quantitative comparison, table-only (not reproduced) | refpaper/114 body numbers | - | done |
 
 ## Missing-value reasons
 - `n` blank for attack/defense package rows: those are per-claim C-codes (multiple sub-runs), not single tables; N is inside each package table.
