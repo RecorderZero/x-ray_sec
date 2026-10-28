@@ -90,7 +90,10 @@ def main() -> None:
     encoders = args.encoders or (["densenet121_imagenet"] if args.smoke else ["densenet121_imagenet", "rad_dino"])
 
     _, diffusion, model_fn = create_runtime(PAST, CKPT, device)
-    rs = Respaced(diffusion, model_fn, device)
+    # The published anon image uses the SAME representation as the shipped pipeline,
+    # whose final-deployment backward is null (forward/backward aligned, 2026-10-28),
+    # so the linkability of the released image must be measured under null too.
+    rs = Respaced(diffusion, model_fn, device, backward_null=True)
     dpm = DPMSolverpp(rs)
     b = schedule(N)
 

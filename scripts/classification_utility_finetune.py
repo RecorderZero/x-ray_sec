@@ -176,7 +176,9 @@ def main() -> None:
     print(f"n_images={len(entries)} (y1={int(labels.sum())})", flush=True)
 
     _, diffusion, model_fn = create_runtime(args.source_root, args.checkpoint, device)
-    sampler = DPMSolverpp(Respaced(diffusion, model_fn, device))
+    # Final deployment: generation aligned with the unconditional inversion
+    # (backward_null), superseding the legacy y=0 convention (2026-10-28 decision).
+    sampler = DPMSolverpp(Respaced(diffusion, model_fn, device, backward_null=True))
     b = schedule(args.steps)
     real, anon, rec, recon_db, anon_db = generate(entries, sampler, b, device)
     img_by_type = {"real": real, "anon": anon, "recovered": rec}
