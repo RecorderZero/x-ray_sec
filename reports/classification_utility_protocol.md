@@ -78,6 +78,22 @@ recovered  = B(D(F(PNG(anon))))       (授權金鑰還原後)
 
 [結論] recovered utility **隨重構品質單調逼近 real**：DenseNet 在 N=50(38.9 dB)仍有小落差(0.882 vs 0.903),N=200(46.1 dB)已實質無損(0.901 vs 0.903);rad-dino(CXR 基礎模型)對 N 不敏感,N=50 即飽和。此把分類 utility 直接綁到 DPM++／步數貢獻:**更好的重構 → 更無損的 utility**,且即使最快設定(N=50)utility 仍 ~0.9。
 
+**4e. 學長架構 baseline(同任務、同 render、同凍結 encoder;`classification_utility_legacy.py`、`legacy_utility_S1*_n100_t500_k20.json`)**
+
+把學長**原始匿名化架構**(legacy dense DDIM T=500、generation y=0 條件 `guidance_scale=-1` 無 CFG 混合、加密 S1=SignedPermutationKey)接上**完全相同**的二元任務/選樣/render/凍結探針,只換架構。偽健康圖 CFG(gs=4,`|x0−healthy|`)是定位工具、對二元分類無貢獻,故省略 —— 架構化簡為 invert→加密→generate(anon)、invert→解密→generate(recover),正是使用者描述的流程。per-class 100、20 splits,AUROC mean±95%CI。
+
+| 架構 | sampler | 加密 | storage | recon PSNR | 速度 | DenseNet real→rec | rad-dino real→rec |
+|---|---|---|---|---:|---:|---:|---:|
+| **本架構** | DPM++ N=100 | S2fn | 保值域 | 43.7 dB | **6.3 s/img** | 0.894 | 0.897 |
+| 學長(+我們儲存) | legacy DDIM T=500 | S1 | 保值域 | 38.9 dB | 30.8 s/img | 0.887 ±0.021 | 0.900 ±0.017 |
+| 學長原生 | legacy DDIM T=500 | S1 | 原生(值域丟棄) | **31.8 dB** | 30.8 s/img | 0.899 ±0.017 | 0.893 ±0.019 |
+
+(三者 real→real 參考一致:DenseNet 0.903、rad-dino 0.895;real→anon 0.535/0.553、anon→anon 0.520/0.492 在學長兩版完全相同,因 anon 影像與 storage 無關。)
+
+- [事實] 學長原生儲存 recon **31.8 dB**,與學長論文自報的 ~30 dB 吻合 → 忠實重現;換成我們的保值域儲存升到 38.9 dB(**儲存貢獻 ~+7 dB**),再換 DPM++ 升到 43.7 dB(**sampler 貢獻 再 +5 dB**)。
+- [結論] **二元分類 utility 對架構不敏感**:recon 橫跨 31.8→38.9→43.7 dB,recovered AUROC 都 ≈ real(~0.90)。即二元肺積水分類不需要 PSNR 所量的高頻細節,**utility 保留是「可逆匿名化家族」的共通性質,非本架構改進獨有**。
+- [結論] 因此本架構的差異化**不在「分類能否存活」,而在**:(i) **速度 ~4.9×**(6.3 vs 30.8 s/img,DPM++ N=100 取代 dense T=500);(ii) **重構保真** 31.8→43.7 dB(保值域 + DPM++);(iii) **安全性**(S2 固定 norm + per-image nonce vs S1 固定全域 key;量化見 §4c 與 t2bb 連結實驗)。此為誠實定位,不過度宣稱 utility 為本架構獨佔。
+
 ## 5. 威脅模型定位（與 GMIA 量化對照，item 4；僅表格比較，未復現 GMIA）
 
 | 維度 | GMIA（refpaper/114，14 類 multi-label） | 本架構 S2fn（二元 No Finding/Effusion） |
@@ -114,5 +130,9 @@ for N in 50 100 200; do scripts/run_cfg_ddim.sh python -m scripts.classification
 scripts/run_cfg_ddim.sh python -m scripts.plot_utility_vs_n \
     --jsons paper_assets/classification_utility/anon_utility_dpm++_n100_s*_k20.json \
     --out paper_assets/classification_utility/fig_utility_vs_n_k20.png                 # item 6 figure
+scripts/run_cfg_ddim.sh python -m scripts.classification_utility_legacy \
+    --per-class 100 --noise-level 500 --splits 20 --scheme S1 --storage range-preserving  # §4e 學長+我們儲存
+scripts/run_cfg_ddim.sh python -m scripts.classification_utility_legacy \
+    --per-class 100 --noise-level 500 --splits 20 --scheme S1 --storage legacy            # §4e 學長原生儲存
 ```
 輸出於 `paper_assets/classification_utility/`（json/png/pdf，可重現，不入庫）；seed=1911。

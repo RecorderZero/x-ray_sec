@@ -2815,3 +2815,25 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * [待辦] 外部資料集 / 外部分類器泛化驗證。
 * [待辦] 本架構自身 MIA 量測,補齊與 GMIA 對照表的 MIA 欄。
 * [結論] 使用者定稿目標達成:前段貢獻(可逆、安全性 S2 固定 norm、重構品質保值域+DPM++、速度)以學長論文為 baseline;最後一塊(定位→分類)以 GMIA(refpaper/114)為 table-only baseline。
+
+## 2026-10-28 · W8 · Track P2 · 學長原始架構的二元分類 utility baseline(legacy DDIM T=500 + S1,兩種 storage)
+
+### 1. 當前目標 (Objective)
+* 使用者要求:測學長**原始架構**拿來做二元分類 utility 的效果。學長架構另有 CFG 偽健康圖,但那是**定位**工具(`|x0−healthy|`),對二元分類無貢獻 → 省略,架構化簡為 invert→加密→generate(anon)、invert→解密→generate(recover)。不需如本架構完整,單一參數設定驗 AUROC。追加:同時測**學長原生 storage(非保值域)**。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/classification_utility_legacy.py`:沿用 `classification_utility_anon` 的 `to_pil`/`probe`/多 split 與凍結 encoder,round-trip 換成 `e2_legacy_wrapper`(`legacy_invert`/`apply_legacy_key`/`legacy_generate`,組合等價完整 legacy sampler,`test_legacy_repro.py` 已驗 bit-exact)。加密 S1=SignedPermutationKey(`Ki@13579`/seed42);`--storage {range-preserving, legacy}`,legacy = `e2_anonymization_runner.legacy_png_handoff`(per-image min-max + uint8 truncation,值域丟棄)。
+* 指令(各 per-class 100、k20、T=500、S1):`--storage range-preserving` 與 `--storage legacy`(各 ~103 分鐘;smoke 4 張先驗流程)。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] recon PSNR:學長原生 storage **31.8 dB**(與學長論文自報 ~30 dB 吻合 → 忠實重現)、換我們保值域 storage **38.9 dB**(儲存貢獻 ~+7 dB)、本架構 DPM++ **43.7 dB**(sampler 再 +5 dB)。
+* [事實] recovered AUROC(DenseNet / rad-dino):學長原生 **0.899 / 0.893**、學長+保值域 **0.887 / 0.900**、本架構 **0.894 / 0.897** —— 三者皆 ≈ real(0.903 / 0.895)。real→anon 0.535/0.553、anon→anon 0.520/0.492(學長兩 storage 版完全相同,因 anon 影像與 storage 無關)。
+* [事實] 速度:本架構 **6.3 s/img** vs 學長 **30.8 s/img ≈ 4.9×**(DPM++ N=100 取代 dense DDIM T=500)。
+
+### 4. 達標判定 (Assessment)
+* [結論] **二元分類 utility 對架構不敏感**:recon 橫跨 31.8→43.7 dB,recovered AUROC 都 ~0.90。utility 保留是「可逆匿名化家族」共通性質,**非本架構改進獨有**。本架構差異化在 (i) 速度 ~4.9×、(ii) 重構保真 31.8→43.7 dB、(iii) 安全性(S2 固定 norm + per-image nonce vs S1 固定全域 key)—— 誠實定位,不過度宣稱 utility 獨佔。
+* [注意] recon 38.9 dB(非預期的 ~30)一度需確認:原因是我先用保值域 storage(讓給學長,比較保守);換回 legacy 原生 storage 即回到 31.8 dB,證實非 bug。
+* 已達標:結果寫入 `reports/classification_utility_protocol.md` §4e(三方 side-by-side)+ §7;json/對照圖於 `paper_assets/classification_utility/`(可重現,不入庫)。
+
+### 5. 下一步
+* [結論] 學長架構 baseline 完成,補強了「分類 utility」這塊的誠實比較 —— 與前段(速度/安全/保真)對學長的量化差異一致。
