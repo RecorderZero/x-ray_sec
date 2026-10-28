@@ -50,7 +50,7 @@ P2_ROWS = [
     # --- W8-W9: final DPM++ deployment point + classification-utility contribution ---
     ("Deploy DPM++", "DEP-1", "final deployment operating point: DPM-Solver++ 2M N=100 + S2fn + range-preserving PNG (fidelity/speed sweep)",
      "deploy_dpm_sweep/sweep.csv", "deploy_dpm_sweep (seed 1911)",
-     "done", "P2; FINAL deploy point, replaces DDIM N=200 (kept as historical Q8-FORMAL); N=100 S2fn recon 44.26 dB, ~5x faster"),
+     "done", "P2; FINAL deploy point (null backward, forward/backward aligned), replaces DDIM N=200 (kept as historical Q8-FORMAL); N=100 S2fn recon 47.06 dB, ~5x faster; same-compute N=499 S2fn 54.35 dB"),
     ("Classif utility", "CU-1", "No Finding vs Effusion preservation, frozen probe (DPM++ N=100, S2fn, 50 patient-splits)",
      "classification_utility/anon_utility_dpm++_n200_s100_k50.json", "classification_utility_anon (seed 1911)",
      "done", "P2; real->rec 0.904/0.937 ~= real 0.916/0.937; anon & anon->anon = chance"),
