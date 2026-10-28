@@ -153,6 +153,18 @@ scripts/run_cfg_ddim.sh python -m scripts.classification_utility_legacy \
 scripts/run_cfg_ddim.sh python -m scripts.classification_utility_external \
     --per-class 150 --nih-root dataset/nih-cxr14                                          # §4f 外部泛化 (NIH)
 scripts/run_cfg_ddim.sh python -m scripts.p11_experiment_matrix                          # 重生實驗矩陣 (41 cells)
+scripts/run_cfg_ddim.sh python -m scripts.plot_architecture_comparison                   # 圖3 三方架構對照
+scripts/run_cfg_ddim.sh python -m scripts.plot_external_generalization                   # 圖4 外部泛化
 ```
 輸出於 `paper_assets/classification_utility/`（json/png/pdf，可重現，不入庫）；seed=1911。
 NIH 取得:`dataset/nih-cxr14/`(Data_Entry_2017_v2020.csv + images_001 archive,HF/NIH Box 直連,不入庫)。
+
+## 8. 論文圖組（最終）
+
+| 圖 | 檔案 | 訊息 |
+|---|---|---|
+| 圖1 utility 矩陣 | `fig_utility_matrix_k50.png` | 4-probe:real→real/recovered 高且齊,anon/anon→anon = chance |
+| 圖2 utility-vs-N | `fig_utility_vs_n_k20.png` | recovered AUROC 隨 recon PSNR 單調逼近 real;N=50 已 ~0.9 |
+| 圖3 三方架構對照 | `fig_architecture_comparison.png` | recovered utility 對架構不敏感(平 ~0.90);差異在速度/保真(標註) |
+| 圖4 外部泛化 | `fig_external_generalization.png` | CheXpert→NIH 零重訓,AUROC 落差僅 ~0.07 |
+| 定性對照圖 | `anon_utility_examples_*`、`legacy_utility_examples_*` | real / anon / recovered 三欄並排 |

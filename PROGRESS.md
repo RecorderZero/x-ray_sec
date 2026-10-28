@@ -2861,3 +2861,18 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 5. 下一步
 * [結論] 使用者列出的定稿缺口(矩陣、操作點統一、MIA、外部泛化)全數收斂,分類 utility 貢獻連同外部效度與文獻定位到位。剩餘純屬未來工作(更多外部集 / 匿名 pipeline 跨集)。
+
+## 2026-10-28 · W8 · Track P2 · 分類 utility 論文圖組整理(4 張主圖)
+
+### 1. 當前目標 (Objective)
+* 使用者要求整理分類 utility 的論文用最終圖組。
+
+### 2. 執行動作 (Actions Taken)
+* 新增 `scripts/plot_architecture_comparison.py`(圖3,三方架構 recovered AUROC + recon/速度標註)、`scripts/plot_external_generalization.py`(圖4,in-domain vs NIH)。沿用既有 dataviz palette/樣式(slot1 #2a78d6、slot2 #eb6834,單軸,chance 線,CI)。
+* report 新增 §8 圖組清單 + §7 繪圖指令。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 最終 4 主圖:圖1 `fig_utility_matrix_k50`、圖2 `fig_utility_vs_n_k20`、圖3 `fig_architecture_comparison`、圖4 `fig_external_generalization`(各 png+pdf,`paper_assets/classification_utility/`,可重現不入庫)+ 定性對照圖 examples。
+
+### 4. 達標判定 (Assessment)
+* 已達標:兩支繪圖腳本 + report §8/§7 本條 commit;圖檔不入庫(可重現)。
