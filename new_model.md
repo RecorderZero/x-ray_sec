@@ -214,7 +214,7 @@
 \* 預期不變，屬「便宜就重確認」級。
 
 ### 11.2 必做三項（最小可辯護集）
-1. [待辦] **RQ4 重報**：DPM++ N=100（主）+ N=200（對照）下 fidelity/runtime/storage；凍結 DDIM baseline 保留為參考，DPM++ 另列為「部署最佳化組態」。
+1. [x] **RQ4 重報**（formal N=200 已交付，見 §11.7）：部署 DPM++ N=100 null、P 45.74 dB / S2fn 46.42 dB（patient-cluster CI + LPIPS）；凍結 legacy DDIM 保留為參考 baseline。
 2. [待辦] **層 A 等價 ablation 重做**：DPM++ N=100 證「分岔生成 ≈ 不分岔」（還原圖 cos/PSNR、偽健康圖品質不變）。
 3. [待辦] **影像空間安全平價檢查**：T2BB-3/4 + MC-2，攻防皆 DPM++ N=100，證「更快更清晰但攻擊未變強」。
 
@@ -264,3 +264,17 @@
 * [事實] **S0/S1/S2 在 DPM++ 下全維持 ~隨機**（auc 0.38–0.54，null_auc≈0.50、random top1=0.05），無一上升；S2 甚至略低於 legacy。→ **換 sampler 未提高釋出匿名圖的可連結性**。
 * [結論] AF-045 的 T2BB frozen-encoder linkage（T2BB-3/4 等價）在 DPM++ N=100 下**安全平價成立**：高還原保真只利持鑰者還原、不利凍結 encoder 連結攻擊（與 degeneracy check 的「anon 洩漏由加密決定」一致）。
 * [限制] S2 用單次隨機金鑰 + per-image nonce 抽樣（與凍結表同政策，金鑰不落盤只記 SHA-256）；「~隨機」結論穩健、精確 auc 隨金鑰抽樣微動。**MC-2 外部學習式 re-id（Siamese shadow-1000）在 DPM++ 下的重跑仍待做**，為完全關閉 AF-045 的最後一塊。
+
+### 11.7 Item 1 正式交付：RQ4 formal 重報 @ 部署操作點（`scripts/rq4_formal_redo.py`）
+
+> §11.4 的 decode/sampler 分解是 dev n=4 的 re-baseline；本節是 **formal N=200 正式交付**。沿用凍結 Q8_FORMAL 的方法學（security_v1 200 病患 patient-disjoint、patient-cluster 百分位 bootstrap CI seed 1911/10000 resamples、PSNR/SSIM/cosine/L∞/RMSE/MAE + 真 LPIPS(alex)），但操作點換成**部署版 DPM-Solver++(2M) N=100 + null backward + range-preserving PNG**（supersede 凍結表的 legacy DDIM T=500 / y=0 / legacy PNG）。不改已稽核的 `q8_pilot_runner`，另寫自含 runner。產物 `paper_assets/rq4_formal/{table_fidelity,table_runtime,per_sample_long,analysis_manifest}.csv/json`。
+
+| 方案 | recon PSNR dB（CI95） | SSIM | cosine | LPIPS（CI95） | 匿名圖 vs x0（單輪） | 4-pass runtime s |
+|---|---|---:|---:|---|---:|---:|
+| **P**（恆等金鑰，可逆上界） | **45.74** [45.60, 45.88] | 0.9919 | 0.99996 | 0.029 [0.027, 0.031] | 49.83（≈還原） | 6.15 |
+| **S2fn**（部署密文） | **46.42** [46.19, 46.63] | 0.9947 | 0.99996 | 0.019 [0.018, 0.021] | **5.27**（雜訊狀密文） | 6.31 |
+
+* [事實] 部署操作點的 RQ4 保真主表：P **45.74 dB**、S2fn **46.42 dB**（N=200、patient-cluster CI）。對照凍結 Q8_FORMAL 的 **legacy P 37.46 dB** → 同一評估集、換到部署操作點後 **+8.3 dB**（多因：sampler + null 對齊 + range-preserving 儲存，分解見 §11.4，單因不可合併）。
+* [事實] **S2fn ≥ P**（46.42 > 45.74）維持（§9/§10 的「加密 ≥ P」現象在 formal N=200 成立）；S2fn 匿名圖對 x0 單輪僅 **5.27 dB**（密文 noise-like，隱私正常），還原後 LPIPS 0.019（感知近乎無損）。
+* [決定] 此為 §11.2 item 1 的正式交付：主表以部署操作點（DPM++ N=100 null）報 P/S2fn，凍結 legacy DDIM 保留為參考 baseline。
+* [限制] scheme 限 P 與 S2fn（部署 scheme-of-record）；S0/S1 為前作方案，其凍結數字續作前作對照，未在此操作點重跑。runtime 為單 GPU batch=1。

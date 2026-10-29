@@ -2999,3 +2999,28 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 兩項主要待辦（AF-045、AF-046 升級）已結。待稽核方複驗確定性與 provenance。
+
+---
+
+## 2026-10-29 · Track P2 · RQ4 formal 重報 @ 部署操作點（N=200，supersede Q8_FORMAL fidelity）
+
+### 1. 當前目標 (Objective)
+* 使用者裁示「跑 A」：把 RQ4 保真主表從凍結的 legacy 操作點（Q8_FORMAL：legacy DDIM T=500 / y=0 / legacy PNG，P 37.46 dB）重報到**部署操作點**（DPM++ N=100 + null + range-preserving），與論文宣稱的部署一致。
+
+### 2. 執行動作 (Actions Taken)
+* 新寫 `scripts/rq4_formal_redo.py`（不動已稽核的 legacy `q8_pilot_runner`）：security_v1 N=200 patient-disjoint、scheme P + S2fn、沿用 Q8 方法學（`q8_metrics.summarize` patient-cluster 百分位 bootstrap CI seed 1911/10000、真 LPIPS(alex)）、逐樣本 runtime。smoke(n=2) 先驗證（LPIPS 可用、CI 方法一致）→ formal N=200 背景跑（bhkt277fd，exit 0）。
+* new_model.md §11.7 記錄正式交付、§11.2 item 1 標 done；presentation Q1/Q9 補入實測數字。產物 `paper_assets/rq4_formal/{table_fidelity,table_runtime,per_sample_long,analysis_manifest}`。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] 部署操作點 RQ4 主表（N=200，patient-cluster CI）：**P 45.74 dB [45.60, 45.88]**、**S2fn 46.42 dB [46.19, 46.63]**；SSIM 0.992/0.995、cosine 0.99996、LPIPS 0.029/0.019；S2fn 匿名圖 vs x0 單輪 5.27 dB（密文）。4-pass runtime P 6.15 / S2fn 6.31 s/張。
+* [事實] 對照凍結 Q8_FORMAL legacy P 37.46 dB → 同評估集、部署操作點 **+8.3 dB**（多因：sampler+null+range-preserving，分解見 §11.4，不可單因合併）。S2fn ≥ P 在 formal N=200 成立。
+
+### 4. 達標判定 (Assessment)
+* [決定] §11.2 item 1（RQ4 重報）正式交付完成：主表以部署操作點報 P/S2fn，凍結 legacy 保留為參考 baseline。smoke→formal 兩階段；未改 past/SourceCode/、audit/、未覆寫凍結 q8_formal 表（新表另存 rq4_formal/）。
+* [限制] scheme 限 P/S2fn（部署 scheme-of-record）；S0/S1 續用前作凍結對照。runtime 單 GPU batch=1。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+* 無。
+
+### 7. 下一步
+* 可選：把 rq4_formal 納入 appendix/實驗矩陣 DEP cell 的正式 N=200 來源（目前 DEP-1 讀 deploy_dpm_sweep n=20）。待裁示。
