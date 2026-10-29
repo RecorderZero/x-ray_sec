@@ -48,9 +48,9 @@ P2_ROWS = [
      "reinvert_ablation/reinvert_ablation.csv", "reinvert-ablation (seed 1911)",
      "done", "P2; A~=B psnr 47.5 dB cos 0.9999, B 1.50x faster"),
     # --- W8-W9: final DPM++ deployment point + classification-utility contribution ---
-    ("Deploy DPM++", "DEP-1", "final deployment operating point: DPM-Solver++ 2M N=100 + S2fn + range-preserving PNG (fidelity/speed sweep)",
-     "deploy_dpm_sweep/sweep.csv", "deploy_dpm_sweep (seed 1911)",
-     "done", "P2; FINAL deploy point (null backward, forward/backward aligned), replaces DDIM N=200 (kept as historical Q8-FORMAL); N=100 S2fn recon 47.06 dB, ~5x faster; same-compute N=499 S2fn 54.35 dB"),
+    ("Deploy DPM++", "DEP-1", "final deployment operating point: DPM-Solver++ 2M N=100 + S2fn + null backward + range-preserving PNG (RQ4 formal fidelity, N=200)",
+     "rq4_formal/table_fidelity.csv", "rq4_formal_redo (seed 1911, security_v1 N=200, patient-cluster CI + LPIPS)",
+     "done", "P2; FINAL deploy point (null backward, forward/backward aligned), supersedes Q8-FORMAL legacy fidelity (kept as historical reference). FORMAL N=200: recon S2fn 46.42 dB [46.19,46.63] / P 45.74 dB [45.60,45.88], LPIPS 0.019/0.029, SSIM 0.995/0.992; vs frozen legacy P 37.46 dB = +8.3 dB. Speed/same-compute sweep in deploy_dpm_sweep: N=100 ~5x faster, same-compute N=499 S2fn 54.35 dB"),
     ("Classif utility", "CU-1", "No Finding vs Effusion preservation, frozen probe (DPM++ N=100, S2fn, 50 patient-splits)",
      "classification_utility/anon_utility_dpm++_n200_s100_k50.json", "classification_utility_anon (seed 1911)",
      "done", "P2 (null backward); real->rec 0.909/0.937 ~= real 0.916/0.937 @ recon 46.7 dB; anon 0.501/0.497 & anon->anon = chance"),
@@ -82,7 +82,14 @@ def read_rows(path: Path) -> list[dict]:
 def n_of(rel: str) -> str:
     p = PA / rel.split(" ")[0]
     if p.suffix == ".csv" and p.exists():
-        return str(len(read_rows(p)))
+        rows = read_rows(p)
+        # Prefer a table's own sample-size column (single consistent value) over the
+        # raw row count, e.g. rq4_formal fidelity carries n=200 across its metric rows.
+        if rows and "n" in rows[0]:
+            vals = {r["n"] for r in rows if r.get("n")}
+            if len(vals) == 1:
+                return vals.pop()
+        return str(len(rows))
     return "-"
 
 

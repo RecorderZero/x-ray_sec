@@ -39,9 +39,9 @@ Total cells: 41 (RQ1-4 frozen main + P2/appendix).
 | Method comp | MC-1 | positioning table vs published medical/reversible anon | refpaper 111/112/113 + web (cited) | - | done |
 | Method comp | MC-2 | external re-id attacker (Packhauser-arch reimpl, CheXpert) | REID-external (shadow 1000, seed 1911) | 4 | done |
 | Method comp | MC-3 | original-weights cross-set sanity + identity control | Packhauser GPL checkpoint (out-of-tree) | - | done |
-| Ablation | ABL-1 | BDIA/DDIM x asym/symnull 2x2 fidelity ablation (N=200) | BDIA2X2_20261020T182731Z_efbf6f85 | 4 | done |
+| Ablation | ABL-1 | BDIA/DDIM x asym/symnull 2x2 fidelity ablation (N=200) | BDIA2X2_20261020T182731Z_efbf6f85 | 200 | done |
 | Ablation | ABL-2 | redundant re-inversion in predecessor healthy-gen (N=10) | reinvert-ablation (seed 1911) | 10 | done |
-| Deploy DPM++ | DEP-1 | final deployment operating point: DPM-Solver++ 2M N=100 + S2fn + range-preserving PNG (fidelity/speed sweep) | deploy_dpm_sweep (seed 1911) | 20 | done |
+| Deploy DPM++ | DEP-1 | final deployment operating point: DPM-Solver++ 2M N=100 + S2fn + null backward + range-preserving PNG (RQ4 formal fidelity, N=200) | rq4_formal_redo (seed 1911, security_v1 N=200, patient-clust | 200 | done |
 | Classif utility | CU-1 | No Finding vs Effusion preservation, frozen probe (DPM++ N=100, S2fn, 50 patient-splits) | classification_utility_anon (seed 1911) | - | done |
 | Classif utility | CU-2 | trained-classifier utility, DenseNet-121 fine-tune (GMIA-style, 5 splits) | classification_utility_finetune (seed 1911) | - | done |
 | Classif utility | CU-3 | utility vs reconstruction steps N (DPM++ N=50/100/200, 20 splits) | classification_utility_anon vs-N (seed 1911) | - | done |
