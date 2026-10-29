@@ -1,0 +1,9 @@
+method,case,tampered,rejected,output_max_abs_change
+S2,tag,True,True,
+S2,nonce,True,True,
+S2,ciphertext,True,True,
+S2,version,True,True,
+S2,parameters,True,True,
+S2,aad,True,True,
+S2,storage,True,True,
+S2a,latent_value,True,False,0.03125
