@@ -168,6 +168,97 @@ def fig_pipeline_passes() -> None:
     print(f"wrote {out}")
 
 
+def fig_s2_container() -> None:
+    """S2 forward/inverse + authenticated-container storage & key-boundary.
+
+    Shows exactly what travels with the published artifact (nonce in clear,
+    params, AEAD-encrypted private metadata, payload, HMAC tag) vs the only
+    secret (32-byte master key, separate 0600 file).  Grounded in
+    src/crypto/{sot,s2_fixed_norm,container,nonce,kdf,key_io}.py.
+    """
+    fig, ax = plt.subplots(figsize=(12.2, 7.4))
+    ax.set_xlim(0, 12.4); ax.set_ylim(0, 8.0); ax.axis("off")
+
+    # ---- forward (encrypt) lane ----
+    ax.text(0.1, 7.62, "FORWARD (encrypt)", fontsize=11, fontweight="bold", color=C_OURS)
+    fwd = [
+        (0.1, "latent\n$z$"),
+        (2.1, "fix norm\n$u=\\frac{C}{\\|z\\|}z$"),
+        (4.4, "$Q$ : $R$ rounds\n$D_{pre}\\,\\frac{H}{\\sqrt{d}}\\,P\\,D_{post}$"),
+        (7.1, "protected\n$y=Qu$"),
+    ]
+    for i, (x, t) in enumerate(fwd):
+        _box(ax, x, 6.55, 1.75, 0.85, t, C_OURS, fs=8.6)
+        if i:
+            _arrow(ax, fwd[i - 1][0] + 1.75, 6.97, x, 6.97)
+    _arrow(ax, 7.1 + 1.75, 6.97, 9.35, 6.97)
+    ax.text(8.95, 7.22, "pack", fontsize=8.2, color="#555")
+
+    # ---- container (middle): what is published / stored ----
+    cx, cy, cw, chh = 9.3, 2.5, 3.0, 4.7
+    ax.add_patch(FancyBboxPatch((cx, cy), cw, chh, boxstyle="round,pad=0.04,rounding_size=0.1",
+                                fc="#eef2f7", ec="#5a6b7b", lw=1.6, zorder=0))
+    ax.text(cx + cw / 2, cy + chh - 0.28, "Authenticated Container\n(published / stored)",
+            ha="center", va="center", fontsize=8.6, fontweight="bold", color="#2b3a48")
+    fields = [
+        ("nonce (16 B, cleartext)", C_GREY, "#222"),
+        ("params: rounds / perm / public $C$", C_GREY, "#222"),
+        ("AEAD ciphertext [lock]\n{orig norm $s$; M1: lo/hi}", C_GOOD, "white"),
+        ("payload: $y$ / range-PNG", C_OURS, "white"),
+        ("HMAC-SHA256 tag", "#6a4ca8", "white"),
+    ]
+    fy = cy + chh - 1.15
+    for t, c, fc in fields:
+        _box(ax, cx + 0.18, fy - 0.5, cw - 0.36, 0.62, t, c, fontcolor=fc, fs=7.8)
+        fy -= 0.78
+    _arrow(ax, 10.8, 6.52, 10.8, cy + chh)          # forward -> container
+    _arrow(ax, cx, cy + 0.9, 8.75, cy + 0.9)        # container -> inverse lane
+
+    # ---- master key (only secret, outside container) ----
+    _box(ax, 9.5, 0.35, 2.6, 0.95,
+         "master key (32 B)\nseparate 0600 file\nONLY secret, NOT in container", "#b00020", fs=7.8)
+    for yy in (6.97, 1.35):                          # key feeds HKDF in both lanes (dashed)
+        ax.add_patch(FancyArrowPatch((9.5, 0.82), (5.8, yy - 0.0), arrowstyle="-|>",
+                     mutation_scale=10, color="#b00020", lw=1.1, ls=(0, (4, 3)),
+                     connectionstyle="arc3,rad=-0.18", zorder=1))
+    ax.text(5.9, 4.0, "HKDF(master key, nonce, label)\n-> sign/perm, AEAD & MAC subkeys",
+            fontsize=7.6, color="#b00020", ha="center", style="italic")
+
+    # ---- inverse (decrypt) lane ----
+    ax.text(0.1, 2.05, "INVERSE (decrypt, needs master key)", fontsize=11, fontweight="bold", color=C_GOOD)
+    inv = [
+        (0.1, "verify HMAC\n(anti-tamper T4)"),
+        (2.0, "open AEAD\n$s$, lo/hi"),
+        (3.9, "$Q^{-1}$: reversed\n$Q_0^{-1}{\\cdots}Q_{R-1}^{-1}$"),
+        (6.3, "un-fix norm\n$z=\\frac{s}{C}u$"),
+    ]
+    for i, (x, t) in enumerate(inv):
+        _box(ax, x, 0.95, 1.7, 0.8, t, C_GOOD, fs=8.2)
+        if i:
+            _arrow(ax, inv[i - 1][0] + 1.7, 1.35, x, 1.35)
+    _box(ax, 8.15, 0.95, 1.1, 0.8, "recover\n$z$", "#1b5e20", fs=8.6)
+    _arrow(ax, 6.3 + 1.7, 1.35, 8.15, 1.35)
+
+    # ---- attacker boundary note ----
+    ax.text(0.1, 5.65,
+            "Attacker (T2/T3) HAS: whole container (cleartext nonce, params,\n"
+            "AEAD ciphertext, payload, tag).   LACKS: master key  =>\n"
+            "  - cannot HKDF the sign/perm  -> cannot invert $Q$\n"
+            "  - cannot derive AEAD subkey  -> cannot read $s$ / lo/hi (ChaCha20-Poly1305)\n"
+            "  - cannot forge HMAC          -> tampering is rejected\n"
+            "nonce being public is fine (Kerckhoffs); its job is per-image uniqueness\n"
+            "-> per-image $Q$ + subkeys, enforced by NonceRegistry (SQLite UNIQUE).",
+            fontsize=8.4, va="top", ha="left", color="#333",
+            bbox=dict(boxstyle="round,pad=0.4", fc="#fff6f6", ec="#b00020", lw=1.0))
+
+    ax.text(0.1, 7.9, "S2 encrypt / decrypt + container: where recovery info lives, why the attacker cannot use it",
+            fontsize=11.5, fontweight="bold")
+    fig.tight_layout()
+    out = ASSETS / "fig_s2_container.png"
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print(f"wrote {out}")
+
+
 def fig_attack_flow() -> None:
     """Three attack lanes with grounded success rates: predecessor vs ours.
 
@@ -298,6 +389,7 @@ def main() -> None:
     fig_storage_motivation()
     fig_sampler_nsweep()
     fig_pipeline_passes()
+    fig_s2_container()
     fig_attack_flow()
     fig_anon_value_range(args.panel_npz)
     fig_fidelity_sidebyside(args.panel_npz)
