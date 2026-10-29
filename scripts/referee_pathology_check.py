@@ -84,6 +84,9 @@ def to_xrv_batch(arrays: list[np.ndarray]) -> torch.Tensor:
                                            xrv.datasets.XRayResizer(224)])
     out = []
     for a in arrays:
+        # recovery can overshoot [0,1] by ~1e-3; the published PNG is clamped to the
+        # display range anyway, so clip before xrv's strict [0,maxval] normalize.
+        a = np.clip(a, 0.0, 1.0)
         img = xrv.datasets.normalize((a * 255.0).astype(np.float32), 255)  # -> [-1024,1024]
         out.append(torch.from_numpy(tfm(img[None, ...])))                  # (1,224,224)
     return torch.stack(out)
