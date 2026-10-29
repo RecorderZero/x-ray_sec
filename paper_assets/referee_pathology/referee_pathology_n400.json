@@ -1,0 +1,246 @@
+{
+  "config": {
+    "operating_point": "DPM++ N=100 S2fn null range-preserving",
+    "per_sample": 400,
+    "seed": 1911,
+    "min_pos": 10
+  },
+  "models": {
+    "densenet121-res224-all": {
+      "pathologies": [
+        "Atelectasis",
+        "Consolidation",
+        "Infiltration",
+        "Pneumothorax",
+        "Edema",
+        "Emphysema",
+        "Fibrosis",
+        "Effusion",
+        "Pneumonia",
+        "Pleural_Thickening",
+        "Cardiomegaly",
+        "Nodule",
+        "Mass",
+        "Hernia",
+        "Lung Lesion",
+        "Fracture",
+        "Lung Opacity",
+        "Enlarged Cardiomediastinum"
+      ],
+      "per_pathology": {
+        "Enlarged Cardiomediastinum": {
+          "n_pos": 272,
+          "n": 400,
+          "auc_real": 0.8742,
+          "auc_recovered": 0.8764,
+          "auc_anon": 0.5309,
+          "delta_rec_minus_real": 0.0022
+        },
+        "Cardiomegaly": {
+          "n_pos": 231,
+          "n": 400,
+          "auc_real": 0.8578,
+          "auc_recovered": 0.8549,
+          "auc_anon": 0.5323,
+          "delta_rec_minus_real": -0.0029
+        },
+        "Lung Opacity": {
+          "n_pos": 282,
+          "n": 400,
+          "auc_real": 0.9107,
+          "auc_recovered": 0.9144,
+          "auc_anon": 0.5648,
+          "delta_rec_minus_real": 0.0037
+        },
+        "Lung Lesion": {
+          "n_pos": 54,
+          "n": 400,
+          "auc_real": 0.664,
+          "auc_recovered": 0.661,
+          "auc_anon": 0.4694,
+          "delta_rec_minus_real": -0.003
+        },
+        "Edema": {
+          "n_pos": 175,
+          "n": 400,
+          "auc_real": 0.8278,
+          "auc_recovered": 0.822,
+          "auc_anon": 0.5637,
+          "delta_rec_minus_real": -0.0058
+        },
+        "Consolidation": {
+          "n_pos": 209,
+          "n": 400,
+          "auc_real": 0.8645,
+          "auc_recovered": 0.8659,
+          "auc_anon": 0.5077,
+          "delta_rec_minus_real": 0.0014
+        },
+        "Pneumonia": {
+          "n_pos": 86,
+          "n": 400,
+          "auc_real": 0.6752,
+          "auc_recovered": 0.6558,
+          "auc_anon": 0.4809,
+          "delta_rec_minus_real": -0.0194
+        },
+        "Atelectasis": {
+          "n_pos": 221,
+          "n": 400,
+          "auc_real": 0.8712,
+          "auc_recovered": 0.8713,
+          "auc_anon": 0.5477,
+          "delta_rec_minus_real": 0.0001
+        },
+        "Pneumothorax": {
+          "n_pos": 44,
+          "n": 400,
+          "auc_real": 0.7483,
+          "auc_recovered": 0.737,
+          "auc_anon": 0.4749,
+          "delta_rec_minus_real": -0.0113
+        },
+        "Effusion": {
+          "n_pos": 184,
+          "n": 400,
+          "auc_real": 0.8892,
+          "auc_recovered": 0.8905,
+          "auc_anon": 0.5597,
+          "delta_rec_minus_real": 0.0013
+        },
+        "Fracture": {
+          "n_pos": 110,
+          "n": 400,
+          "auc_real": 0.5035,
+          "auc_recovered": 0.5018,
+          "auc_anon": 0.5129,
+          "delta_rec_minus_real": -0.0017
+        }
+      },
+      "macro_auc": {
+        "real": 0.7897,
+        "recovered": 0.7865,
+        "anon": 0.5223
+      },
+      "macro_delta_rec_minus_real": -0.0032
+    },
+    "densenet121-res224-chex": {
+      "pathologies": [
+        "Atelectasis",
+        "Consolidation",
+        "",
+        "Pneumothorax",
+        "Edema",
+        "",
+        "",
+        "Effusion",
+        "Pneumonia",
+        "",
+        "Cardiomegaly",
+        "",
+        "",
+        "",
+        "Lung Lesion",
+        "Fracture",
+        "Lung Opacity",
+        "Enlarged Cardiomediastinum"
+      ],
+      "per_pathology": {
+        "Enlarged Cardiomediastinum": {
+          "n_pos": 272,
+          "n": 400,
+          "auc_real": 0.86,
+          "auc_recovered": 0.8611,
+          "auc_anon": 0.4531,
+          "delta_rec_minus_real": 0.0011
+        },
+        "Cardiomegaly": {
+          "n_pos": 231,
+          "n": 400,
+          "auc_real": 0.8723,
+          "auc_recovered": 0.8731,
+          "auc_anon": 0.4755,
+          "delta_rec_minus_real": 0.0008
+        },
+        "Lung Opacity": {
+          "n_pos": 282,
+          "n": 400,
+          "auc_real": 0.8924,
+          "auc_recovered": 0.8938,
+          "auc_anon": 0.4882,
+          "delta_rec_minus_real": 0.0014
+        },
+        "Lung Lesion": {
+          "n_pos": 54,
+          "n": 400,
+          "auc_real": 0.6124,
+          "auc_recovered": 0.611,
+          "auc_anon": 0.4563,
+          "delta_rec_minus_real": -0.0014
+        },
+        "Edema": {
+          "n_pos": 175,
+          "n": 400,
+          "auc_real": 0.8273,
+          "auc_recovered": 0.8272,
+          "auc_anon": 0.4867,
+          "delta_rec_minus_real": -0.0001
+        },
+        "Consolidation": {
+          "n_pos": 209,
+          "n": 400,
+          "auc_real": 0.8734,
+          "auc_recovered": 0.8737,
+          "auc_anon": 0.4878,
+          "delta_rec_minus_real": 0.0003
+        },
+        "Pneumonia": {
+          "n_pos": 86,
+          "n": 400,
+          "auc_real": 0.6291,
+          "auc_recovered": 0.6287,
+          "auc_anon": 0.413,
+          "delta_rec_minus_real": -0.0004
+        },
+        "Atelectasis": {
+          "n_pos": 221,
+          "n": 400,
+          "auc_real": 0.8371,
+          "auc_recovered": 0.838,
+          "auc_anon": 0.5077,
+          "delta_rec_minus_real": 0.0009
+        },
+        "Pneumothorax": {
+          "n_pos": 44,
+          "n": 400,
+          "auc_real": 0.7587,
+          "auc_recovered": 0.7566,
+          "auc_anon": 0.5145,
+          "delta_rec_minus_real": -0.0021
+        },
+        "Effusion": {
+          "n_pos": 184,
+          "n": 400,
+          "auc_real": 0.8698,
+          "auc_recovered": 0.8687,
+          "auc_anon": 0.5235,
+          "delta_rec_minus_real": -0.0011
+        },
+        "Fracture": {
+          "n_pos": 110,
+          "n": 400,
+          "auc_real": 0.5913,
+          "auc_recovered": 0.5892,
+          "auc_anon": 0.5044,
+          "delta_rec_minus_real": -0.0021
+        }
+      },
+      "macro_auc": {
+        "real": 0.784,
+        "recovered": 0.7837,
+        "anon": 0.4828
+      },
+      "macro_delta_rec_minus_real": -0.0003
+    }
+  }
+}
