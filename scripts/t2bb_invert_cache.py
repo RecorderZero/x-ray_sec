@@ -52,16 +52,17 @@ def rel(p: Path) -> str:
         return str(p)
 
 
-def load_or_init_manifest(cache_dir: Path, ckpt_sha: str) -> dict:
+def load_or_init_manifest(cache_dir: Path, ckpt_sha: str, sampler: str, level: int) -> dict:
+    """`level` is the inversion config knob: legacy noise_level (500) or DPM++ N steps."""
     path = cache_dir / "manifest.json"
     if path.exists():
         man = json.loads(path.read_text())
-        if man["checkpoint_sha256"] != ckpt_sha or man["noise_level"] != NOISE_LEVEL:
+        if man["checkpoint_sha256"] != ckpt_sha or man["noise_level"] != level or man.get("sampler") != sampler:
             raise SystemExit(f"cache config mismatch: manifest={man['checkpoint_sha256'][:8]}/"
-                             f"{man['noise_level']} vs run={ckpt_sha[:8]}/{NOISE_LEVEL}")
+                             f"{man['noise_level']}/{man.get('sampler')} vs run={ckpt_sha[:8]}/{level}/{sampler}")
         return man
-    man = {"schema_version": 1, "checkpoint_sha256": ckpt_sha, "noise_level": NOISE_LEVEL,
-           "sampler": SAMPLER, "image_size": IMG, "seed": 1911}
+    man = {"schema_version": 1, "checkpoint_sha256": ckpt_sha, "noise_level": level,
+           "sampler": sampler, "image_size": IMG, "seed": 1911}
     cache_dir.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(man, indent=2) + "\n", encoding="utf-8")
     return man
@@ -91,6 +92,11 @@ def main() -> None:
     parser.add_argument("--checkpoint", type=Path, default=MODEL_PATH)
     parser.add_argument("--cache-dir", type=Path, default=ROOT / "artifacts/t2bb_latent_cache")
     parser.add_argument("--max-patients", type=int, default=None, help="invert only the first N patients (prefix)")
+    parser.add_argument("--inversion", choices=["legacy", "dpm++"], default="legacy",
+                        help="legacy = dense DDIM T=500 (predecessor default, unchanged); "
+                             "dpm++ = the final-deployment DPM-Solver++(2M) N=100 forward (null), "
+                             "to test the actually-deployed inversion. Use a SEPARATE --cache-dir for dpm++.")
+    parser.add_argument("--steps", type=int, default=100, help="N for --inversion dpm++ (deployment N=100)")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args()
 
@@ -100,21 +106,36 @@ def main() -> None:
     if args.max_patients is not None:
         rows = rows[: args.max_patients * 2]   # splits are written in pair order
 
+    if args.inversion == "dpm++":
+        sampler_label, level = f"dpm++_n{args.steps}_forward/null", args.steps
+    else:
+        sampler_label, level = SAMPLER, NOISE_LEVEL
+
     ckpt_sha = sha256_file(args.checkpoint)
-    load_or_init_manifest(args.cache_dir, ckpt_sha)
+    load_or_init_manifest(args.cache_dir, ckpt_sha, sampler_label, level)
     latents_dir = args.cache_dir / "latents"
     latents_dir.mkdir(parents=True, exist_ok=True)
 
     todo = [r for r in rows if not (latents_dir / f"{r['file_sha256']}.npy").exists()]
-    print(f"{rel(args.split)}: {len(rows)} imgs, {len(rows) - len(todo)} cached, {len(todo)} to invert")
+    print(f"{rel(args.split)}: {len(rows)} imgs, {len(rows) - len(todo)} cached, "
+          f"{len(todo)} to invert ({sampler_label})")
 
     if todo:
         model, diffusion, _ = build_model(args.device)
         model_fn = make_model_fn(model)
+        if args.inversion == "dpm++":
+            # final-deployment inversion: DPM-Solver++(2M) N=steps forward, null (fwd always null)
+            from scripts.respaced_ddim_sweep import Respaced, schedule
+            from scripts.exact_inv_sweep import DPMSolverpp
+            dpm = DPMSolverpp(Respaced(diffusion, model_fn, args.device, backward_null=True))
+            b = schedule(args.steps)
+            invert = lambda x0: dpm.forward(x0, b)
+        else:
+            invert = lambda x0: legacy_invert(diffusion, model_fn, x0, NOISE_LEVEL)
         t0 = time.time()
         for i, r in enumerate(todo, 1):
             x0 = preprocess(Path(r["local_path"]))[0].unsqueeze(0).to(args.device)
-            z = legacy_invert(diffusion, model_fn, x0, NOISE_LEVEL)
+            z = invert(x0)
             arr = z.reshape(IMG, IMG).cpu().numpy().astype(np.float32)
             np.save(latents_dir / f"{r['file_sha256']}.npy", arr)
             if i % 20 == 0 or i == len(todo):

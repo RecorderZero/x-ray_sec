@@ -54,18 +54,31 @@ def range_preserving_8bit(a: np.ndarray) -> np.ndarray:
     return decode_range_preserving_png(payload).astype(np.float32)
 
 
-def channel_feature(z: np.ndarray, channel: str, sample_id: str) -> np.ndarray:
+def channel_feature(z: np.ndarray, channel: str, sample_id: str, gen=None) -> np.ndarray:
     if channel == "s0_abs":
         return range_preserving_8bit(np.abs(z))
-    if channel == "s2_anon":
+    if channel == "p_deploy":
+        # deployment published image WITHOUT encryption = backward_null reconstruction
+        # (identity-leak upper bound: the attacker sees the real anatomy back)
+        if gen is None:
+            raise ValueError("p_deploy needs a backward generator (--deploy-steps)")
+        anon = gen(torch.from_numpy(z).reshape(1, 1, IMG, IMG))
+        return range_preserving_8bit(anon.reshape(IMG, IMG).numpy())
+    if channel in ("s2_anon", "s2_anon_deploy"):
         zt = torch.from_numpy(z).reshape(1, 1, IMG, IMG)
         u, _ = normalize_to_fixed_norm(zt)
         v = transform(u, FIXTURE_KEY, nonce_for(f"t2bb-inner::{sample_id}"), rounds=1, use_permutation=True)
+        if channel == "s2_anon_deploy":
+            # the ACTUAL deployed published image: backward_null(encrypt(z)) -> range-preserving PNG
+            if gen is None:
+                raise ValueError("s2_anon_deploy needs a backward generator (--deploy-steps)")
+            anon = gen(v)
+            return range_preserving_8bit(anon.reshape(IMG, IMG).numpy())
         return range_preserving_8bit(v.reshape(IMG, IMG).numpy())
     raise ValueError(channel)
 
 
-def load_features(split_csv: Path, cache_dir: Path, channel: str, max_patients: int | None = None):
+def load_features(split_csv: Path, cache_dir: Path, channel: str, max_patients: int | None = None, gen=None):
     with split_csv.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     if max_patients is not None:
@@ -73,7 +86,7 @@ def load_features(split_csv: Path, cache_dir: Path, channel: str, max_patients: 
     feats, pid, roles = [], [], []
     for r in rows:
         z = np.load(cache_dir / "latents" / f"{r['file_sha256']}.npy")
-        feats.append(channel_feature(z, channel, r["sample_id"]))
+        feats.append(channel_feature(z, channel, r["sample_id"], gen))
         pid.append(r["pair_id"]); roles.append(r["pair_role"])
     return feats, pid, roles
 
@@ -143,7 +156,12 @@ def main() -> None:
     ap.add_argument("--victim-split", type=Path, default=ROOT / "splits/t2bb_inner_v1.csv")
     ap.add_argument("--cache-dir", type=Path, default=ROOT / "artifacts/t2bb_latent_cache")
     ap.add_argument("--max-patients", type=int, default=200, help="shadow prefix to train on")
-    ap.add_argument("--channels", nargs="+", default=["s0_abs", "s2_anon"])
+    ap.add_argument("--channels", nargs="+", default=["s0_abs", "s2_anon"],
+                    help="s0_abs/s2_anon = legacy latent-space channels (default, unchanged); "
+                         "p_deploy/s2_anon_deploy = deployment-faithful PIXEL published images "
+                         "(backward_null DPM++ N=steps), to test the actually-released image.")
+    ap.add_argument("--deploy-steps", type=int, default=100,
+                    help="N for backward_null generation when a *_deploy channel is used (deployment N=100)")
     ap.add_argument("--epochs", type=int, default=200)
     ap.add_argument("--val-patients", type=int, default=40)
     ap.add_argument("--out", type=Path, default=ROOT / "paper_assets/tables/table_t2bb_learned_attack.csv")
@@ -156,10 +174,27 @@ def main() -> None:
 
     torch.manual_seed(SEED)
     device = args.device
+
+    # Deployment-faithful channels generate the actual published PIXEL image via the
+    # final-deployment backward (null, DPM++ N=deploy-steps); build the generator once.
+    gen = None
+    if any(c in ("p_deploy", "s2_anon_deploy") for c in args.channels):
+        from scripts.q11_localization_parity import build_model, make_model_fn
+        from scripts.respaced_ddim_sweep import Respaced, schedule
+        from scripts.exact_inv_sweep import DPMSolverpp
+        _model, _diffusion, _ = build_model(device)
+        _dpm = DPMSolverpp(Respaced(_diffusion, make_model_fn(_model), device, backward_null=True))
+        _b = schedule(args.deploy_steps)
+
+        @torch.inference_mode()
+        def gen(latent):
+            return _dpm.backward(latent.to(device), _b).detach().float().cpu()
+        print(f"deploy channels: backward_null DPM++ N={args.deploy_steps} (pixel published image)", flush=True)
+
     results = []
     for channel in args.channels:
-        s_feats, s_pid, s_roles = load_features(args.shadow_split, args.cache_dir, channel, args.max_patients)
-        v_feats, v_pid, v_roles = load_features(args.victim_split, args.cache_dir, channel)
+        s_feats, s_pid, s_roles = load_features(args.shadow_split, args.cache_dir, channel, args.max_patients, gen)
+        v_feats, v_pid, v_roles = load_features(args.victim_split, args.cache_dir, channel, gen=gen)
 
         # hold out last val_patients shadow patients for a learning sanity check
         uniq = sorted(set(s_pid), key=s_pid.index)
@@ -195,16 +230,23 @@ def main() -> None:
         w = csv.DictWriter(h, fieldnames=cols, lineterminator="\n"); w.writeheader()
         for r in results:
             w.writerow({c: r.get(c, "") for c in cols})
-    # efficacy verdict for the predecessor channel
-    vic = next((r for r in results if r["channel"] == "s0_abs" and r["set"] == "victim_learned"), None)
-    val = next((r for r in results if r["channel"] == "s0_abs" and r["set"] == "shadow_val_learned"), None)
-    fx = next((r for r in results if r["channel"] == "s0_abs" and r["set"] == "victim_fixed_cos"), None)
+    # efficacy verdict on the LEAK channel (no per-image nonce): s0_abs, or p_deploy in a deploy run
+    leak = next((c for c in ("s0_abs", "p_deploy") if c in args.channels), None)
+    claim = next((c for c in ("s2_anon", "s2_anon_deploy") if c in args.channels), None)
+    vic = next((r for r in results if r["channel"] == leak and r["set"] == "victim_learned"), None)
+    val = next((r for r in results if r["channel"] == leak and r["set"] == "shadow_val_learned"), None)
+    fx = next((r for r in results if r["channel"] == leak and r["set"] == "victim_fixed_cos"), None)
+    claim_vic = next((r for r in results if r["channel"] == claim and r["set"] == "victim_learned"), None)
     verdict = {
+        "leak_channel": leak, "claim_channel": claim,
         "learned_victim_auc": vic["auc"] if vic else None,
         "fixed_victim_auc": fx["auc"] if fx else None,
         "shadow_val_learned_top1": val["top1"] if val else None,
+        "claim_victim_auc": claim_vic["auc"] if claim_vic else None,
+        "claim_victim_top1": claim_vic["top1"] if claim_vic else None,
         "net_learned": bool(val and val["top1"] >= 2 * val["random_top1"]),
         "beats_fixed": bool(vic and fx and vic["auc"] >= 0.70 and vic["top1"] >= 0.25),
+        "claim_random": bool(claim_vic and claim_vic["auc"] <= 0.60 and claim_vic["top1"] <= 2 * claim_vic["random_top1"]),
     }
     verdict["efficacy"] = bool(verdict["net_learned"] and verdict["beats_fixed"])
     summary = {"schema_version": 1, "task_id": "T2BB-learned", "seed": SEED,
