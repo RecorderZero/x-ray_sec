@@ -1,6 +1,6 @@
 # T2-BB Inner-Risk（匿名圖之間 linkage）實驗設計
 
-> 狀態：**設計草稿（draft）**，尚未執行。對應威脅模型 T2-BB（PROPOSAL §3，P2 選做、另表報告）。
+> 狀態：direct-latent pilot 已完成；2026-10-20 新增 §16 的 actual-M1 frozen-encoder 補強。對應威脅模型 T2-BB（PROPOSAL §3，P2 選做、另表報告）。
 > 前綴慣例：`[決定]` 設計定案（改需回 Cowork）／`[事實]` 已量測已驗證（附來源）／`[假設]` 未驗證／`[待辦]` 待做／`[結論]` 由事實推得／`[限制]` 誠實界線／`[注意]` 風險提示。
 > 交叉參考：`paper_assets/threat_model_attack_map.md` §2、`reports/t2wb_protocol.md`、`scripts/a4_t2wb_gallery.py`。建立日期 2026-10-20。
 
@@ -140,6 +140,7 @@
 - [x] 步驟 2：GPU pilot（反演+加密+linkage+四控制）——gate 已取得使用者授權。
 - [x] 升級學習式攻擊（shadow 1000-patient split，pilot 200）。
 - [x] 依決策點判定：**結案**（見 §15）。
+- [x] AF-045 部署忠實複驗：DPM++ N=100 反演 + 發布像素圖 learned attack（shadow 1000、三通道 leak/headline/latent）——**結案**（見 §17）。
 
 ---
 
@@ -175,3 +176,41 @@
 - [結論] **最弱～學習式攻擊者光譜內,BB inner linkage 效果不顯著**：無任一通道(線性 cos/abs/norm、ImageNet DenseNet、shadow 學習式)能將 Top-1 推過 ~0.3 或 AUC 過 ~0.68;學習式過擬合無法改善上界。
 - [結論] **S2 的 per-image nonce 將其降至隨機**,inner-risk 安全為 by-construction(§12 既有界線:此為近乎平凡結果,論文價值在前作透明性之揭露與攻擊者假設光譜之完整)。
 - [限制] N=20(victim)/200(shadow pilot) 規模小;記憶化/訓練集重疊 confound 已以 disjoint split 控制(manifest 記錄)。結論限於「固定統計 + pilot 規模學習式」攻擊者,非通用安全證明。
+
+---
+
+## 16. Actual-M1 frozen-encoder 補強（2026-10-20）
+
+- [修正] §5/§15 的既有 `t2bb_inner_linkage.py` 是把 encrypted latent 本身正規化成 attacker-view array 後評分；它適合證明 S0/S1 的正交不變量透明，但**不是部署時真正公開的 DDIM-generated anonymous image**。因此 §15 改定位為 direct-latent 結構探針，不單獨結案整個 T2-BB。
+- [決定] 新管線：cached `z → crypto → legacy_generate → public M1 PNG → frozen encoder`。P/S0/S1 使用 mixed-deployment 的 range-discarding legacy PNG；S2 使用 private-range container 的 public q/255（lo/hi 不公開）。
+- [決定] encoder：ImageNet DenseNet121（通用基準）與 Microsoft RAD-DINO（CXR domain frozen encoder），均不 fine-tune；不使用目標 diffusion model activation。
+- [決定] 攻擊/真值硬隔離：公開 export 只有 opaque ID/PNG/hash/public nonce；patient/pair/role 在 export 外的 private evaluator map。embedding/similarity 先盲算，最後才 join truth。
+- [決定] victim split 沿用 `t2bb_inner_v1` 的 20 病患×2 跨 study 設計。報 Top-1/Top-5/AUC、label permutation null/p-value；CI 明確標作 fixed-gallery conditional-query bootstrap。N=20 與單一隨機 S2 key 只作 exploratory pilot。
+- [事實] 2-patient plumbing smoke：16/16 PNG 成功、平均 7.85 秒/generation；兩 frozen encoder 都能 local/offline 執行。完整 160 generation 預估約 21 分鐘（<30 分鐘 gate）。
+- [事實] 完整 N=20：P control 在 DenseNet/RAD-DINO 分別為 Top-1 0.50/0.75、AUC 0.810/0.976（permutation p=0.0002），證明公開 P M1 存在可用 linkage signal。S0/S1/S2 的 AUC 全在 0.434–0.558、Top-1 0–0.10，所有 permutation p≥0.098，兩個 frozen encoder 均未顯著連結。
+- [結論] actual-M1 BB pilot 不支持「S0/S1 公開 PNG 可被顯著連結」；S0/S1/S2 在本攻擊者下皆近隨機。direct-latent 的 S0/S1 透明性只適用能接觸 latent 統計的較強介面。
+- [限制] N=20、single-key exploratory，CI 是 fixed-gallery conditional-query bootstrap；null 只代表兩個指定 frozen encoder 未成功，非通用安全證明，也不能宣稱 S2 顯著優於 S0/S1。
+
+---
+
+## 17. AF-045 部署忠實 MC-2：DPM++ 反演 + 發布像素圖 learned attack（定稿 2026-10-29）
+
+- [動機] §15.3 的 shadow learned attack 用的是**前作 legacy dense DDIM T=500** 反演快取，且 channel 是 latent（`s0_abs` / `s2_anon`）。最終部署版改了兩件事：反演改為 **DPM-Solver++(2M) N=100**（forward/backward 皆 null 對齊），且真正公開的是 **backward_null 生成的像素匿名圖**（非 latent 密文）。AF-045 要求在**完全依照部署參數**下複驗，確認部署版本是否真的安全。
+- [決定] 新建獨立 DPM++ 反演快取（`artifacts/t2bb_latent_cache_dpm`，shadow 1000 病患×2＋inner 20×2 = 2040 latents，`sampler=dpm++_n100_forward/null`，與 legacy 快取物理隔離，manifest 拒絕混用），learned attack 新增三個部署通道（`scripts/t2bb_learned_attack.py`，`--inversion dpm++ --deploy-steps 100`）：
+  - **`p_deploy`** = 未加密的 backward_null 還原像素圖 → **洩漏上界/陽性對照**（若連這個 learned attack 都學不到，才是「攻擊太弱」）。
+  - **`s2_anon_deploy`** = `backward_null(encrypt(z))` 的實際發布像素圖 → **本實驗 headline**（使用者 2026-10-27 確認：威脅模型只公開像素匿名圖，不公開 latent）。
+  - **`s2_anon`** = latent 密文 → **上界對照**（攻擊者若還能拿到 latent 的更強介面）。
+- [事實] 規模：shadow 1000 病患（200 epochs，train loss 收斂 0.0199/0.0184），victim 20 病患×2。反演吞吐 1.56 s/img（DPM++ N=100），2040 張約 53 分鐘。seed 1911。產物 `paper_assets/tables/table_t2bb_learned_attack_dpm_deploy.{csv,json}`。隨機基準：shadow-val Top-1=0.025（40 類）、victim Top-1=0.05（20 類）。
+
+| channel | 意義 | shadow-val Top-1 / AUC | victim-learned Top-1 / AUC | victim-fixed AUC |
+|---|---|---|---|---|
+| **p_deploy** | 未加密還原（洩漏上界） | 0.175 (7×) / 0.729 | 0.250 / **0.635** | 0.619 |
+| **s2_anon_deploy** | 發布像素匿名圖（headline） | 0.125 (5×) / 0.562 | 0.100 / **0.430** | 0.417 |
+| **s2_anon** | latent 密文（上界對照） | 0.025 (1×) / 0.523 | 0.050 / **0.440** | 0.436 |
+
+- [事實] **陽性對照成立**：`p_deploy` 未加密還原圖上，learned attack shadow-val Top-1 達 7× 隨機、victim AUC 0.635（> fixed cos 0.619）→ 證明 (a) learned Siamese 在部署管線的**像素**介面上確有識別能力，(b) **DPM++ 反演 + null 還原這條 pipeline 本身不消除身份**（身份資訊留存在未加密還原圖中）。
+- [事實] **發布圖安全**：`s2_anon_deploy` 實際發布圖對未見 victim 的 AUC = **0.430**（≈ 隨機、低於 0.5），victim Top-1 0.100（n=20 下 2/20，相對隨機 1/20 不顯著）。shadow-val 雖見微弱 5× Top-1，但**不遷移至 held-out victim**（victim AUC < 0.5）→ 僅背住 shadow 身份、非可遷移 biometric。
+- [事實] **latent 上界亦隨機**：`s2_anon` victim AUC 0.440、Top-1=隨機 → 即使攻擊者取得 latent 密文（更強介面）也無連結力。
+- [結論][sampler-agnostic] 真正移除可連結性的是 **S2 的 per-image nonce**，與反演 sampler 無關：§15.3（legacy dense T=500 latent 快取）與本節（DPM++ N=100 部署像素圖）兩套獨立反演管線給出**同一結論**——加密通道回隨機、未加密洩漏對照可學。前作的透明性與 S2 的修補皆不依賴特定 sampler；部署改用 DPM++ 不改變 inner-risk 安全性。這呼應 skill §8：阻止跨影像擴散的是 per-image nonce，不是 diffusion 本身。
+- [結論] **AF-045 結案**：在完全依照部署參數（DPM++ N=100、forward/backward 皆 null、S2fn、range-preserving PNG、發布像素圖）下，匿名圖對最弱～學習式 BB 攻擊者不可連結（victim AUC 0.43–0.44 ≈ 隨機），而同管線未加密版本可被同一攻擊連結（victim AUC 0.635）——確立「安全性來自加密、非來自管線本身」。
+- [限制] victim N=20、單一 S2 key、單一 checkpoint；shadow 1000 但 2-shot。結論限於此規模與「固定統計＋shadow learned」攻擊者光譜，非通用安全證明。shadow-val 的微弱 5× Top-1（不遷移）顯示像素 render 保留少量可被 shadow 背記的全域規律，已誠實記錄。

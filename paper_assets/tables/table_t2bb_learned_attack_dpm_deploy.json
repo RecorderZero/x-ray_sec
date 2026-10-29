@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "task_id": "T2BB-learned",
+  "seed": 1911,
+  "train_patients": 1000,
+  "epochs": 200,
+  "channels": [
+    "p_deploy",
+    "s2_anon_deploy",
+    "s2_anon"
+  ],
+  "verdict": {
+    "leak_channel": "p_deploy",
+    "claim_channel": "s2_anon",
+    "learned_victim_auc": 0.635,
+    "fixed_victim_auc": 0.6188,
+    "shadow_val_learned_top1": 0.175,
+    "claim_victim_auc": 0.4396,
+    "claim_victim_top1": 0.05,
+    "net_learned": true,
+    "beats_fixed": false,
+    "claim_random": true,
+    "efficacy": false
+  },
+  "results": [
+    {
+      "channel": "p_deploy",
+      "set": "shadow_val_learned",
+      "train_patients": 1000,
+      "final_loss": 0.0199,
+      "top1": 0.175,
+      "top5": 0.45,
+      "auc": 0.7286,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.025
+    },
+    {
+      "channel": "p_deploy",
+      "set": "victim_learned",
+      "train_patients": 1000,
+      "final_loss": 0.0199,
+      "top1": 0.25,
+      "top5": 0.45,
+      "auc": 0.635,
+      "neg_control_top1": 0.1,
+      "random_top1": 0.05
+    },
+    {
+      "channel": "p_deploy",
+      "set": "victim_fixed_cos",
+      "train_patients": 1000,
+      "final_loss": 0.0199,
+      "top1": 0.2,
+      "top5": 0.45,
+      "auc": 0.6188,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.05
+    },
+    {
+      "channel": "s2_anon_deploy",
+      "set": "shadow_val_learned",
+      "train_patients": 1000,
+      "final_loss": 0.0199,
+      "top1": 0.125,
+      "top5": 0.225,
+      "auc": 0.5624,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.025
+    },
+    {
+      "channel": "s2_anon_deploy",
+      "set": "victim_learned",
+      "train_patients": 1000,
+      "final_loss": 0.0199,
+      "top1": 0.1,
+      "top5": 0.1,
+      "auc": 0.4304,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05
+    },
+    {
+      "channel": "s2_anon_deploy",
+      "set": "victim_fixed_cos",
+      "train_patients": 1000,
+      "final_loss": 0.0199,
+      "top1": 0.0,
+      "top5": 0.2,
+      "auc": 0.4166,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05
+    },
+    {
+      "channel": "s2_anon",
+      "set": "shadow_val_learned",
+      "train_patients": 1000,
+      "final_loss": 0.0184,
+      "top1": 0.025,
+      "top5": 0.175,
+      "auc": 0.5232,
+      "neg_control_top1": 0.05,
+      "random_top1": 0.025
+    },
+    {
+      "channel": "s2_anon",
+      "set": "victim_learned",
+      "train_patients": 1000,
+      "final_loss": 0.0184,
+      "top1": 0.05,
+      "top5": 0.15,
+      "auc": 0.4396,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05
+    },
+    {
+      "channel": "s2_anon",
+      "set": "victim_fixed_cos",
+      "train_patients": 1000,
+      "final_loss": 0.0184,
+      "top1": 0.0,
+      "top5": 0.1,
+      "auc": 0.4359,
+      "neg_control_top1": 0.0,
+      "random_top1": 0.05
+    }
+  ],
+  "note": "Efficacy = net_learned (shadow-val Top-1 >= 2x random) AND beats_fixed (victim AUC>=0.70 & Top-1>=0.25 vs fixed-abs 0.66). s2_anon is the by-construction control (per-image nonce -> expected ~random)."
+}
