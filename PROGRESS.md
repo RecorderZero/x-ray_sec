@@ -2969,3 +2969,33 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 5. 下一步
 * AF-045（MC-2 學習式 re-id）：查證發現該攻擊只吃**反演 latent**（forward,兩版皆 null,未動 backward）→ null 切換不影響 MC-2;唯一待確認變項為反演 sampler（cache 為 legacy dense T=500 vs 部署 DPM++ N=100）。此為安全宣稱的研究設計判斷,待與使用者確認是否重建 DPM++ 反演 cache 再跑學習式攻擊。
+
+---
+
+## 2026-10-29 · Track P2 · AF-045 部署忠實 MC-2 結案 + AF-046 獨立裁判升級
+
+### 1. 當前目標 (Objective)
+* AF-045：在**完全依照部署參數**（DPM++ N=100 反演、forward/backward 皆 null、S2fn、range-preserving、發布像素圖）下複驗學習式 inner-risk re-id，確認部署版是否真安全。
+* AF-046 升級（使用者 2026-10-29 提議）：用獨立第三方零重訓 CXR 分類器當裁判，直接量還原圖多病理偵測保全，把原 HF 影像端 proxy 升級為真正偵測指標。
+
+### 2. 執行動作 (Actions Taken)
+* AF-045：建獨立 DPM++ 反演 cache（`artifacts/t2bb_latent_cache_dpm`，shadow 1000×2 + inner 20×2 = 2040 latents，1.56 s/img，與 legacy cache 物理隔離）；`t2bb_learned_attack.py --inversion dpm++ --deploy-steps 100` 跑三通道 `p_deploy`（未加密還原＝洩漏上界）、`s2_anon_deploy`（發布像素圖＝headline）、`s2_anon`（latent 上界）；shadow 1000、200 epochs、victim 20×2。產物 `table_t2bb_learned_attack_dpm_deploy.{csv,json}`、report §17。
+* AF-046：`referee_pathology_check.py`（torchxrayvision DenseNet，權重 `densenet121-res224-all` + `-chex`，零重訓）對 400 張 patient-disjoint frontal 之 real/rec/anon 同前處理同操作點（DPM++ N=100 null）評 11 病理 AUC；GPU smoke（n=8）抓到還原值溢出 [0,1] bug → 加 `np.clip(a,0,1)` 修正（commit c299e62）。產物 `referee_pathology_n400.json`、report §4h、§6 limitation #2 升級。
+
+### 3. 執行結果 (Results & Observations)
+* [事實] AF-045 三通道（隨機：shadow-val Top-1 0.025、victim 0.05）：
+  - `p_deploy`（洩漏對照）victim AUC **0.635**、shadow-val Top-1 0.175（7×）→ 攻擊有能力，DPM++/null 管線本身不消除身份。
+  - `s2_anon_deploy`（發布像素圖）victim AUC **0.430**（≈隨機、<0.5）；shadow-val 5× Top-1 不遷移至 held-out victim。
+  - `s2_anon`（latent 上界）victim AUC **0.440** ≈ 隨機。
+* [結論][sampler-agnostic] §15.3（legacy dense）與 §17（DPM++ 部署）兩套獨立反演給同一判決——加密通道回隨機、未加密對照可學。安全來自 S2 per-image nonce，非反演 sampler。AF-045 結案。
+* [事實] AF-046 裁判（n=400，11 病理）：recovered ≈ real 逐病理，macro Δ **−0.003**（all）／**−0.000**（chex），最大 |Δ|=0.019（Pneumonia）；焦點病灶 Lung Lesion 0.661≈0.664、Pneumothorax 0.737≈0.748、Pneumonia 0.656≈0.675 皆保全；anon macro 0.522/0.483 ≈ chance（密文非診斷性）；Fracture 真圖上即 chance（裁判 256² 讀不出，誠實照報）。
+
+### 4. 達標判定 (Assessment)
+* [x] **已達標**：AF-045（sampler-agnostic 安全，發布圖 ≈ 隨機、洩漏對照可學）與 AF-046 升級（獨立裁判確認多病理偵測保全）皆通過。原子 commit b03ad1d（AF-045）、c299e62（clip fix）、3e24790（AF-046 裁判報告）。
+* [限制] AF-045 victim N=20、單一 key/checkpoint；AF-046 Nodule/Mass 非 CheXpert 欄位（以 Lung Lesion 代表），ML-proxy 非放射科判讀。皆已於 report 誠實記錄。
+
+### 6. ⚠ 與 WORKFLOW.md 不符
+- 無。
+
+### 7. 下一步
+* 兩項主要待辦（AF-045、AF-046 升級）已結。待稽核方複驗確定性與 provenance。
