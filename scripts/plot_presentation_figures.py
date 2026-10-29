@@ -18,9 +18,11 @@ presentation/assets/:
 """
 from __future__ import annotations
 
+import argparse
 import csv
 from pathlib import Path
 
+import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -166,10 +168,139 @@ def fig_pipeline_passes() -> None:
     print(f"wrote {out}")
 
 
+def fig_attack_flow() -> None:
+    """Three attack lanes with grounded success rates: predecessor vs ours.
+
+    Numbers (random baseline ~0.005-0.05):
+      amplitude/magnitude (T1 exact latent): attack_package C4/C5 Top-1 1.00 -> fixed-norm ~0.005
+      learned re-id (external GMIA/Packhauser, range-preserving): table_reid_external
+        AUC S0 0.616 / S1 0.541 -> S2 0.445 (Top-1 0.15/0.10 -> 0.05)
+      inner-linkage (anon<->anon): table_t2bb_inner_linkage AUC 0.66 -> S2 ~0.43
+    """
+    fig, ax = plt.subplots(figsize=(12.0, 5.6))
+    ax.set_xlim(0, 12.4); ax.set_ylim(0, 6.2); ax.axis("off")
+    # source
+    _box(ax, 0.1, 2.5, 1.9, 1.2, "Attacker gets\npublished\nanonymized\noutput", "#444", fs=9)
+
+    lanes = [
+        ("Amplitude / magnitude\n(T1, exact latent)",
+         "Top-1 = 1.00", "~0.005 (chance)",
+         "killed by fixed-norm + CSPRNG keystream\n(magnitude multiset destroyed)"),
+        ("Learned re-id\n(GMIA / Packhauser)",
+         "AUC 0.62 / T1 0.15", "AUC 0.44 / T1 0.05",
+         "killed by per-image nonce + S2 transform"),
+        ("Inner linkage\n(anon ↔ anon)",
+         "AUC 0.66", "AUC 0.43 (chance)",
+         "killed by per-image nonce (distinct Q/image)"),
+    ]
+    ys = [4.55, 2.9, 1.25]
+    for (method, pred, ours, defense), y in zip(lanes, ys):
+        _arrow(ax, 2.0, 3.1, 2.55, y + 0.45)
+        _box(ax, 2.55, y, 2.5, 0.95, method, C_GREY, fontcolor="#222", fs=9)
+        _arrow(ax, 5.05, y + 0.47, 5.5, y + 0.47)
+        _box(ax, 5.5, y + 0.5, 2.75, 0.5, f"Predecessor:  {pred}", C_PRED, fs=8.3)
+        _box(ax, 5.5, y - 0.02, 2.75, 0.5, f"Ours:  {ours}", C_GOOD, fs=8.3)
+        ax.text(8.4, y + 0.47, defense, fontsize=8.2, va="center", ha="left",
+                color="#333", style="italic")
+    ax.text(0.1, 5.85, "Attack efficacy: predecessor broken, ours at chance "
+            "(random ≈ 0.005–0.05)", fontsize=12, fontweight="bold")
+    ax.text(0.1, 0.35, "Sources: attack_package C4/C5, table_reid_external, "
+            "table_t2bb_inner_linkage (range-preserving storage; seed 1911)",
+            fontsize=8, color="#666")
+    fig.tight_layout()
+    out = ASSETS / "fig_attack_flow.png"
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print(f"wrote {out}")
+
+
+def fig_anon_value_range(npz: Path) -> None:
+    """Histogram of anonymized-image pixel values: plaintext fits [0,1], encrypted
+    (S2) spills ~38% outside [0,1] -> legacy min-max discards that range."""
+    if not npz.exists():
+        print(f"skip fig_anon_value_range (no {npz}; run scripts.smoke_presentation_panels)")
+        return
+    d = np.load(npz, allow_pickle=True)
+    aP, aS = d["anon_P"].ravel(), d["anon_S2fn"].ravel()
+    fig, ax = plt.subplots(figsize=(7.8, 4.8))
+    bins = np.linspace(-0.6, 1.3, 120)
+    ax.hist(aP, bins=bins, density=True, color=C_GREY, alpha=0.75,
+            label=f"plaintext anon (P): range [{aP.min():.2f}, {aP.max():.2f}]")
+    ax.hist(aS, bins=bins, density=True, color=C_OURS, alpha=0.6,
+            label=f"encrypted anon (S2): range [{aS.min():.2f}, {aS.max():.2f}]")
+    ax.axvspan(-0.6, 0, color="#d33", alpha=0.08)
+    ax.axvspan(1, 1.3, color="#d33", alpha=0.08)
+    ax.axvline(0, color="#d33", ls="--", lw=1); ax.axvline(1, color="#d33", ls="--", lw=1)
+    frac = float(np.mean((aS < 0) | (aS > 1)))
+    ax.annotate(f"{frac*100:.0f}% of encrypted-anon\npixels fall OUTSIDE [0,1]\n"
+                "→ legacy min-max PNG\ndiscards this range",
+                (-0.45, ax.get_ylim()[1] * 0.62), fontsize=9, color="#b00",
+                bbox=dict(boxstyle="round", fc="white", ec="#b00", alpha=0.9))
+    ax.set_xlabel("anonymized-image pixel value (raw float, before PNG)")
+    ax.set_ylabel("density")
+    ax.set_title("Why range-preserving storage: the encrypted anon's value range\n"
+                 "exceeds [0,1], so legacy min-max→uint8 loses it (dev_v1.1_000)",
+                 fontsize=11)
+    ax.legend(loc="upper right", fontsize=9)
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    out = ASSETS / "fig_anon_value_range.png"
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print(f"wrote {out}")
+
+
+def fig_fidelity_sidebyside(npz: Path) -> None:
+    """2x3 same-image panels: predecessor (S1, E2.5 authentic crops) vs ours (S2fn
+    smoke). Columns: Original | Anonymized (cipher) | Recovered."""
+    if not npz.exists():
+        print(f"skip fig_fidelity_sidebyside (no {npz})")
+        return
+    from PIL import Image
+    e25 = np.array(Image.open(ASSETS / "E2.5_roundtrip_grid.png").convert("L"))
+    # S1 dev_000 image row y=601..858; cols 256 wide: 0 original,1 anonymous,3 M1 PNG recovered
+    def crop(col):
+        return e25[601:858, col * 256:(col + 1) * 256]
+    pred = [crop(0), crop(1), crop(3)]
+    d = np.load(npz, allow_pickle=True)
+    ours = [d["x0"], d["anon_S2fn"], d["rec_S2fn"]]
+
+    fig, axes = plt.subplots(2, 3, figsize=(8.4, 6.2))
+    cols = ["Original $x_0$", "Anonymized (cipher)", "Recovered"]
+    rows = ["Predecessor\n(S1, legacy PNG,\ndense DDIM)\nmean 31.4 dB",
+            "Ours\n(S2fn, range-preserving,\nDPM++ N=100)\nmean 46.4 dB"]
+    rowc = [C_PRED, C_OURS]
+    for r, imgs in enumerate([pred, ours]):
+        for c, im in enumerate(imgs):
+            ax = axes[r][c]
+            ax.imshow(im, cmap="gray")  # per-panel min-max display
+            ax.set_xticks([]); ax.set_yticks([])
+            if r == 0:
+                ax.set_title(cols[c], fontsize=11)
+        axes[r][0].set_ylabel(rows[r], fontsize=9.5, color=rowc[r],
+                              rotation=0, ha="right", va="center", labelpad=8)
+    axes[0][2].text(0.5, -0.08, "~31 dB (example)", transform=axes[0][2].transAxes,
+                    ha="center", fontsize=9, color=C_PRED)
+    axes[1][2].text(0.5, -0.08, f"{float(d['psnr_S2fn']):.1f} dB (example)",
+                    transform=axes[1][2].transAxes, ha="center", fontsize=9, color=C_OURS)
+    fig.suptitle("Predecessor vs ours on the same image (dev_v1.1_000)", fontsize=12)
+    fig.tight_layout(rect=(0.04, 0, 1, 0.97))
+    out = ASSETS / "fig_fidelity_sidebyside.png"
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print(f"wrote {out}")
+
+
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--panel-npz", type=Path,
+                    default=Path("/tmp/claude-1000/-data2-paper/"
+                                 "06f83540-c3da-4694-b2f1-227996eae257/scratchpad/panel_data.npz"),
+                    help="output of scripts.smoke_presentation_panels (for the two image figures)")
+    args = ap.parse_args()
     fig_storage_motivation()
     fig_sampler_nsweep()
     fig_pipeline_passes()
+    fig_attack_flow()
+    fig_anon_value_range(args.panel_npz)
+    fig_fidelity_sidebyside(args.panel_npz)
 
 
 if __name__ == "__main__":
