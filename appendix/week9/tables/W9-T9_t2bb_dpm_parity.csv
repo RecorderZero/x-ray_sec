@@ -1,0 +1,9 @@
+encoder,scheme,pairs,top1,auc,random_top1,null_auc_mean,auc_permutation_p
+densenet121_imagenet,P,20,0.65,0.8112,0.05,0.4995,0.0002
+densenet121_imagenet,S0,20,0.0,0.4316,0.05,0.5,0.9448
+densenet121_imagenet,S1,20,0.05,0.4867,0.05,0.4993,0.5883
+densenet121_imagenet,S2,20,0.05,0.4812,0.05,0.5003,0.6497
+rad_dino,P,20,0.8,0.9766,0.05,0.4993,0.0002
+rad_dino,S0,20,0.05,0.5371,0.05,0.4996,0.1392
+rad_dino,S1,20,0.05,0.5091,0.05,0.4998,0.3781
+rad_dino,S2,20,0.15,0.5129,0.05,0.4994,0.3439

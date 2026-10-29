@@ -500,6 +500,86 @@ def tab_w6_selection(out: Path, src: list[Path]) -> None:
     } for case in data["cases"]])
 
 
+# ---------------------------------------------------------------- week 9 tables
+def tab_w9_sampler(out: Path, src: list[Path]) -> None:
+    """Aligned same-NFE round-trip PSNR for DDIM / BDIA / DPM-Solver++ across N."""
+    data = json.loads(src[0].read_text(encoding="utf-8"))
+    rows = []
+    for n, s in sorted(data["summary"].items(), key=lambda kv: -int(kv[0])):
+        rows.append({"N": int(n), "evals_per_pass": s["evals_per_pass"],
+                     "ddim_psnr_db": s["ddim_psnr_db"], "bdia_psnr_db": s["bdia_psnr_db"],
+                     "dpmpp_psnr_db": s["dpm_psnr_db"], "dpmpp_pass_s": round(s["dpm_pass_s"], 3)})
+    _write_csv(out, rows)
+
+
+def tab_w9_decompose(out: Path, src: list[Path]) -> None:
+    """RQ4 re-baseline: decode-convention gain vs sampler gain, held separate (AF-044)."""
+    dec = json.loads(src[0].read_text(encoding="utf-8"))["decomposition"]
+    rows = []
+    for scheme, v in dec.items():
+        rows.append({"scheme": scheme, "legacy_ddim_N499": v["legacy_ddim_N499"],
+                     "aligned_ddim_N499": v["aligned_ddim_N499"],
+                     "decode_convention_gain_db": v["decode_convention_gain_db"],
+                     "dpmpp_N100": v["dpmpp_N100"], "dpmpp_N200": v["dpmpp_N200"],
+                     "sampler_gain_aligned_N100_db": v["sampler_gain_aligned_N100_db"]})
+    _write_csv(out, rows)
+
+
+def tab_w9_layerA(out: Path, src: list[Path]) -> None:
+    """Layer-A equivalence @ DPM++ N=100: branch (A) vs re-invert (B)."""
+    agg = json.loads(src[0].read_text(encoding="utf-8"))["aggregate"]
+    rows = []
+    for sampler, v in agg.items():
+        rows.append({"sampler": sampler, "recovery_cos_A_vs_B": v["recovery_mean_cos"],
+                     "recovery_psnr": v["recovery_mean_psnr"],
+                     "healthy_gs2_cos_A_vs_B": v["healthy_gs2_mean_cos"],
+                     "healthy_gs2_psnr": v["healthy_gs2_mean_psnr"]})
+    _write_csv(out, rows)
+
+
+def tab_w9_parity(out: Path, src: list[Path]) -> None:
+    """DPM++ frozen-encoder anon<->anon linkage parity vs frozen legacy (AF-045, §11.6)."""
+    data = json.loads(src[0].read_text(encoding="utf-8"))
+    rows = []
+    for r in data["results"]:
+        rows.append({"encoder": r["encoder"], "scheme": r["scheme"], "pairs": r["pairs"],
+                     "top1": r["top1"], "auc": r["auc"], "random_top1": r["random_top1"],
+                     "null_auc_mean": r["null_auc_mean"], "auc_permutation_p": r["auc_permutation_p"]})
+    _write_csv(out, rows)
+
+
+def tab_w9_referee(out: Path, src: list[Path]) -> None:
+    """Independent torchxrayvision referee per-pathology AUC (real/recovered/anon), both weights."""
+    data = json.loads(src[0].read_text(encoding="utf-8"))
+    rows = []
+    for weights, m in data["models"].items():
+        for name, p in m["per_pathology"].items():
+            if "auc_real" not in p:
+                continue
+            rows.append({"weights": weights, "pathology": name, "n_pos": p["n_pos"],
+                         "auc_real": p["auc_real"], "auc_recovered": p["auc_recovered"],
+                         "auc_anon": p["auc_anon"], "delta_rec_minus_real": p["delta_rec_minus_real"]})
+        ma = m["macro_auc"]
+        rows.append({"weights": weights, "pathology": "MACRO", "n_pos": "",
+                     "auc_real": ma["real"], "auc_recovered": ma["recovered"], "auc_anon": ma["anon"],
+                     "delta_rec_minus_real": m["macro_delta_rec_minus_real"]})
+    _write_csv(out, rows)
+
+
+def tab_w9_hf(out: Path, src: list[Path]) -> None:
+    """HF-fidelity proxy: recovered-vs-x0 high-frequency retention (mean/p05/min)."""
+    rv = json.loads(src[0].read_text(encoding="utf-8"))["recovered_vs_x0"]
+    spec = [("RAPSD high-band retention", rv["rapsd_high_retention"]),
+            ("RAPSD mid-band retention", rv["rapsd_retention"]["mid"]),
+            ("RAPSD low-band retention", rv["rapsd_retention"]["low"]),
+            ("HP-SSIM (sigma=1)", rv["hp_ssim"]),
+            ("Sobel gradient r", rv["sobel_grad_r"]),
+            ("Laplacian var ratio", rv["lap_var_ratio"]),
+            ("32x32 block HF retention", rv["block_hf_retention_mean"])]
+    _write_csv(out, [{"metric": name, "mean": v["mean"], "ci95": v["ci95"],
+                      "p05": v["p05"], "min": v["min"]} for name, v in spec])
+
+
 # ---------------------------------------------------------------- registry
 WEEKS: dict[int, list[Item]] = {
     1: [
@@ -925,6 +1005,83 @@ WEEKS: dict[int, list[Item]] = {
              "影像保真由誤差「方向」而非 latent cos/rmse「大小」決定；S0 解密誤差雖大但落在生成器不敏感方向",
              ["paper_assets/latent_direction_demo/grid.png"],
              ["latent_direction_demo (seed 1911)"]),
+    ],
+    9: [
+        # --- 加速取樣器線 ---
+        Item("W9-T1", "table", "W9-T1_sampler_comparison.csv", "正文", "Method／取樣器選型",
+             "對齊 backward、同 NFE 下 DDIM／BDIA／DPM-Solver++(2M) 的 key-free 往返 PSNR（4 圖平均，N∈{499,200,100,50,25}；gate anchor=42.35 dB）。DPM++ N=100(5×) 45.64 dB ≈ full-density，幾乎不隨步數退化。",
+             "部署取樣器選 DPM-Solver++(2M) N=100：同速度而端到端 +5~7 dB，5× 加速近零保真代價",
+             ["paper_assets/exact_inv_sweep/sweep.json"], [], tab_w9_sampler),
+        Item("W9-F1", "figure", "W9-F1_respaced_step_grid.png", "附錄", "Method／減步視覺",
+             "respaced DDIM 減步掃描的定性 grid（2 圖 × N）：減步下的匿名/還原影像隨 N 的退化。",
+             "DDIM 減步在低 N 保真流失，激勵換用 exact-inversion DPM-Solver++（W9-T1）",
+             ["paper_assets/respaced_ddim_sweep/grid.png"], []),
+        # --- 部署真實管線 ---
+        Item("W9-T2", "table", "W9-T2_deploy_dpm_sweep.csv", "正文", "Results／部署保真",
+             "部署真實 4-pass（反演→加密→匿名圖→range-preserving PNG→反演→解密→還原）DPM++ × {P,S2fn} × N 的 recon PSNR 與牆鐘；部署操作點 N=100。",
+             "range-preserving PNG 對 DPM++ 幾乎無損；S2≥P；N=100 為部署操作點",
+             ["paper_assets/deploy_dpm_sweep/sweep.csv"], []),
+        Item("W9-F2", "figure", "W9-F2_deploy_s2_grid.png", "正文", "Results／匿名定性",
+             "P vs S2fn × N={499,200,100,50,25} 的匿名圖（雜訊狀密文）與還原圖定性 grid。",
+             "S2fn 匿名圖為不可辨識密文、還原圖隨 N 逼近原圖",
+             ["paper_assets/deploy_s2_sweep/grid.png"], []),
+        Item("W9-T3", "table", "W9-T3_quality_speed.csv", "正文主表", "Results／效率",
+             "本架構（DPM++ null + S2fn + range-preserving）vs 學長原版（legacy dense DDIM T=500 + S1 + legacy storage），60 張病患不相交；每列一取樣器配置的 PSNR/SSIM/MAE/MSE/cos/L∞ + latent-crypto-cos（無損檢查）+ pipeline 秒數。",
+             "同算力 N=499 +22.1 dB；同品質 18.15×；latent 加解密無損（cos=1.000000）",
+             ["paper_assets/quality_speed/comparison.csv"], []),
+        # --- RQ4 re-baseline / 層 A（AF-044） ---
+        Item("W9-T4", "table", "W9-T4_decode_sampler_decompose.csv", "正文", "Results／增益分解",
+             "RQ4 重報前把「換 decode 慣例」與「換 sampler」增益分離（P/S2fn，range-preserving）：legacy-DDIM→aligned-DDIM（慣例增益）、aligned-DDIM→DPM++（sampler 增益）；兩增益各自單變數、非相加。",
+             "AF-044：與凍結（legacy decode）比較須把慣例增益與 sampler 增益分列",
+             ["paper_assets/rq4_redo/decompose.json"], [], tab_w9_decompose),
+        Item("W9-T5", "table", "W9-T5_layerA_dpm_ablation.csv", "附錄", "Results／層 A 等價",
+             "層 A 等價 ablation @ DPM++ N=100：4-pass 分岔（從 x_rec_T 同生還原圖+偽健康圖）vs 不分岔（re-invert）之 cos(A,B)/PSNR。",
+             "re-inversion 在 DPM++ 下冗餘（cos 0.99997）→ 4-pass 對新 sampler 成立",
+             ["paper_assets/layerA_dpm/ablation.json"], [], tab_w9_layerA),
+        # --- 分類 utility ---
+        Item("W9-F3", "figure", "W9-F3_utility_matrix.png", "正文", "Results／分類 utility",
+             "分類 utility 矩陣（per-class 200、50 splits，DPM++ N=100 S2fn null）：train-real × test-{real,recovered,anon} 的 AUROC（含 95% CI、chance 線），DenseNet-121 / rad-dino。",
+             "授權還原保全 utility（AUROC≈real）、密文近 chance（隱私）",
+             ["paper_assets/classification_utility/fig_utility_matrix_k50.png"], []),
+        Item("W9-F4", "figure", "W9-F4_utility_vs_n.png", "附錄", "Results／utility-vs-N",
+             "recovered AUROC vs 取樣步數 N（null，per-class 100、20 splits；real 虛線參考、PSNR 文字標註）。",
+             "recovered utility 隨 N 單調逼近 real，N=100 已接近飽和",
+             ["paper_assets/classification_utility/fig_utility_vs_n_k20.png"], []),
+        Item("W9-F5", "figure", "W9-F5_architecture_comparison.png", "正文", "Results／架構對照",
+             "三方架構（學長原生 storage / 學長+保值域 / 本架構 DPM++）recovered AUROC + recon(dB)/速度標註。",
+             "utility 保留為可逆匿名化家族共通性質；本架構差異化在速度/保真/安全",
+             ["paper_assets/classification_utility/fig_architecture_comparison.png"], []),
+        Item("W9-F6", "figure", "W9-F6_external_generalization.png", "正文", "Results／外部效度",
+             "in-domain（CheXpert→CheXpert）vs 外部（CheXpert→NIH ChestX-ray14）零重訓 AUROC。",
+             "分類器學真實病理特徵（跨資料集僅掉 ~0.07），非 CheXpert artifact",
+             ["paper_assets/classification_utility/fig_external_generalization.png"], []),
+        Item("W9-T6", "table", "W9-T6_privacy_utility_joint.csv", "正文主表", "Results／隱私-utility",
+             "同一 DPM++/S2 操作點、同一凍結 encoder 的病理 utility（real/recovered/anon）與身份連結（P/S2 link AUC）並排聯合表（AF-047 單一 null run 組裝）。",
+             "同操作點讀病理 ~0.9、讀身份 ~random 同時成立",
+             ["paper_assets/classification_utility/privacy_utility_table.csv"], []),
+        # --- 高頻保真 / 獨立裁判（AF-046） ---
+        Item("W9-T7", "table", "W9-T7_hf_fidelity.csv", "正文", "Results／高頻保真",
+             "HF-fidelity proxy（recovered vs x0，200 張、DPM++ N=100 S2fn null）：RAPSD 分帶 retention、HP-SSIM、Sobel-r、Laplacian 變異比、32×32 分塊 HF retention（mean/p05/min）。",
+             "AF-046：還原未系統性平滑高頻（高頻帶 retention 0.964、HP-SSIM 0.988）",
+             ["paper_assets/hf_fidelity/hf_fidelity.json"], [], tab_w9_hf),
+        Item("W9-T8", "table", "W9-T8_referee_pathology.csv", "正文", "Results／多病理保全",
+             "獨立第三方裁判（torchxrayvision DenseNet，densenet121-res224-all / -chex，零重訓）在 11 CheXpert∩xrv 病理上 real/recovered/anon 的 AUC 與 Δ(rec−real)，n=400 patient-disjoint。",
+             "AF-046 升級：recovered ≈ real 逐病理（macro Δ≤0.003），含焦點病灶；anon ~chance",
+             ["paper_assets/referee_pathology/referee_pathology_n400.json"], [], tab_w9_referee),
+        # --- 安全平價（AF-045） ---
+        Item("W9-T9", "table", "W9-T9_t2bb_dpm_parity.csv", "正文", "Results／frozen linkage 平價",
+             "DPM++ N=100 端到端生成匿名圖後，凍結 encoder（densenet121-imagenet / rad-dino）anon↔anon 配對 linkage（20 對）× {P,S0,S1,S2}，含 label-permutation null 與 p 值。",
+             "AF-045：換 sampler 未提高可連結性，S0/S1/S2 全 ~隨機",
+             ["paper_assets/t2bb_dpm_parity/parity.json"], [], tab_w9_parity),
+        Item("W9-T10", "table", "W9-T10_mc2_learned_attack_deploy.csv", "正文主表", "Results／T2-BB 學習式 re-id",
+             "部署忠實 MC-2：DPM++ N=100 null 反演 cache（shadow 1000×2）訓練 learned Siamese，攻擊三通道——p_deploy（未加密還原＝洩漏上界）、s2_anon_deploy（發布像素圖）、s2_anon（latent 上界）的 Top-1/Top-5/AUC。",
+             "AF-045 結案：發布圖 victim AUC 0.430≈隨機，而洩漏對照 0.635 可學 → 安全來自 per-image nonce",
+             ["paper_assets/tables/table_t2bb_learned_attack_dpm_deploy.csv"], []),
+        # --- 實驗矩陣 ---
+        Item("W9-T11", "table", "W9-T11_final_experiment_matrix.csv", "正文", "實驗凍結",
+             "最終實驗矩陣（41 cells，操作點統一 DPM++ N=100）：RQ1–4 主結果 + P2/appendix，每 cell 附 run id/provenance，負結果明標。",
+             "全論文實驗一覽與凍結，統一部署操作點",
+             ["paper_assets/final_experiment_matrix.csv"], []),
     ],
 }
 

@@ -1,0 +1,8 @@
+metric,mean,ci95,p05,min
+RAPSD high-band retention,0.96404,0.00345,0.93,0.76365
+RAPSD mid-band retention,0.99753,0.00108,0.98656,0.94159
+RAPSD low-band retention,0.99901,0.00013,0.99764,0.99633
+HP-SSIM (sigma=1),0.98767,0.00103,0.97389,0.9517
+Sobel gradient r,0.99696,0.00042,0.99242,0.96687
+Laplacian var ratio,0.89621,0.0068,0.81134,0.69328
+32x32 block HF retention,0.9461,0.00266,0.91539,0.84715

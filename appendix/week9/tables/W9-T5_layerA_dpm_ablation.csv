@@ -1,0 +1,3 @@
+sampler,recovery_cos_A_vs_B,recovery_psnr,healthy_gs2_cos_A_vs_B,healthy_gs2_psnr
+aligned-DDIM,0.999872,40.749,0.999874,40.82
+DPM++,0.999967,46.736,0.999969,47.051
