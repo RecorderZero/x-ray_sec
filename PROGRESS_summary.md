@@ -922,3 +922,119 @@
 * [事實] W9 已完成加速取樣器線：對齊 respaced DDIM 基準、BDIA 對齊重做、**DPM-Solver++(2M) 定為部署取樣器**（N=100，5×，端到端 ~44 dB；見 `new_model.md §10`）。
 * [決定] 新標準 pipeline：**DPM++ N=100 + 4-pass（層 A）**；切換後重做清單見 `new_model.md §11`（RQ4 重報、層 A 等價 ablation、影像空間安全平價檢查 T2BB-3/4+MC-2）。
 * [待辦] 先 commit T2-BB-M1-frozen（8.7）再補入 appendix；依 §11 推進三項必做重做。
+
+## Week 9（2026-10-25～10-31；主力 10-27～10-29）｜加速取樣器定案（DPM-Solver++）、null 對齊部署、分類 utility 貢獻定稿、AF-044～047 收斂
+
+> 本週為「部署版定案週」：把取樣器從 dense DDIM 升級為 **DPM-Solver++(2M) N=100**（5× 速度、近零保真代價），將主 pipeline backward 由 y=0 切為 **null（forward/backward 全對齊，supersede AF-018/021）**，完成以 GMIA 為對照的**分類 utility** 貢獻（可逆還原保全 utility、密文保護隱私），並在 null+DPM++ 下重量所有部署數字、關閉 AF-044/045/046/047。病灶定位經公開 GT 驗證為 chance 等級（學長原版亦然）→ 降級為定性。PROGRESS 內多筆標記為 W8，實屬本週曆內（延續收尾），於此統整。
+
+### 9.1 範圍與狀態
+
+| 子任務 | 內容 | 狀態 | 主要 commit |
+|---|---|---|---|
+| 加速 B1/B3 | respaced DDIM 減步掃描、DPM-Solver++ + BDIA 對齊重做；**DPM++ 定為部署取樣器** | done（自驗 PASS） | 見 new_model.md §9/§10 |
+| 加速 B2 | BELM(O-BELM) smoke：整數-timestep 下非單調、不穩定 → 不採用 | done_negative | — |
+| 加速 C | 模型輕量化（必重訓，~3–5 週）→ 未啟動 | 規劃（new_model.md §4） | — |
+| 部署掃描 | deploy_s2_sweep / deploy_dpm_sweep：S2≈P、range-preserving 近無損、S2fn≈S2a | done | — |
+| null 對齊 | 主 pipeline backward 切 null（`backward_null` flag，預設 False guard）；supersede AF-018/021 y=0 | done | `1007611` |
+| §11.2 item1-3 | decode/sampler 分解 re-baseline、層 A @ DPM++ 等價、frozen-encoder linkage 平價 | done | 見 new_model.md §11 |
+| 分類 utility | real baseline + S2 匿名/還原 preservation + 多 split CI + 微調 + utility-vs-N + GMIA 對照 + 學長 baseline | done（定稿） | 見 classification_utility_protocol.md |
+| 矩陣/外部 | 實驗矩陣重生 34→41 cells（DPM++ N=100 統一）、MIA 改結構性說明、NIH 外部泛化 | done | — |
+| 品質/速度 | ours vs 學長原版：同算力 N=499 +22.1 dB、同品質 18.15× | done | `(perf)` |
+| AF-044 | decode 慣例 × sampler 增益分列、補 commit 診斷腳本 | 待複驗 | 見 §11.3/11.4 |
+| AF-046 | HF-FIDELITY 全跑 + 三點 limitation；**升級獨立第三方裁判多病理保全** | 待複驗 | `c2baa26`/`3e24790` |
+| AF-047 | privacy-utility 聯合表以單一 null run 組裝、各欄 n/scheme 明載 | 待複驗 | `8eb4759` |
+| AF-045 | 部署忠實 MC-2（DPM++ 反演 + 發布像素圖 learned re-id）**結案** | 待複驗 | `b03ad1d` |
+| LOC-VAL | CheXlocalize 積液定位 pilot（null 還原）→ chance 等級，降級定性 | done（定性） | 見 localization_evaluation_protocol.md |
+
+### 9.2 本週重點
+
+* [事實] **加速線定案 DPM-Solver++(2M)**：同 NFE 對齊往返，N=100(5×) DPM++ **45.64 dB** vs DDIM 38.85（+6.79 dB），幾乎不隨步數退化；非退化檢查（z 分布、sign-flip 加密後 anon vs x0 一致）確認高還原純屬取樣器精度非作弊。BELM 於整數-timestep 設定非單調（smoke-first 攔下，不採用）。
+* [事實] **null 對齊（supersede AF-018/021）**：查明三 sampler 的 `backward()` 一律 y=0（繼承 legacy），`forward()` 才加 null；使用者裁決主 pipeline backward 切 null、全對齊後重量。`backward_null` 預設 False（純加法 guard，凍結消費者 by construction 不變），部署腳本 opt-in。null 比 y=0 還原再 +4 dB 且更乾淨。
+* [事實] **分類 utility 貢獻定稿（以 GMIA/refpaper 114 為 table-only 對照）**：授權還原後分類 AUROC ≈ real（DenseNet 0.909、rad-dino 0.937），密文近 chance（real→anon 0.50、anon→anon 0.51）；經 50-split 凍結探針（緊 CI）+ GMIA 式微調分類器雙重確認；隱私與 utility 在同一 DPM++/S2 操作點同時成立。
+* [事實] **utility 保留非本架構獨佔、差異化在別處**：學長原版（legacy T=500+S1）recovered AUROC 亦 ~0.90 → utility 保留是「可逆匿名化家族」共通性質。本架構差異化為 (i) 速度 ~4.9×、(ii) 保真 31.8→46.7 dB、(iii) 安全（S2 固定 norm + per-image nonce）。誠實定位。
+* [事實] **安全平價（AF-045 全鏈）**：frozen-encoder linkage（§11.6，DPM++ 20 對）S0/S1/S2 全 ~隨機、無一上升；**部署忠實 MC-2**（shadow-1000 learned Siamese，發布像素圖）victim AUC **0.430 ≈ 隨機**，而未加密還原洩漏對照 AUC **0.635**（攻擊有能力）→ 安全來自 S2 per-image nonce，與反演 sampler 無關。
+* [事實] **AF-046 升級**：除 HF 影像端 proxy（高頻 retention 0.964、HP-SSIM 0.988）外，獨立第三方裁判（torchxrayvision，零重訓）在 **11 病理**上 recovered ≈ real（macro Δ ≤ 0.003），含焦點病灶 Lung Lesion/Pneumothorax/Pneumonia。
+
+### 9.3 實驗結果與分析
+
+**加速取樣器對比（new_model.md §9/§10；key-free 往返 PSNR，同 NFE，4 圖平均）**
+* N=499/200/100/50/25：DDIM 46.62/43.38/38.85/33.89/28.65；BDIA（對齊）47.78/45.75/39.26/30.97/27.05；**DPM++ 48.08/47.79/45.64/40.55/33.64**。DPM++ N=100 ≈ full-density，5× 速度。
+* 「對齊 backward 後 BDIA 需重做」判斷正確：結論由 legacy 下「<0.4 dB」翻為「N=200 +2.36 dB」。
+
+**部署真實版（range-preserving PNG + 加密端到端 4-pass）**
+* deploy_s2_sweep（N=499 起）：**range-preserving 幾乎不傷 S2**（S2a float 46.26→PNG 45.26，−1 dB，不像 legacy PNG 把 S0/S1 砸到 31）；**S2fn ≈ S2a 全 N 重合**（藏 norm 的安全近乎免費）；**S2 ≥ P 一路到 N=50**。
+* deploy_dpm_sweep（DPM++/S2fn）：N=499/200/100/50/25 = 46.90/46.62/44.26/38.62/32.65；vs DDIM 同步數 +1.27~+6.59 dB。部署操作點 **N=100（5×、~7.5s/4pass、~44 dB，null 後 46.7）**。
+
+**decode 慣例 × sampler 分解（§11.4，回應 AF-044）**
+* S2fn：legacy-DDIM(499) 39.13 → aligned-DDIM(499) 45.63（decode 慣例 **+6.50**）；aligned-DDIM(100) 37.67 → DPM++(100) 44.26（sampler **+6.59**）。兩增益各自單變數受控、**非相加**；RQ4 重報一律對 aligned-DDIM re-baseline。forward 逐位元相同（max_abs=0），差異全在 backward。
+
+**層 A 等價 ablation @ DPM++ N=100（§11.5）**
+* 4-pass 分岔（從 x_rec_T 同生還原圖+偽健康圖）≈ 不分岔：DPM++ recovery cos **0.99997**（psnr 46.7）、healthy gs2 cos 0.99997。re-inversion 冗餘，4-pass 對新 sampler 成立。
+
+**分類 utility（classification_utility_protocol.md；null+DPM++ N=100 S2fn）**
+* item 2 凍結探針（per-class 200、50 splits，AUROC densenet/rad-dino）：real→real 0.916/0.937、**real→recovered 0.909/0.937**、real→anon 0.50/0.50、anon→anon 0.51/0.53。
+* item 3 微調 DenseNet（null，5 splits）：real→real 0.883、**real→rec 0.884**、real→anon 0.452、anon→anon 0.500。
+* item 6 utility-vs-N（null，k20）：N=50/100/200 → 39.8/46.8/52.5 dB；rec 0.889/0.900/0.904（單調逼近 real）。
+* 學長 baseline：recon 學長原生 storage 31.8 dB / +保值域 38.9 / 本架構 DPM++ 46.7；recovered AUROC 三者皆 ~0.90（utility 不敏感）。速度 6.3 vs 30.8 s/img（4.9×）。
+* 外部泛化（零重訓 CheXpert→NIH）：DenseNet 0.900→0.823、rad-dino 0.902→0.836（僅掉 ~0.07）；文獻 CheXpert 積液 baseline 0.928–0.937，我們 0.90–0.94 屬正常區間。
+
+**品質/速度對照（quality_speed；null，60 張）**
+* 同算力 **N=499**：ours **54.17 dB** vs 學長 **32.07 dB** = **+22.1 dB**（ours 爬到 ~54 dB 加密保真上限，學長被 legacy min-max 儲存釘在 ~32）。同品質（matched-PSNR 32 dB）ours 於 N=25 達標 → **18.15×**。lat-cos 全列 1.000000（latent 無損）。
+
+**安全（AF-045）**
+* frozen linkage（§11.6，DPM++ 20 對）：P 0.821/0.975（洩漏對照，重現 legacy），S0/S1/S2 全 0.43–0.56 ~隨機。
+* MC-2 部署忠實（shadow 1000×2 + inner 20×2 DPM++ 反演 cache，learned Siamese 200 epochs）：`p_deploy`（未加密還原＝洩漏上界）victim AUC 0.635、shadow-val Top-1 7× 隨機；`s2_anon_deploy`（發布像素圖）victim AUC **0.430**；`s2_anon`（latent 上界）0.440。
+
+**AF-046 獨立裁判（referee_pathology，n=400，torchxrayvision all+chex）**
+* 11 病理 recovered ≈ real：macro Δ −0.003（all）/−0.000（chex），最大 |Δ|=0.019；anon macro 0.522/0.483 ≈ chance；Fracture 真圖上即 chance（裁判 256² 極限，誠實照報）。
+
+**定位（LOC-VAL / CheXlocalize，null 還原，val 20 張未校準）**
+* 新 pipeline 最佳 IoU ~0.051、pxAP ≤0.11、**pointing 0/10**；學長原版 gs=4 IoU 0.0003、pxAP 0.070、pointing 0/10。chance pxAP=0.037 → 兩邊僅 ~2–3× chance。結論：非本 pipeline 退步，是「擴散反事實 + 像素遮罩」方法 + 指標的本質 → 定位降級為定性/示範。
+
+### 9.4 論文可用素材
+
+| 內容 | 建議用途 | 建議章節 |
+|---|---|---|
+| 加速取樣器對比表（DDIM/BDIA/DPM++ × N，new_model.md §10） | 正文 | Method／取樣器選型 |
+| 品質/速度對照（同算力 +22.1 dB、同品質 18.15×，三框架分欄） | 正文 | Results／效率 |
+| 分類 utility 四主圖（matrix k50、utility-vs-N、architecture comparison、external NIH） | 正文 | Results／utility |
+| privacy-utility 聯合表（同 pipeline/encoder，病理 ~0.9 vs 身份 ~random） | 正文 | Results／隱私-utility |
+| GMIA 對照表（結構性質比較，不復現 GMIA） | 正文/Discussion | Related/Discussion |
+| 最終實驗矩陣（41 cells，DPM++ N=100 統一） | 正文 | 實驗凍結 |
+| HF-FIDELITY + 獨立裁判 11 病理保全（AF-046） | 正文 | Results／保真 |
+| MC-2 部署忠實 re-id（leak/headline/latent 三通道） | 正文 | Results／T2-BB 安全 |
+| 定位 chance 基線（含學長原版同尺）（附錄/定性） | 附錄 | Limitations／定位 |
+
+### 9.5 決策紀錄
+
+* [決定]（使用者 2026-10-27）加速取樣器：B2(BELM) 擱置、改測 B3(DPM++)/BDIA；確認 DPM++ 更準後定為部署取樣器，操作點 N=100。
+* [決定]（使用者 2026-10-27）放寬 GPU 規則為「smoke-first、長度不限」（取代 CLAUDE.md §3 的 30 分 go/no-go；未改 CLAUDE.md，記於 memory working-rules）。
+* [決定]（使用者 2026-10-27）定位還原改 null；定位經 chance 驗證後降級為定性，不再掃 guidance 追 IoU。
+* [決定]（使用者 2026-10-27）utility 軸由定位改為二元分類（No Finding vs Pleural Effusion，生成器 CFG 僅條件過兩類）。
+* [決定]（使用者 2026-10-28）最終部署條件 = 反演 null + 生成 null（全對齊），supersede AF-018/021；y=0 可用 `--legacy-y0-backward` 復現。
+* [決定]（使用者 2026-10-28）實驗矩陣統一操作點 DPM++ N=100（DDIM N=200 舊部署棄用保留）；MIA 改結構性說明不量測；外部資料集下載 NIH 零重訓測泛化。
+* [決定]（使用者 2026-10-29）AF-046 升級：以獨立第三方預訓練分類器當裁判直接量多病理保全；real/rec/anon 三者同前處理送裁判。
+
+### 9.6 稽核狀態
+
+* AF-044（MINOR, METHOD/DOC）：decode 慣例/sampler 分列 + 補 commit 診斷腳本（bit-identical 重現）→ 待複驗。
+* AF-045（QUESTION→SECURITY）：§11.6 frozen linkage 平價 + 部署忠實 MC-2（發布圖 ~隨機、洩漏對照可學）→ **實作方視為結案**，待複驗。
+* AF-046（MINOR, CLAIM/DOC）：HF-FIDELITY 照報 + 三點 limitation 入文 + 獨立裁判 11 病理升級 → 待複驗。
+* AF-047（DOC）：privacy-utility 聯合表單一 null run、各欄 n/scheme 明載、無跨來源拼接 → 待複驗。
+* AUD-20261027-01、AUD-20261028-02：本週回應來源。
+
+### 9.7 限制與未解問題
+
+* [限制] 分類 utility 為二元單病理（生成器僅條件過兩類），無法如 GMIA 做 14 類；匿名/還原 pipeline 僅在 CheXpert（生成器訓練集）上評估；NIH 外部測試僅測「分類器泛化」，非把 pipeline 跑在 NIH。
+* [限制] AF-045 MC-2 victim N=20、單一 key/checkpoint、2-shot；shadow-val 微弱 5× Top-1 不遷移至 victim（已記錄）。結論限於「固定統計 + shadow learned」攻擊者光譜，非通用安全證明。
+* [限制] AF-046 Nodule/Mass 非 CheXpert 欄位（以 Lung Lesion 代表）；裁判為 ML-proxy 非放射科判讀；Fracture 於 256² 連真圖都 chance。
+* [限制] 定位 threshold 0.5 未校準、val-only、非 formal；外部定位模型（BioViL-T/AFLoc）校準尚未做；S2 定位分支僅數值 fixture 非完整 AEAD 部署。
+* [未解] 加速層 C（模型輕量化，必重訓）未啟動（~3–5 週，須使用者裁決）；RQ4 formal N=200 以 DPM++/null 正式重報尚未執行（item 1 正式交付）。
+* [限制] +22.1 dB 為多因（DPM++ + null 對齊 + range-preserving 儲存，光儲存 ~+7 dB）；最乾淨單因結論為速度（18.15×），不得寫成單一來源。
+
+### 9.8 下週計畫（Week 10）
+
+* [待辦] 稽核方複驗 AF-044/045/046/047；通過後於 AUDIT 關閉。
+* [待辦] RQ4 formal N=200 以 DPM++/null 正式重報（item 1 正式交付），重算主表受影響 cell。
+* [待辦] 視需要以 `scripts/build_weekly_appendix.py` 產 `appendix/week9/` 向量素材。
+* [選做] 加速層 C（輕量化）評估是否啟動；外部定位模型校準（定性補強）。
