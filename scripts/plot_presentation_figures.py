@@ -260,18 +260,22 @@ def fig_s2_container() -> None:
 
 
 def fig_attack_flow() -> None:
-    """Three attack lanes with grounded success rates: predecessor vs ours.
+    """Five attack lanes with grounded outcomes: predecessor vs ours.
 
     Numbers (random baseline ~0.005-0.05):
       amplitude/magnitude (T1 exact latent): attack_package C4/C5 Top-1 1.00 -> fixed-norm ~0.005
       learned re-id (external GMIA/Packhauser, range-preserving): table_reid_external
         AUC S0 0.616 / S1 0.541 -> S2 0.445 (Top-1 0.15/0.10 -> 0.05)
       inner-linkage (anon<->anon): table_t2bb_inner_linkage AUC 0.66 -> S2 ~0.43
+      KPA (T3): table_KPA -- S0 1 pair / S1 2 pairs recover key bit-exact;
+        table_cross_nonce -- recovered transform cross-nonce cos 0.001 (no transfer)
+      CPA (T3): table_CPA -- 1 query reconstructs full decrypt map (err 0);
+        table_cross_nonce -- cross-nonce cos 0.001
     """
-    fig, ax = plt.subplots(figsize=(12.0, 5.6))
-    ax.set_xlim(0, 12.4); ax.set_ylim(0, 6.2); ax.axis("off")
+    fig, ax = plt.subplots(figsize=(12.6, 8.4))
+    ax.set_xlim(0, 12.8); ax.set_ylim(0, 9.2); ax.axis("off")
     # source
-    _box(ax, 0.1, 2.5, 1.9, 1.2, "Attacker gets\npublished\nanonymized\noutput", "#444", fs=9)
+    _box(ax, 0.1, 3.9, 1.9, 1.3, "Attacker gets\npublished\nanonymized\noutput", "#444", fs=9)
 
     lanes = [
         ("Amplitude / magnitude\n(T1, exact latent)",
@@ -283,21 +287,29 @@ def fig_attack_flow() -> None:
         ("Inner linkage\n(anon ↔ anon)",
          "AUC 0.66", "AUC 0.43 (chance)",
          "killed by per-image nonce (distinct Q/image)"),
+        ("KPA (T3)\nknown plaintext–ciphertext",
+         "S0: 1 pair / S1: 2 pairs\n→ key recovered", "cross-nonce cos 0.001",
+         "per-image nonce: a solved image\ndoes NOT transfer to any other"),
+        ("CPA (T3)\nchosen plaintext",
+         "1 query → full\ndecrypt map (err 0)", "cross-nonce cos 0.001",
+         "per-image nonce: map valid for\nthat nonce only"),
     ]
-    ys = [4.55, 2.9, 1.25]
+    ys = [7.0, 5.55, 4.1, 2.65, 1.2]
     for (method, pred, ours, defense), y in zip(lanes, ys):
-        _arrow(ax, 2.0, 3.1, 2.55, y + 0.45)
-        _box(ax, 2.55, y, 2.5, 0.95, method, C_GREY, fontcolor="#222", fs=9)
-        _arrow(ax, 5.05, y + 0.47, 5.5, y + 0.47)
-        _box(ax, 5.5, y + 0.5, 2.75, 0.5, f"Predecessor:  {pred}", C_PRED, fs=8.3)
-        _box(ax, 5.5, y - 0.02, 2.75, 0.5, f"Ours:  {ours}", C_GOOD, fs=8.3)
-        ax.text(8.4, y + 0.47, defense, fontsize=8.2, va="center", ha="left",
+        _arrow(ax, 2.0, 4.55, 2.55, y + 0.47)
+        _box(ax, 2.55, y, 2.6, 0.95, method, C_GREY, fontcolor="#222", fs=8.6)
+        _arrow(ax, 5.15, y + 0.47, 5.55, y + 0.47)
+        _box(ax, 5.55, y + 0.5, 2.95, 0.5, f"Predecessor:  {pred}", C_PRED, fs=7.7)
+        _box(ax, 5.55, y - 0.02, 2.95, 0.5, f"Ours:  {ours}", C_GOOD, fs=7.7)
+        ax.text(8.65, y + 0.47, defense, fontsize=7.9, va="center", ha="left",
                 color="#333", style="italic")
-    ax.text(0.1, 5.85, "Attack efficacy: predecessor broken, ours at chance "
-            "(random ≈ 0.005–0.05)", fontsize=12, fontweight="bold")
+    ax.text(0.1, 8.75, "Attack efficacy: predecessor broken, ours at chance "
+            "(random ≈ 0.005–0.05)", fontsize=12.5, fontweight="bold")
+    ax.text(0.1, 8.35, "T1/T2 = re-identification & linkage · T3 = KPA/CPA (key/map recovery)",
+            fontsize=9, color="#555")
     ax.text(0.1, 0.35, "Sources: attack_package C4/C5, table_reid_external, "
-            "table_t2bb_inner_linkage (range-preserving storage; seed 1911)",
-            fontsize=8, color="#666")
+            "table_t2bb_inner_linkage, table_KPA, table_CPA, table_cross_nonce (seed 1911)",
+            fontsize=7.8, color="#666")
     fig.tight_layout()
     out = ASSETS / "fig_attack_flow.png"
     fig.savefig(out, dpi=150); plt.close(fig)
