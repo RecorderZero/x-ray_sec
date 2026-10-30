@@ -264,6 +264,28 @@ def main() -> None:
         results.append(res)
         print(f"S2perm(P on)_{args.storage}  Top-1={res['top1']:.3f} AUC={res['auc']:.3f}", flush=True)
 
+        # pure PHD = P . H . D_pre (P after H, NO D_post): manual construction,
+        # same net / nonce / key -- tests whether P alone (without D_post) carries
+        # the learned-re-id benefit while staying H-strip-safe.
+        from src.crypto.sot import fwht  # noqa: E402
+        from src.crypto.prng import sign_vector, permutation  # noqa: E402
+
+        def s2_phd_view(z, sid):
+            u, _ = normalize_to_fixed_norm(z)
+            ncc = nonce_for(f"t2bb-inner::{sid}")
+            n = u.numel()
+            s = torch.as_tensor(sign_vector(FIXTURE_KEY, ncc, 0, "sign-pre", n), dtype=u.dtype)
+            p = torch.as_tensor(permutation(FIXTURE_KEY, ncc, 0, n), dtype=torch.long)
+            y = fwht((u.reshape(1, -1) * s)).reshape(-1)[p].reshape(u.shape)
+            return attacker_view(y, args.storage)
+
+        views = [s2_phd_view(z, r["sample_id"]) for z, r in zip(latents, victim)]
+        inputs = [arr_to_input(v) for v in views]
+        res = evaluate(score_matrix(net, inputs, device), v_pid, v_role, rng())
+        res.update(condition=f"S2phd_{args.storage}", scheme="S2phd", storage=args.storage)
+        results.append(res)
+        print(f"S2phd(P.H.D, no post)_{args.storage}  Top-1={res['top1']:.3f} AUC={res['auc']:.3f}", flush=True)
+
     cols = ["condition", "scheme", "storage", "top1", "top5", "auc", "neg_control_top1", "random_top1"]
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", newline="", encoding="utf-8") as h:
