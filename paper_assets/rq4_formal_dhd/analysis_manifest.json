@@ -1,0 +1,48 @@
+{
+  "evidence_role": "formal",
+  "seed": 1911,
+  "n_images": 200,
+  "supersedes": "paper_assets/q8_formal/table_fidelity.csv (legacy DDIM T=500, y=0, legacy PNG)",
+  "operating_point": {
+    "sampler": "DPM-Solver++(2M)",
+    "steps": 100,
+    "backward": "null (forward/backward aligned; supersedes AF-018/021)",
+    "storage": "range_preserving_png/v1",
+    "generation": "unconditional"
+  },
+  "schemes": [
+    "P",
+    "S2fn"
+  ],
+  "metrics": [
+    "psnr_db",
+    "ssim",
+    "cosine",
+    "linf",
+    "rmse",
+    "mae",
+    "single_roundtrip_psnr_db",
+    "lpips"
+  ],
+  "ci_method": "percentile bootstrap, seed 1911, 10000 resamples, cluster=patient",
+  "bootstrap_resamples": 10000,
+  "lpips": {
+    "metric": "LPIPS",
+    "net": "alex",
+    "available": true,
+    "reason": "",
+    "backend": "torchmetrics",
+    "torchmetrics_version": "1.9.0",
+    "linear_weights_sha256": "df73285e35b22355a2df87cdb6b70b343713b667eddbda73e1977e0c860835c0",
+    "backbone_weights": "alexnet-owt-7be5be79.pth",
+    "backbone_weights_sha256": "7be5be791159472b1fbf3c69796f7cb30dca7ad8466c2df70058c37116cdee02"
+  },
+  "split": "splits/security_v1.csv",
+  "split_sha256": "49d3139cf16a8bf6fb96e8a7aa906b6ab2e9557a7d617a510bb2fcdfa2dcafd1",
+  "checkpoint": "past/SourceCode/results/Model/cfg_chexpert_p_uncond_0.1_v1_2025_05_08/modelchexpert050000.pt",
+  "checkpoint_sha256": "3f61b80a2b2df4f5f1780fe9a7ce639f6a94ddb5057e5f9e88dc300de4786b14",
+  "git": {
+    "commit": "4a7c40c5e9c983f3ba5f2e4aa7956568d3739fd7",
+    "dirty": true
+  }
+}
