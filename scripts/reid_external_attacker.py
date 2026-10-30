@@ -245,6 +245,25 @@ def main() -> None:
         results.append(res)
         print(f"{scheme}_{args.storage}  Top-1={res['top1']:.3f} AUC={res['auc']:.3f}", flush=True)
 
+    # P-ablation: S2 with permutation ON (D.P.H.D, R=1) evaluated by the SAME trained
+    # net / nonce / key as the deployed S2 (D.H.D, P off) above -- isolates P's effect.
+    if "S2" in args.schemes:
+        from scripts.d7_cpu_security import FIXTURE_KEY, nonce_for  # noqa: E402
+        from src.crypto.s2_fixed_norm import normalize_to_fixed_norm  # noqa: E402
+        from src.crypto.sot import transform  # noqa: E402
+
+        def s2_perm_view(z, sid):
+            u, _ = normalize_to_fixed_norm(z)
+            y = transform(u, FIXTURE_KEY, nonce_for(f"t2bb-inner::{sid}"), rounds=1, use_permutation=True)
+            return attacker_view(y, args.storage)
+
+        views = [s2_perm_view(z, r["sample_id"]) for z, r in zip(latents, victim)]
+        inputs = [arr_to_input(v) for v in views]
+        res = evaluate(score_matrix(net, inputs, device), v_pid, v_role, rng())
+        res.update(condition=f"S2perm_{args.storage}", scheme="S2perm", storage=args.storage)
+        results.append(res)
+        print(f"S2perm(P on)_{args.storage}  Top-1={res['top1']:.3f} AUC={res['auc']:.3f}", flush=True)
+
     cols = ["condition", "scheme", "storage", "top1", "top5", "auc", "neg_control_top1", "random_top1"]
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", newline="", encoding="utf-8") as h:
