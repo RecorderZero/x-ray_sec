@@ -27,6 +27,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
 import time
 from pathlib import Path
 
@@ -44,8 +45,13 @@ INDICES = (0, 1, 10, 11)
 SWEEP_N = (499, 400, 200, 100, 50, 25)
 SCHEMES = ("P", "S2a", "S2fn")
 S2_KEY = hashlib.sha256(b"cxr-s2/D6/public-reproducibility-fixture/v1").digest()
-S2_ROUNDS = 2
-S2_PERM = True
+# Deployment transform core = D.H.D (R=1, P off): the minimal H-strip-resistant form
+# (public self-inverse H with a keyed D_post after it; a bare H.D would let an attacker
+#  re-apply the public H and recover |z|).  Permutation adds no measured benefit
+# (table_rounds_permutation).  Historical DPHD (R=2, P on) is reproducible by setting
+# env S2_ROUNDS=2 S2_PERM=1 (user decision 2026-10-31; keeps old frozen numbers valid).
+S2_ROUNDS = int(os.environ.get("S2_ROUNDS", "1"))
+S2_PERM = os.environ.get("S2_PERM", "0") == "1"
 
 
 def nonce(sid: str) -> bytes:

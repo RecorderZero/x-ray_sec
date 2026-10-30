@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -66,6 +67,9 @@ NOISE_LEVEL = 500
 SCHEMES = ("S0", "S1", "S2")
 STORAGES = ("minmax", "range_preserving")
 SCORERS = ("cos", "abs", "sorted_abs", "norm", "densenet121")
+# Deployment transform core = D.H.D (R=1, P off); env S2_PERM=1 reproduces the
+# historical D.P.H.D (P on) frozen in table_t2bb_inner_linkage.csv (2026-10-31).
+S2_PERM = os.environ.get("S2_PERM", "0") == "1"
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
@@ -85,7 +89,7 @@ def encrypt(z: torch.Tensor, scheme: str, sample_id: str):
     if scheme == "S2":
         u, s = normalize_to_fixed_norm(z)
         nonce = nonce_for(f"t2bb-inner::{sample_id}")   # PER-IMAGE nonce
-        return transform(u, FIXTURE_KEY, nonce, rounds=1, use_permutation=True), (s, nonce)
+        return transform(u, FIXTURE_KEY, nonce, rounds=1, use_permutation=S2_PERM), (s, nonce)
     raise ValueError(scheme)
 
 
@@ -93,7 +97,7 @@ def decrypt(z_ano: torch.Tensor, scheme: str, aux) -> torch.Tensor:
     if scheme in ("S0", "S1"):
         return apply_legacy_key(z_ano, PAST, scheme, "deanonymize")
     s, nonce = aux
-    u = inverse_transform(z_ano, FIXTURE_KEY, nonce, rounds=1, use_permutation=True)
+    u = inverse_transform(z_ano, FIXTURE_KEY, nonce, rounds=1, use_permutation=S2_PERM)
     return restore_original_norm(u, s)
 
 
