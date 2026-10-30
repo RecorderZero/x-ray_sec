@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "task_id": "H-strip",
+  "seed": 1911,
+  "d": 65536,
+  "key_source": "d7 FIXTURE_KEY",
+  "cache": "/data2/paper/artifacts/t2bb_latent_cache/latents",
+  "finding": "bare HD (H.D) is H-strip-vulnerable: the public self-inverse H is removed and |z| recovered; D.H.D and D.P.H.D keep a keyed op after H and stay at random.",
+  "rows": [
+    {
+      "variant": "bare_HD",
+      "n": 8,
+      "hstrip_sortmag_retention_mean": 0.0,
+      "naive_sortmag_retention_mean": 0.036058,
+      "vulnerable": true,
+      "note": "retention~0 => |z| magnitudes recovered after H-strip => sorted-mag linkage reopens"
+    },
+    {
+      "variant": "D.H.D",
+      "n": 8,
+      "hstrip_sortmag_retention_mean": 0.035405,
+      "naive_sortmag_retention_mean": 0.036058,
+      "vulnerable": false,
+      "note": "retention~0 => |z| magnitudes recovered after H-strip => sorted-mag linkage reopens"
+    },
+    {
+      "variant": "D.P.H.D",
+      "n": 8,
+      "hstrip_sortmag_retention_mean": 0.034787,
+      "naive_sortmag_retention_mean": 0.036058,
+      "vulnerable": false,
+      "note": "retention~0 => |z| magnitudes recovered after H-strip => sorted-mag linkage reopens"
+    }
+  ]
+}
