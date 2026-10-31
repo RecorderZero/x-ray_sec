@@ -184,7 +184,7 @@ def fig_s2_container() -> None:
     fwd = [
         (0.1, "latent\n$z$"),
         (2.1, "fix norm\n$u=\\frac{C}{\\|z\\|}z$"),
-        (4.4, "$Q$ = D$\\cdot$H$\\cdot$D  (R=1,P off)\n$D_{post}\\,\\frac{H}{\\sqrt{d}}\\,D_{pre}$"),
+        (4.4, "$Q$ = D$\\cdot$P$\\cdot$H$\\cdot$D  (R=1)\n$D_{post}\\,P\\,\\frac{H}{\\sqrt{d}}\\,D_{pre}$"),
         (7.1, "protected\n$y=Qu$"),
     ]
     for i, (x, t) in enumerate(fwd):
@@ -229,7 +229,7 @@ def fig_s2_container() -> None:
     inv = [
         (0.1, "verify HMAC\n(anti-tamper T4)"),
         (2.0, "open AEAD\n$s$, lo/hi"),
-        (3.9, "$Q^{-1}$\n$D_{pre}\\frac{H}{\\sqrt{d}}D_{post}$"),
+        (3.9, "$Q^{-1}$\n$D_{pre}\\frac{H}{\\sqrt{d}}P^{-1}D_{post}$"),
         (6.3, "un-fix norm\n$z=\\frac{s}{C}u$"),
     ]
     for i, (x, t) in enumerate(inv):
