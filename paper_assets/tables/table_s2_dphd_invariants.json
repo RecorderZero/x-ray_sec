@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "task_id": "S2-DHD-invariants",
+  "seed": 1911,
+  "transform": "D.P.H.D (rounds=1, permutation=True)",
+  "fixed_norm_C": 248.261,
+  "n_latents": 8,
+  "d": 65536,
+  "reversibility": {
+    "l1_mean_max": 2.3819204101211294e-16,
+    "l2_maxabs_max": 1.7763568394002505e-15,
+    "pass": true
+  },
+  "fixed_norm": {
+    "max_abs_dev_from_C": 2.5295321393059567e-12,
+    "pass": true
+  },
+  "gaussian_preserving": {
+    "ks_pvalue_min": 0.3292007527923987,
+    "mean_meanabs": 0.002147488235950984,
+    "mean_std": 0.9697665646565072,
+    "expected_std": 0.96976953125,
+    "mean_skew": -0.002294740289674745,
+    "mean_excess_kurtosis": -0.020915088181696684
+  },
+  "orthogonality_d256": {
+    "QtQ_minus_I_maxabs": 0.0,
+    "pass": true
+  }
+}

@@ -36,16 +36,18 @@ from scripts.d7_cpu_security import FIXTURE_KEY, nonce_for  # noqa: E402
 from scripts.output_guard import add_force_flag, refuse_overwrite  # noqa: E402
 
 SEED = 1911
-ROUNDS, PERM = 1, False       # D.H.D deployment
+ROUNDS = 1                    # deployment rounds; PERM set via --permutation
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--cache-dir", type=Path, default=ROOT / "artifacts/t2bb_latent_cache/latents")
     ap.add_argument("--n", type=int, default=8)
+    ap.add_argument("--permutation", action="store_true", help="P on (D.P.H.D); default off (D.H.D)")
     ap.add_argument("--out", type=Path, default=ROOT / "paper_assets/tables/table_s2_dhd_invariants.json")
     add_force_flag(ap)
     args = ap.parse_args()
+    PERM = args.permutation
     refuse_overwrite([args.out], args.force)
     torch.manual_seed(SEED)
 
@@ -79,7 +81,8 @@ def main() -> None:
     m = np.array(moments)
     result = {
         "schema_version": 1, "task_id": "S2-DHD-invariants", "seed": SEED,
-        "transform": "D.H.D (rounds=1, permutation=False)", "fixed_norm_C": float(FIXED_NORM),
+        "transform": f"{'D.P.H.D' if PERM else 'D.H.D'} (rounds={ROUNDS}, permutation={PERM})",
+        "fixed_norm_C": float(FIXED_NORM),
         "n_latents": len(files), "d": 65536,
         "reversibility": {"l1_mean_max": l1m, "l2_maxabs_max": l2m, "pass": l2m < 1e-5},
         "fixed_norm": {"max_abs_dev_from_C": normdev, "pass": normdev < 1e-3},

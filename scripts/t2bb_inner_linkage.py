@@ -67,9 +67,9 @@ NOISE_LEVEL = 500
 SCHEMES = ("S0", "S1", "S2")
 STORAGES = ("minmax", "range_preserving")
 SCORERS = ("cos", "abs", "sorted_abs", "norm", "densenet121")
-# Deployment transform core = D.H.D (R=1, P off); env S2_PERM=1 reproduces the
-# historical D.P.H.D (P on) frozen in table_t2bb_inner_linkage.csv (2026-10-31).
-S2_PERM = os.environ.get("S2_PERM", "0") == "1"
+# Deployment transform core = D.P.H.D (R=1, P on); env S2_PERM=0 gives D.H.D
+# (frozen in table_t2bb_inner_linkage_dhd.csv). (2026-10-31)
+S2_PERM = os.environ.get("S2_PERM", "1") == "1"
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
