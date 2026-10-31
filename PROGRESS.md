@@ -3024,3 +3024,24 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 
 ### 7. 下一步
 * 可選：把 rq4_formal 納入 appendix/實驗矩陣 DEP cell 的正式 N=200 來源（目前 DEP-1 讀 deploy_dpm_sweep n=20）。待裁示。
+
+## 2026-10-31 · Track P2 · 變換核心定案 D·P·H·D R=1 + PriCheXy 外部對照 + AF-048~051 回應
+
+### 1. 當前目標
+* 定案 S2 變換核心、補外部方法比較、回應稽核 AF-048/049/050/051。
+
+### 2. 執行動作
+* [決定] 部署變換 DPHD(R=2,P on) → 探索 D·H·D / PHD → **定案 D·P·H·D R=1**（四通道各金鑰化一次；`S2_PERM`/`S2_ROUNDS` env 可還原 DHD/R=2）。`scripts/deploy_s2_sweep.py`、`t2bb_inner_linkage.py`。
+* 新增 `scripts/hstrip_attack.py`、`scripts/s2_dhd_invariants.py`（--permutation）；`reid_external_attacker.py` 加 S2perm/S2phd/--external-anon-dir。
+* DPHD R=1 重凍：`rq4_formal_dphd`、`classification_utility_dphd`、`table_t2bb_inner_linkage_dphd`、`table_s2_dphd_invariants`。
+* PriCheXy-Net 外部對照（樹外 `/data2/external_gpl/`，GPL 不入庫）：`table_reid_external_vs_prichexy`、`external_comparison/prichexy_pathology.json`。
+
+### 3. 執行結果
+* [事實] 保真 N=200：S2fn(DPHD) 46.40 dB[46.16,46.62]；re-id P-ablation（同權重/同 seed，受控）S2 Poff 0.569 vs Pon(DPHD) 0.445 vs PHD 0.464 → **P 因果降 re-id、非雜訊**；H-strip：裸 HD 0.0（破）、D·H·D/PHD/DPHD 0.035（安全）；不變量 QᵀQ−I=0.0、往返 1.8e-15、保高斯。
+* [事實] PriCheXy（跨集推論）同攻擊器 re-id 0.738、病理 0.895；我方 S2 re-id 0.445、還原病理 0.908。
+
+### 4. 達標判定 / 稽核回應
+* [注意/AF-050] `table_reid_external_vs_prichexy` 初版 S2 與 S2perm 位元相同（169/380）＝config 翻 P-on 後「S2」條件已是 P-on。**修復：以 `S2_PERM=0` 重跑使 S2(Poff)≠S2perm(Pon)，自證置換有效**（`bgzn02w3y`）。
+* [限制/AF-049] §4.7(b′) 補鎖：plaintext 天花板僅 0.764、無 CI、pathology n=36 單 split vs 我方 n=400/50splits 嚴謹度不對稱、PriCheXy 不遷移為預期 → **唯一站得住軸＝可逆性＋攻擊器無關性，0.445 vs 0.738 不作隱私強度對比（apples-to-oranges）**。
+* [限制/AF-048] §4.1 補：三因分解唯一來源仍 n=4 dev（非 N=200）；S2fn≥P 之推定機制（固定 norm 白化 → range-PNG 量化相對誤差更小），尚未以 N=200 量化。
+* [待辦/AF-049/050/051] PriCheXy 對照與未提交 re-freeze 在 AF-049/050/051 關閉前不得進論文正式表格；本條補登 PROGRESS（回應 AF-051 之只增紀錄缺口）。
