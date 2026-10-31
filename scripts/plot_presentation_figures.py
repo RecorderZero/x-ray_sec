@@ -110,6 +110,43 @@ def fig_sampler_nsweep() -> None:
     print(f"wrote {out}")
 
 
+def fig_sampler_time() -> None:
+    """4-pass deployment pipeline wall-clock vs inversion steps N (companion to
+    fig_sampler_nsweep).  Time is ~linear in N and sampler-independent (NFE-bound:
+    all samplers do N model evals/pass x 4 passes), so DDIM/DPM++ overlap; the
+    DPM++ advantage is reaching target quality at FEWER N -> less time.
+    Source: deploy_dpm_sweep/sweep.csv (scheme S2fn = deployment)."""
+    rows = [r for r in read_rows(ROOT / "paper_assets" / "deploy_dpm_sweep" / "sweep.csv")
+            if r["scheme"] == "S2fn"]
+    fig, ax = plt.subplots(figsize=(7.6, 4.8))
+    # DDIM solid-thick grey UNDER, DPM++ dashed blue ON TOP -> shows they coincide.
+    for name, color, mk, ls, lw in [("DDIM", C_GREY, "o", "-", 4.5), ("DPM++", C_OURS, "D", "--", 2.0)]:
+        pts = sorted([(int(r["N"]), float(r["mean_pipeline_seconds"]))
+                      for r in rows if r["sampler"] == name])
+        ax.plot([n for n, _ in pts], [s for _, s in pts], ls, marker=mk, color=color,
+                label=f"{name} (S2fn, 4-pass)", lw=lw, ms=6)
+    ns = sorted({int(r["N"]) for r in rows})
+    ax.axvline(100, color=C_GOOD, ls=":", lw=1.5)
+    ax.annotate("deployment: N=100\n~7.5 s / image (4-pass)", (100, 21),
+                color=C_GOOD, fontsize=9, ha="center",
+                bbox=dict(boxstyle="round", fc="white", ec=C_GOOD, alpha=0.95))
+    ax.text(0.30, 0.74, "time ≈ linear in N, sampler-independent (NFE-bound):\n"
+            "DDIM & DPM++ coincide. DPM++'s win = same PSNR at\n"
+            "fewer N (see PSNR figure), not faster per-step.",
+            transform=ax.transAxes, va="top", fontsize=8.2, color="#555",
+            bbox=dict(boxstyle="round,pad=0.3", fc="#f6f8fa", ec="#ccc"))
+    ax.set_xscale("log"); ax.set_xticks(ns); ax.set_xticklabels([str(n) for n in ns])
+    ax.set_xlabel("inversion steps N (= model evals per pass)")
+    ax.set_ylabel("4-pass pipeline wall-clock (s / image)")
+    ax.set_title("4-pass deployment time vs N (DDIM ≈ DPM++; source deploy_dpm_sweep)", fontsize=11)
+    ax.legend(loc="upper left", fontsize=9)
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    out = ASSETS / "fig_sampler_time.png"
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print(f"wrote {out}")
+
+
 def _box(ax, x, y, w, h, text, color, alpha=1.0, fontcolor="white", fs=8.5):
     ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.08",
                                 fc=color, ec="none", alpha=alpha, zorder=2))
