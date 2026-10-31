@@ -38,9 +38,9 @@
       "storage": "range_preserving"
     },
     {
-      "top1": 0.05,
-      "top5": 0.15,
-      "auc": 0.44473684210526315,
+      "top1": 0.1,
+      "top5": 0.35,
+      "auc": 0.5685526315789474,
       "neg_control_top1": 0.0,
       "random_top1": 0.05,
       "condition": "S2_range_preserving",

@@ -20,3 +20,10 @@ Caveat: cross-dataset (PriCheXy weights trained on ChestX-ray14) + different
 attacker than PriCheXy's own; their paper reports 81.8->57.7% on their setup.
 Honest reading: PriCheXy's adversarial deformation does not transfer to a
 different attacker/dataset; our S2 is attacker-agnostic (cryptographic).
+
+## AF-050 resolution (2026-10-31)
+Earlier `table_reid_external_vs_prichexy` had S2 == S2perm bit-identical because
+the config default had been flipped to P-on, so the "S2" condition was already
+P-on. Re-run with `S2_PERM=0`: S2(P off)=0.569 != S2perm(P on=deployment)=0.445
+in the SAME table/net -> proves the permutation is applied and changes the
+attacker score. Deployment = S2perm (DPHD, 0.445).
