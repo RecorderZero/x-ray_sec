@@ -44,3 +44,4 @@ appendix_audit/
 | Week 6（10/15） | `week06_Q8-P8/` | Q8.1–Q8.5、P8.1 N=20 dev pilot（mixed deployment） | `AUDIT_summary.md` § Week 6 |
 | Week 7（10/16–10/19） | `week07_F9-G5-Q10/` | F9.1–F9.5＋G5 主表凍結、Q10.1–Q10.5（誤差歸因/精度/AEAD/雪崩） | `AUDIT_summary.md` § Week 7 |
 | Week 8（10/22–10/24） | `week08_P2-P11/` | P2 附錄（T2-BB-M1-Frozen／外部 re-id／BDIA 2×2）＋P11／Z12 凍結交付＋Q11 定位 parity（AF-041/042/043 全關閉） | `AUDIT_summary.md` § Week 8 |
+| Week 9（10/27–10/29） | `week09_W9-accel-deploy/` | W9 層 B 加速（respaced DDIM／DPM++(2M)／BDIA）＋null 部署慣例定案＋classification utility（null）＋AF-045 部署忠實 re-id＋AF-046 多病理 referee／HF-FIDELITY（AF-044/045/046/047 全關閉） | `AUDIT_summary.md` § Week 9 |

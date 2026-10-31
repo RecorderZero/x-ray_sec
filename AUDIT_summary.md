@@ -1277,3 +1277,140 @@
 - 重新產生:`scripts/run_cfg_ddim.sh python appendix_audit/week08_P2-P11/scripts/make_figures.py`,接著 `… /scripts/collect_assets.py`（圖表數字一律從 `table_t2bb_m1_frozen.json`、`reid_original_weights_sanity.json`、`table_localization_parity.csv` 讀入計算,不手打）。
 - 稽核方獨立驗證腳本與輸出:`audit/t2bb_m1_recompute.py` → `audit/out/t2bb_m1_recompute.json`;`audit/p11_independent_verify.py` → `audit/out/p11_independent_verify.json`（index 見 `audit/README.md`）。
 - 詳細稽核紀錄:`AUDIT.md`（AUD-20261022-01、-02、AUD-20261023-01、AUD-20261024-01）。
+
+---
+
+## Week 9（10/27–10/29）· W9 加速取樣器 + 最終部署慣例（null）+ utility/security 收尾 · DPM++(2M) 5× 加速而保真持平、部署 backward 經使用者裁決對齊 null（supersede AF-018/021,加法式不污染凍結）、utility 以獨立多病理裁判實證保全、安全為 sampler-agnostic 負面結果;四筆 finding（AF-044～047）當週全開全關
+
+> 本節涵蓋三條交織的工作:(A) **層 B 取樣器加速**——respaced DDIM（B1）、exact-inversion DPM-Solver++(2M)＋BDIA（B3）、BELM（B2,擱置）、部署掃描;(B) **最終部署慣例定案**——生成 backward 由 y=0 切 null（forward/backward 對齊）;(C) **utility／security 收尾**——classification utility（含外部 NIH）、localization null 分支、CheXlocalize pilot＋CFG++、DPM++ 下的學習式 re-id 與多病理保全。四輪共開立四個 finding（AF-044 MINOR、AF-045 QUESTION、AF-046 MINOR、AF-047 MINOR,皆為**慣例/宣稱範圍/安全重測/文件**問題,底層加密與數值正確性無誤）,**全部當週關閉**。至此 AF-001～AF-047 全部關閉、§A 未關閉表為空、G0–G5 維持 PASS。
+>
+> **證據強度聲明**:本週以 spec-first ＋ 已 commit artifact 逐值讀取 ＋ 控制組有效性 ＋ 旗標非破壞性 ＋ 跨腳本決定性為主（CODE／核對），**未重跑 GPU**;最強的客觀背書是 AUD-20261027-01 的跨腳本 bit-identical（`deploy_dpm` 的 DDIM/S2fn 與獨立腳本 `deploy_s2` 逐值相同）。
+
+### 1. 範圍與 Gate 狀態
+
+**無新 Gate;G0–G5 維持 PASS。** 加速取樣器與部署慣例屬研究/部署線,以**加法式** `backward_null`（預設 False）實作,凍結 RQ4/linkage 消費者 by construction 不變,故不觸動主表與 F9/G5 凍結範圍。
+
+| 子任務／線 | 內容 | 稽核判定 | 稽核輪次 |
+|---|---|---|---|
+| B1 respaced DDIM | eta=0 標準更新、forward 與 legacy bit-identical | Achieved（CODE＋決定性） | AUD-20261027-01 |
+| B3 DPM-Solver++(2M) | data-prediction 多步、近似反演 | Achieved（CODE 數學忠實＋gate） | AUD-20261027-01 |
+| B3 BDIA（γ=1） | 對齊重做、leapfrog 近可逆 | Achieved（claim-level） | AUD-20261027-01 |
+| B2 BELM | smoke 不穩定 | 誠實擱置（negative,非缺陷） | AUD-20261027-01 |
+| AF-044 decode 分解 | legacy×aligned×sampler 二維拆解 | CLOSE | AUD-20261028-01 |
+| null-backward 定案 | forward/backward 對齊無條件 | Achieved（使用者裁決＋加法式 flag） | AUD-20261029-01 |
+| classification utility | real/anon/recovered × 兩 encoder × 4 probe | Achieved（CODE＋provenance 一致） | AUD-20261028-01、-20261029-01 |
+| external NIH 泛化 | 真實影像零重訓跨集 | Achieved（CODE） | AUD-20261028-01 |
+| AF-045 部署忠實 MC-2 | DPM++ null 學習式 re-id 三通道 | CLOSE | AUD-20261029-01 |
+| AF-046 HF＋多病理 referee | 高頻保真 proxy＋torchxrayvision 11 病理 | CLOSE | AUD-20261029-01 |
+| AF-047 聯合表 | 單一 null run 重算 | CLOSE | AUD-20261029-01 |
+
+本週 4 輪稽核:AUD-20261027-01（加速取樣器,開 AF-044/045,PASS WITH FINDINGS）、AUD-20261028-01（複驗 AF-044/045＋新實作,關 AF-044、AF-045 部分解決,開 AF-046/047,PASS WITH FINDINGS）、AUD-20261028-02（使用者裁決 AF-046 收斂路線＋部分收回原質疑）、AUD-20261029-01（複驗 null 修復＋AF-045/046/047 全關,PASS）。**目前無未關閉 finding。**
+
+### 2. 本週完成重點
+
+1. `[事實]` **DPM-Solver++(2M) 數學忠實、5× 而保真持平**:逐行對 data-prediction 標準式（c1=σ_t/σ_s、c2=−α_t(e^{−h}−1)、多步 buffer、邊界一階),近似反演非 bit-exact 已誠實標註;`rq4_redo/decompose.json` 顯示 **DPM++ N=100 ≈ aligned-DDIM N=499**（P 40.4≈40.2、S2fn 44.3≈45.6）→ 省 5× 步數而保真持平。
+2. `[事實]` **AF-044 decode 慣例乾淨二維分解**:decode 增益（legacy-DDIM→aligned-DDIM,同 N=499）**隨 scheme 變**——P +2.03、S2fn +6.50 dB;sampler 增益（aligned-DDIM→aligned-DPM++,同 N=100）另計。證「S2 DPM++ ~44 dB」headline **大半來自 decode 修正而非 sampler**,off-by-one 診斷（forward bit-identical、legacy≈delta2–3、非單步偏移）補 commit 且逐值重現。
+3. `[事實]` **最終部署慣例定案為 null**（使用者裁決,supersede AF-018/021 的 y=0）:forward（反演,本就 null）與 backward（生成）對齊無條件 → DDIM 反演↔生成一致,recon +4 dB（k50 43.6→46.7 null;smoke 44.3→48.4）;S2fn 因 ~1e-6 WHT 殘差封頂 ~53 dB、恆等金鑰 P 達 71 dB。實作為加法式 `backward_null=False` 預設,凍結消費者（`rq4_redo`、`t2bb_m1_frozen_linkage`）不引用 → 既有稽核數字不變。
+4. `[事實]` **classification utility（null）recovered≈real、cipher=chance**:train-real→test-real 0.916/0.937（densenet/rad-dino）、→recovered **0.909/0.937**（≈real）、→anon 0.501/0.497（chance）、train-anon→anon 0.507/0.525（chance）;patient-disjoint 每人一張、50 splits＋95%CI、real/recovered 同 render、frozen probe 與 fine-tune 雙證、utility-vs-N 單調。外部 NIH 零重訓:in-domain 0.900/0.902、external 0.823/0.836（落差 ~0.07）。
+5. `[事實]` **AF-045 安全為 sampler-agnostic 負面結果**:部署忠實學習式 re-id（DPM++ N=100 反演＋null＋發布像素圖,shadow 1000/200 epochs/victim 20×2,獨立隔離 cache）三通道——正控制 `p_deploy`（未加密）**學得起來**（victim AUC 0.635、top1 0.25、shadow-val AUC 0.729）、`s2_anon_deploy`（發布圖）0.430≈隨機、`s2_anon`（raw 密文 latent 上界）0.440≈隨機;與 legacy dense 同判決 → 安全源於 S2 per-image nonce,非反演 sampler。
+6. `[事實]` **AF-046 多病理保全獲獨立裁判實證**:HF-FIDELITY（null,200 張）高頻帶 retention 0.964、HP-SSIM 0.988、Sobel-r 0.997,**分塊 min 0.650/p05 0.40**（局部高頻衰減如實揭露）,控制組 C1 到頂、C3 正確崩塌於結構指標;**torchxrayvision 零重訓裁判**（11 病理,n=400）recovered≈real 逐病理（macro Δ −0.003 all／−0.000 chex,最大 |Δ|=0.019 Pneumonia,Lung Lesion 0.664→0.661、Pneumothorax 0.748→0.737 保全）、anon ~chance → **實證反駁「還原抹除其他病理」**。
+7. `[事實]` **AF-047 聯合表單一來源一致**:改以單一 null run 組裝、各欄 n/scheme 明載;新 CSV 病理 0.916/0.909 與 k50 null json、身份 P/S2 0.811/0.481 與 t2bb null parity 逐值一致,跨來源拼接與 §4c 誤引消除。
+8. `[事實]` **localization 誠實負面結果**:CheXlocalize 積液定位對新 pipeline 與前作皆 chance 等級（未隱藏,即改走 classification utility 的動機）;資料隔離（val/test patient 互斥、hash manifest、「test 未做模型輸出與選參」）到位;gs0 計算一致性修復明載「不證醫療定位正確」、僅改新 module 未動 legacy/frozen。
+
+### 3. 關鍵實驗結果
+
+#### 表 1｜AF-044 decode×sampler 二維分解（`rq4_redo/decompose.json`,n=4 dev,PSNR dB）
+
+| 方案 | legacy-DDIM N=499 | aligned-DDIM N=499 | decode 增益 | aligned-DPM++ N=100 | aligned-DPM++ N=200 |
+|---|---|---|---|---|---|
+| P | 38.18 | 40.21 | **+2.03** | 40.39 | 41.70 |
+| S2fn | 39.13 | 45.63 | **+6.50** | 44.26 | 46.62 |
+
+* 解讀:decode 慣例增益隨 scheme 變（S2fn 遠大於 P）;DPM++ N=100 ≈ aligned-DDIM N=499 → sampler 真實貢獻為「同保真省 5× 步數」。`[限制]` n=4 foundation,正式 RQ4 重報為 N=200、**aligned-null**（AF-044 殘留義務）。證據強度:CODE。
+
+#### 表 2｜classification utility 矩陣（null 部署,`anon_utility_dpm++_n200_s100_k50.json`,n=400、50 splits、95%CI）
+
+| probe | DenseNet | rad-dino | 解讀 |
+|---|---|---|---|
+| train real→test real | 0.916 ±0.005 | 0.937 ±0.004 | 任務可學控制 |
+| train real→test recovered | **0.909 ±0.006** | **0.937 ±0.004** | ≈ real,還原保全 |
+| train real→test anon | 0.501 ±0.011 | 0.497 ±0.016 | = chance,密文讀不出 |
+| train anon→test anon | 0.507 ±0.013 | 0.525 ±0.012 | = chance,訓不出密文分類器 |
+
+* recon 46.7 dB（null）、anon 5.9 dB。raw-PNG real-only baseline 0.884/0.914。證據強度:CODE＋provenance 逐值一致。
+
+#### 表 3｜AF-045 部署忠實學習式 re-id（`table_t2bb_learned_attack_dpm_deploy.json`,DPM++ N=100 null,shadow 1000,victim 20×2）
+
+| 通道 | victim AUC | victim top1（rand） | shadow-val AUC | 判定 |
+|---|---|---|---|---|
+| p_deploy（未加密,正控制） | **0.635** | 0.25（0.05） | 0.729 | **學得起來**（net_learned=true） |
+| s2_anon_deploy（發布圖,headline） | 0.430 | 0.10（0.05） | 0.562 | ≈ 隨機 |
+| s2_anon（raw 密文 latent 上界） | 0.440 | 0.05（0.05） | 0.523 | ≈ 隨機（efficacy=false） |
+
+* 正控制有效 + 加密通道回隨機 = 結構正確的負面結果;與 §15.3 legacy dense 同判決 → sampler-agnostic。證據強度:CODE＋正控制有效性。`[限制]` victim N=20、單 key/checkpoint。
+
+#### 表 4｜AF-046 多病理裁判（`referee_pathology_n400.json`,torchxrayvision 零重訓,n=400,macro over 11 病理）
+
+| model | real macro | recovered macro | anon macro | macro Δ(rec−real) | 最大 |Δ| |
+|---|---|---|---|---|---|
+| densenet121-res224-all | 0.790 | 0.787 | 0.522 | **−0.003** | 0.019（Pneumonia） |
+| densenet121-res224-chex | 0.784 | 0.784 | 0.483 | **−0.000** | — |
+
+* 焦點/小病灶 Lung Lesion 0.664→0.661、Pneumothorax 0.748→0.737 皆保全;anon ~chance;Fracture 真圖即 chance（裁判 256² 讀不出,誠實照報）。HF-FIDELITY 高頻 retention 0.964、分塊 min 0.650。證據強度:CODE（ML-proxy,非放射科判讀）。
+
+### 4. 重要發現與論文呈現提醒
+
+- **加速與 decode 慣例必須分列（AF-044）**:論文報 DPM++ 保真時,須把「decode 慣例增益」與「sampler 增益」拆開,否則 S2fn 的 +6.5 dB decode-fix 會被誤讀成 sampler 功勞;正式 RQ4 重報目標為 **aligned-null**。
+- **部署慣例變更有完整治理軌跡**:null-backward 為**使用者裁決**（由稽核 AUD-20261028-02 §1 指出還原用 y=0 觸發）推翻舊使用者裁決 AF-018/021;加法式 flag 保證凍結結果不被回溯更動,論文/repo 可用 `--legacy-y0-backward` 復現舊慣例作對照。
+- **安全是 sampler-agnostic 的「負面結果＋有效正控制」**:不可寫成「不可攻破」;正確措辭為「部署忠實的學習式攻擊在未加密對照上可學、在 S2 發布圖/密文 latent 上回隨機,安全源於 per-image nonce」。
+- **utility 保全已從單病理升級為多病理實證**:原 AF-046 的「只在積水軸驗證」疑慮,經 null 還原（移除健康條件機制）＋獨立 torchxrayvision 11 病理裁判（rec≈real）實證化解;論文 utility 宣稱可寫「多病理偵測保全（ML-proxy）」,但須標明 referee 非放射科判讀、Fracture/Nodule 的裁判盲區。
+- **HF 局部衰減要與 headline 並列**:分塊 min 0.650（最差 patch per-sample 低至 0.085）代表局部高頻確有衰減,論文 limitation 宜與 0.964 headline 並列,不可只引 headline。
+
+### 5. 使用者裁決紀錄
+
+| 日期 | 裁決 | 影響 |
+|---|---|---|
+| 10/27 | 指示就 W9 加速取樣器/步數研究進度質疑驗證 | AUD-20261027-01 範圍 |
+| 10/28 | AF-046 採「路一 HF-FIDELITY + limitation」（不追臨床小病灶偵測完整研究） | AUD-20261028-02;後升級加做多病理 referee |
+| 10/28 | 確認最終部署參數時裁決:主 pipeline backward 切 null、全對齊後重量（supersede AF-018/021） | 全 §4/§5 數字改 null 部署條件 |
+| 10/29 | AF-046 升級:用獨立第三方零重訓 CXR 分類器當裁判,直接量多病理保全 | AUD-20261029-01;AF-046 收斂 |
+| 10/29 | 指示複驗實作方修復 | AUD-20261029-01 範圍 |
+
+### 6. 未結 findings 與下週風險
+
+* **無未關閉 finding**（AF-044～047 皆本週開立並關閉）。AF-001～AF-047 全部關閉,§A 未關閉表為空,G0–G5 維持 PASS。
+* 非阻斷 advisory（供定稿留意,非 finding）:
+  - **AF-044 殘留義務**:正式 RQ4 重報（N=200、aligned-null decode）仍為 future work;在其完成前,論文不得以 legacy-decode 凍結表作為 DPM++/null 部署操作點（new_model §11.2 item 1 追蹤）。
+  - 加速診斷多為 **n≤4 dev**;強措辭（「完勝」「近乎零保真代價」）須待正式 N=200。classification utility（n=400/50 splits）與 referee（n=400）為穩結果。
+  - `hf_fidelity.json` 為 untracked（生成腳本 `scripts/hf_fidelity_check.py` 已 commit、seed 1911 可重生);HF 權威紀錄在 report §4g＋PROGRESS。
+  - utility limitation 三點須入文（只在偵測軸、referee 為 ML-proxy、NIH 只測真實影像非還原後 NIH）。
+* 待稽核（使用者先前擱置「之後再驗」,本週未觸）:predecessor reinvert ablation（`d446cb1`）、`predecessor_decrypt_flow.md`。
+
+### 7. 論文素材清單
+
+| 素材 | 建議放在論文 | 證據強度 | 使用注意 |
+|---|---|---|---|
+| `paper_assets/rq4_redo/decompose.json` | 方法/附錄:decode×sampler 分解 | CODE | n=4 foundation;decode 增益隨 scheme 變;正式重報 aligned-null |
+| `paper_assets/exact_inv_sweep/sweep.json`＋`scripts/exact_inv_sweep.py` | 方法:DPM++(2M) 加速 | CODE＋決定性 | 近似反演非 bit-exact;5× 保真持平 |
+| `paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json` | 結果:utility 矩陣（null） | CODE＋provenance | recovered≈real、cipher=chance;patient-disjoint 50 splits |
+| `paper_assets/classification_utility/external_utility_nih_n150.json` | 結果:外部泛化 | CODE | 測分類器泛化（真實 NIH）,非還原 pipeline 跑 NIH |
+| `paper_assets/classification_utility/privacy_utility_table.{csv,md}` | 結果:隱私-utility 聯合表 | CODE＋逐值核對 | 單一 null run;各欄 n/scheme 明載 |
+| `paper_assets/tables/table_t2bb_learned_attack_dpm_deploy.{csv,json}` | 安全:部署忠實學習式 re-id | CODE＋正控制有效 | sampler-agnostic;victim N=20 |
+| `paper_assets/referee_pathology/referee_pathology_n400.json` | utility:多病理保全獨立裁判 | CODE（ML-proxy） | 11 病理 rec≈real;Fracture/Nodule 裁判盲區 |
+| `paper_assets/hf_fidelity/hf_fidelity.json`＋`scripts/hf_fidelity_check.py` | utility:高頻保真 proxy | CODE | headline 0.964 須與分塊 min 0.650 並列;untracked 可重生 |
+| `reports/localization_evaluation_protocol.md` | 附錄:定位負面結果＋協定 | DOC | chance-level 誠實照報;parity 非準確度 benchmark |
+
+### 8. 限制（不能宣稱的事）
+
+- **加速保真不可與 decode 慣例混談**:S2fn 的 +6.5 dB 大半為 decode-fix,非 sampler;DPM++ 的淨貢獻是「同保真省 5× 步數」。正式 RQ4（aligned-null、N=200）前不得以凍結 legacy 表當部署操作點。
+- **安全是 sampler-agnostic 負面結果,非「不可攻破」**:正控制（未加密還原）可學證明攻擊有能力;S2 發布圖/密文 latent 回隨機源於 per-image nonce。victim N=20、單 key/checkpoint。
+- **utility 保全為 ML-proxy 多病理偵測,非放射科判讀**:torchxrayvision 裁判在 256² 讀不出 Fracture（真圖即 chance）、Nodule/Mass 非 CheXpert 欄位（以 Lung Lesion 代表）;HF 分塊 min 0.650 顯示局部高頻確有衰減。
+- **NIH 泛化只支持偵測任務跨資料集**,不支持「還原保全跨資料集」（NIH 跑真實影像、非還原後 NIH;生成器未在 NIH 訓練）。
+- **classification 任務為二元單病理**,難度低於 GMIA 14 類 multi-label,直接數字不可互換。
+
+### 9. 檔案索引
+
+- 已建置 `appendix_audit/week09_W9-accel-deploy/`（2026-10-31,使用者指示補建;數字一律從下列凍結 json 讀入、不手打）:MANIFEST.csv（33 筆,SHA-256 可比對,src copies 與 live source 逐檔一致、0 mismatch）、`figures/`（5 張稽核方圖:w09_fig01 decode×sampler 分解、fig02 加速 PSNR-vs-NFE、fig03 utility 矩陣 null、fig04 學習式 re-id、fig05 多病理 referee）、`tables/`（6 張 w09_tab＋2 張實作方 src）、`data/`（11 筆實作方原始 json）、`docs/`（9 筆實作方報告/腳本快照）、`scripts/`（make_figures.py＋collect_assets.py,經 `scripts/run_cfg_ddim.sh` 可重生）。本週為 CODE/核對,`data/` 僅實作方 `w09_src_*`、無稽核方獨立重算 `w09_aud_*`。
+- 原始 artifact（多為可重現、不入庫）:`paper_assets/{rq4_redo,exact_inv_sweep,deploy_dpm_sweep,classification_utility,t2bb_dpm_parity,hf_fidelity,referee_pathology,quality_speed}/`;已 commit 的權威表:`paper_assets/tables/table_t2bb_learned_attack_dpm_deploy.*`、`paper_assets/referee_pathology/referee_pathology_n400.json`。
+- 重新產生:各腳本經 `scripts/run_cfg_ddim.sh`（`rq4_redo_decode_sampler`、`exact_inv_sweep`、`classification_utility_anon`/`_finetune`/`_external`、`t2bb_learned_attack`＋`t2bb_invert_cache`、`hf_fidelity_check`、`referee_pathology_check`,seed 1911）。
+- 詳細稽核紀錄:`AUDIT.md`（AUD-20261027-01、AUD-20261028-01、AUD-20261028-02、AUD-20261029-01）。

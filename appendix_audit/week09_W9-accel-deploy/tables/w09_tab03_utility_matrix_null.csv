@@ -1,0 +1,9 @@
+encoder,condition,auroc,auroc_ci95,acc,n_splits,n_images,source
+densenet121_imagenet,train_real__test_real,0.9157,0.0051,0.8352,50,400,paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json; AUD-20261029-01
+densenet121_imagenet,train_real__test_recovered,0.9087,0.0058,0.8358,50,400,paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json; AUD-20261029-01
+densenet121_imagenet,train_real__test_anon,0.5008,0.0114,0.5025,50,400,paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json; AUD-20261029-01
+densenet121_imagenet,train_anon__test_anon,0.507,0.0129,0.5055,50,400,paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json; AUD-20261029-01
+rad_dino,train_real__test_real,0.9368,0.0043,0.8675,50,400,paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json; AUD-20261029-01
+rad_dino,train_real__test_recovered,0.937,0.0044,0.8697,50,400,paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json; AUD-20261029-01
+rad_dino,train_real__test_anon,0.4968,0.0157,0.4995,50,400,paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json; AUD-20261029-01
+rad_dino,train_anon__test_anon,0.5254,0.0116,0.5235,50,400,paper_assets/classification_utility/anon_utility_dpm++_n200_s100_k50.json; AUD-20261029-01

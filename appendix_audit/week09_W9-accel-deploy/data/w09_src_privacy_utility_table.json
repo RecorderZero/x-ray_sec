@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "sampler": "dpm++",
+    "steps": 100,
+    "backward": "null (forward/backward aligned)",
+    "utility_per_class": 200,
+    "utility_test_n": 120,
+    "utility_n_splits": 50,
+    "utility_scheme": "S2fn",
+    "recon_psnr_db": 46.727,
+    "parity_sampler": "DPM++",
+    "parity_N": 100,
+    "parity_pairs": 20,
+    "parity_scheme": "S2",
+    "external_attacker": "Siamese ResNet-50 (ImageNet), emb128, |ea-eb| head, BCE (Packhauser 2022 arch, reimpl)",
+    "external_S2_top1": 0.05,
+    "external_S2_auc": 0.445,
+    "external_random_top1": 0.05,
+    "external_plaintext_top1": 0.15,
+    "external_plaintext_auc": 0.764,
+    "per_column_n": {
+      "pathology_utility": "per_class 200 (test 120/split x 50 patient-splits)",
+      "identity_linkage": "20 patient pairs (gallery+query), scheme S2",
+      "external_reid": "Siamese ResNet-50 (ImageNet), emb128, |ea-eb| head, BCE (Packhauser 2022 arch, reimpl) Siamese, latent ciphertext"
+    },
+    "note": "Same DPM++ N=100 pipeline (null backward) and same frozen encoders throughout. Pathology (utility) uses the S2fn deployment recovery; identity linkage is scored on the S2 scheme (same per-image-nonce orthogonal family; S2fn is its fixed-norm fidelity variant, both yield noise-like anon). Pathology AUROC near real after recovery; identity linkage AUC near random (0.5) for S2; external latent-ciphertext attacker S2 at random top-1. P (no encryption) is the identity-leak control. Per-column n differs by source and is stated above (AF-047): utility n is per-class x splits, identity n is patient pairs."
+  },
+  "rows": [
+    {
+      "encoder": "DenseNet-121 (ImageNet)",
+      "pathology_real_auroc": 0.9157,
+      "pathology_recovered_auroc": 0.9087,
+      "pathology_anon_auroc": 0.5008,
+      "identity_P_link_auc": 0.8112,
+      "identity_S2_link_auc": 0.4812
+    },
+    {
+      "encoder": "rad-dino (CXR)",
+      "pathology_real_auroc": 0.9368,
+      "pathology_recovered_auroc": 0.937,
+      "pathology_anon_auroc": 0.4968,
+      "identity_P_link_auc": 0.9766,
+      "identity_S2_link_auc": 0.5129
+    }
+  ]
+}

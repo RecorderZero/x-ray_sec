@@ -1,0 +1,10 @@
+metric,recovered_mean,recovered_p05,recovered_min,C1_x0_vs_x0,C3_anon_vs_x0,source
+RAPSD retention (high band 0.5-1.0),0.96404,0.93,0.76365,1.0,6.75578,paper_assets/hf_fidelity/hf_fidelity.json; n=200; AUD-20261029-01
+RAPSD retention (mid band),0.99753,0.98656,0.94159,1.0,1.44537,paper_assets/hf_fidelity/hf_fidelity.json; n=200; AUD-20261029-01
+RAPSD retention (low band),0.99901,0.99764,0.99633,1.0,0.02406,paper_assets/hf_fidelity/hf_fidelity.json; n=200; AUD-20261029-01
+HP-SSIM,0.98767,0.97389,0.9517,1.0,0.06751,paper_assets/hf_fidelity/hf_fidelity.json; n=200; AUD-20261029-01
+Sobel gradient r,0.99696,0.99242,0.96687,1.0,0.00578,paper_assets/hf_fidelity/hf_fidelity.json; n=200; AUD-20261029-01
+Laplacian variance ratio,0.89621,0.81134,0.69328,1.0,21.1721,paper_assets/hf_fidelity/hf_fidelity.json; n=200; AUD-20261029-01
+32x32 block HF retention (mean),0.9461,0.91539,0.84715,1.0,17.18887,paper_assets/hf_fidelity/hf_fidelity.json; n=200; AUD-20261029-01
+32x32 block HF retention (p05),0.79898,0.67228,0.43201,1.0,1.68933,paper_assets/hf_fidelity/hf_fidelity.json; n=200; AUD-20261029-01
+32x32 block HF retention (min; worst patch),0.65043,0.39698,0.08502,1.0,0.87669,paper_assets/hf_fidelity/hf_fidelity.json; n=200; AUD-20261029-01

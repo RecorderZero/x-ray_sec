@@ -1,0 +1,4 @@
+channel,victim_auc,victim_top1,random_top1,shadow_val_auc,shadow_val_top1,train_patients,victim_pairs,source
+p_deploy,0.635,0.25,0.05,0.7286,0.175,1000,20,paper_assets/tables/table_t2bb_learned_attack_dpm_deploy.json; AUD-20261029-01
+s2_anon_deploy,0.4304,0.1,0.05,0.5624,0.125,1000,20,paper_assets/tables/table_t2bb_learned_attack_dpm_deploy.json; AUD-20261029-01
+s2_anon,0.4396,0.05,0.05,0.5232,0.025,1000,20,paper_assets/tables/table_t2bb_learned_attack_dpm_deploy.json; AUD-20261029-01

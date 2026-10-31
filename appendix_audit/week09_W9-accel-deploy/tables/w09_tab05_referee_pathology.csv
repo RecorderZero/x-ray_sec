@@ -1,0 +1,25 @@
+model,pathology,n_pos,auc_real,auc_recovered,auc_anon,delta_rec_minus_real,source
+densenet121-res224-all,Enlarged Cardiomediastinum,272,0.8742,0.8764,0.5309,0.0022,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Cardiomegaly,231,0.8578,0.8549,0.5323,-0.0029,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Lung Opacity,282,0.9107,0.9144,0.5648,0.0037,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Lung Lesion,54,0.664,0.661,0.4694,-0.003,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Edema,175,0.8278,0.822,0.5637,-0.0058,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Consolidation,209,0.8645,0.8659,0.5077,0.0014,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Pneumonia,86,0.6752,0.6558,0.4809,-0.0194,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Atelectasis,221,0.8712,0.8713,0.5477,0.0001,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Pneumothorax,44,0.7483,0.737,0.4749,-0.0113,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Effusion,184,0.8892,0.8905,0.5597,0.0013,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,Fracture,110,0.5035,0.5018,0.5129,-0.0017,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-all,MACRO,,0.7897,0.7865,0.5223,-0.0032,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Enlarged Cardiomediastinum,272,0.86,0.8611,0.4531,0.0011,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Cardiomegaly,231,0.8723,0.8731,0.4755,0.0008,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Lung Opacity,282,0.8924,0.8938,0.4882,0.0014,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Lung Lesion,54,0.6124,0.611,0.4563,-0.0014,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Edema,175,0.8273,0.8272,0.4867,-0.0001,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Consolidation,209,0.8734,0.8737,0.4878,0.0003,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Pneumonia,86,0.6291,0.6287,0.413,-0.0004,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Atelectasis,221,0.8371,0.838,0.5077,0.0009,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Pneumothorax,44,0.7587,0.7566,0.5145,-0.0021,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Effusion,184,0.8698,0.8687,0.5235,-0.0011,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,Fracture,110,0.5913,0.5892,0.5044,-0.0021,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01
+densenet121-res224-chex,MACRO,,0.784,0.7837,0.4828,-0.0003,paper_assets/referee_pathology/referee_pathology_n400.json; AUD-20261029-01

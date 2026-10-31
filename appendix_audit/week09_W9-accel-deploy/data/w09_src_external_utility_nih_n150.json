@@ -1,0 +1,41 @@
+{
+  "seed": 1911,
+  "design": "A: No Finding (y0) vs Pleural Effusion/Effusion (y1), binary",
+  "task": "external-dataset generalization of the train-real utility probe (no retraining)",
+  "train_domain": "CheXpert (frontal, e1 preprocess)",
+  "external_domain": "NIH ChestX-ray14",
+  "per_class": 150,
+  "chexpert_n": 300,
+  "nih_n": 300,
+  "nih_available": {
+    "0": 150,
+    "1": 150
+  },
+  "probe": "StandardScaler + LogisticRegression, frozen features",
+  "results": {
+    "densenet121_imagenet": {
+      "chexpert_to_chexpert_heldout": {
+        "acc": 0.7889,
+        "auroc": 0.9002,
+        "f1": 0.8041
+      },
+      "chexpert_to_nih": {
+        "acc": 0.73,
+        "auroc": 0.8226,
+        "f1": 0.7055
+      }
+    },
+    "rad_dino": {
+      "chexpert_to_chexpert_heldout": {
+        "acc": 0.8111,
+        "auroc": 0.9022,
+        "f1": 0.8283
+      },
+      "chexpert_to_nih": {
+        "acc": 0.7667,
+        "auroc": 0.8362,
+        "f1": 0.7866
+      }
+    }
+  }
+}

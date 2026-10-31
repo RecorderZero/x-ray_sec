@@ -1,0 +1,108 @@
+{
+  "seed": 1911,
+  "smoke": false,
+  "sampler": "DPM++",
+  "N": 100,
+  "pairs": 20,
+  "s2_key_sha256": "9cc69659b74862f4d2568306b29eb914c0c0e67d9753b1ca7b1dde3bfd18aafd",
+  "s2_rounds": 1,
+  "s2_use_permutation": false,
+  "results": [
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "P",
+      "encoder": "densenet121_imagenet",
+      "pairs": 20,
+      "top1": 0.65,
+      "auc": 0.8112,
+      "random_top1": 0.05,
+      "null_auc_mean": 0.4995,
+      "auc_permutation_p": 0.0002
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "S0",
+      "encoder": "densenet121_imagenet",
+      "pairs": 20,
+      "top1": 0.0,
+      "auc": 0.4316,
+      "random_top1": 0.05,
+      "null_auc_mean": 0.5,
+      "auc_permutation_p": 0.9448
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "S1",
+      "encoder": "densenet121_imagenet",
+      "pairs": 20,
+      "top1": 0.05,
+      "auc": 0.4867,
+      "random_top1": 0.05,
+      "null_auc_mean": 0.4993,
+      "auc_permutation_p": 0.5883
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "S2",
+      "encoder": "densenet121_imagenet",
+      "pairs": 20,
+      "top1": 0.05,
+      "auc": 0.4812,
+      "random_top1": 0.05,
+      "null_auc_mean": 0.5003,
+      "auc_permutation_p": 0.6497
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "P",
+      "encoder": "rad_dino",
+      "pairs": 20,
+      "top1": 0.8,
+      "auc": 0.9766,
+      "random_top1": 0.05,
+      "null_auc_mean": 0.4993,
+      "auc_permutation_p": 0.0002
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "S0",
+      "encoder": "rad_dino",
+      "pairs": 20,
+      "top1": 0.05,
+      "auc": 0.5371,
+      "random_top1": 0.05,
+      "null_auc_mean": 0.4996,
+      "auc_permutation_p": 0.1392
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "S1",
+      "encoder": "rad_dino",
+      "pairs": 20,
+      "top1": 0.05,
+      "auc": 0.5091,
+      "random_top1": 0.05,
+      "null_auc_mean": 0.4998,
+      "auc_permutation_p": 0.3781
+    },
+    {
+      "sampler": "DPM++",
+      "N": 100,
+      "scheme": "S2",
+      "encoder": "rad_dino",
+      "pairs": 20,
+      "top1": 0.15,
+      "auc": 0.5129,
+      "random_top1": 0.05,
+      "null_auc_mean": 0.4994,
+      "auc_permutation_p": 0.3439
+    }
+  ]
+}

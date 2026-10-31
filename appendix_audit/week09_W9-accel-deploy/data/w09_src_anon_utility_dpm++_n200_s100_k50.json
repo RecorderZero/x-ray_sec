@@ -1,0 +1,101 @@
+{
+  "seed": 1911,
+  "design": "A: No Finding (y0) vs Pleural Effusion (y1), binary",
+  "split": "patient-disjoint; one image per patient",
+  "per_class": 200,
+  "n_images": 400,
+  "n_splits": 50,
+  "test_frac": 0.3,
+  "train_n": 280,
+  "test_n": 120,
+  "steps": 100,
+  "scheme": "S2fn",
+  "sampler": "dpm++",
+  "render": "shared [0,1] 256x256 -> grayscale RGB for real/anon/recovered",
+  "pipeline": "aligned dpm++; B(E(F(x0))) anon; B(D(F(PNG(anon)))) recovered",
+  "probe": "StandardScaler + LogisticRegression, frozen features; 50 patient-disjoint split(s), mean & 95% CI",
+  "recon_psnr_vs_x0_db": {
+    "mean": 46.727,
+    "min": 36.191
+  },
+  "anon_psnr_vs_x0_db": {
+    "mean": 5.926
+  },
+  "generation_seconds": 2521.5,
+  "results": {
+    "densenet121_imagenet": {
+      "feat_dim": 1024,
+      "matrix": {
+        "train_real__test_real": {
+          "auroc": 0.9157,
+          "auroc_std": 0.0186,
+          "auroc_ci95": 0.0051,
+          "acc": 0.8352,
+          "f1": 0.8332,
+          "n_splits": 50
+        },
+        "train_real__test_anon": {
+          "auroc": 0.5008,
+          "auroc_std": 0.0412,
+          "auroc_ci95": 0.0114,
+          "acc": 0.5025,
+          "f1": 0.5565,
+          "n_splits": 50
+        },
+        "train_real__test_recovered": {
+          "auroc": 0.9087,
+          "auroc_std": 0.0209,
+          "auroc_ci95": 0.0058,
+          "acc": 0.8358,
+          "f1": 0.8299,
+          "n_splits": 50
+        },
+        "train_anon__test_anon": {
+          "auroc": 0.507,
+          "auroc_std": 0.0466,
+          "auroc_ci95": 0.0129,
+          "acc": 0.5055,
+          "f1": 0.5067,
+          "n_splits": 50
+        }
+      }
+    },
+    "rad_dino": {
+      "feat_dim": 768,
+      "matrix": {
+        "train_real__test_real": {
+          "auroc": 0.9368,
+          "auroc_std": 0.0155,
+          "auroc_ci95": 0.0043,
+          "acc": 0.8675,
+          "f1": 0.8678,
+          "n_splits": 50
+        },
+        "train_real__test_anon": {
+          "auroc": 0.4968,
+          "auroc_std": 0.0566,
+          "auroc_ci95": 0.0157,
+          "acc": 0.4995,
+          "f1": 0.3981,
+          "n_splits": 50
+        },
+        "train_real__test_recovered": {
+          "auroc": 0.937,
+          "auroc_std": 0.0158,
+          "auroc_ci95": 0.0044,
+          "acc": 0.8697,
+          "f1": 0.8678,
+          "n_splits": 50
+        },
+        "train_anon__test_anon": {
+          "auroc": 0.5254,
+          "auroc_std": 0.042,
+          "auroc_ci95": 0.0116,
+          "acc": 0.5235,
+          "f1": 0.5234,
+          "n_splits": 50
+        }
+      }
+    }
+  }
+}
