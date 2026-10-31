@@ -80,8 +80,14 @@ def git_head() -> dict:
             return subprocess.check_output(args, cwd=Path(__file__).resolve().parents[1]).decode().strip()
         except Exception:
             return ""
+    # dirty reflects TRACKED modifications only (AF-051): untracked artifacts
+    # (audit/, refpaper/, out-of-tree outputs) are legitimately uncommitted and
+    # must not flag a deterministic run as dirty.  `dirty_tracked_files` records
+    # which tracked files were uncommitted at run time for provenance.
+    tracked = _run(["git", "status", "--porcelain=v1", "--untracked-files=no"])
     return {"commit": _run(["git", "rev-parse", "HEAD"]),
-            "dirty": bool(_run(["git", "status", "--porcelain"]))}
+            "dirty": bool(tracked),
+            "dirty_tracked_files": tracked}
 
 
 def main() -> None:

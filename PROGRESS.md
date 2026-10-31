@@ -3045,3 +3045,9 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * [限制/AF-049] §4.7(b′) 補鎖：plaintext 天花板僅 0.764、無 CI、pathology n=36 單 split vs 我方 n=400/50splits 嚴謹度不對稱、PriCheXy 不遷移為預期 → **唯一站得住軸＝可逆性＋攻擊器無關性，0.445 vs 0.738 不作隱私強度對比（apples-to-oranges）**。
 * [限制/AF-048] §4.1 補：三因分解唯一來源仍 n=4 dev（非 N=200）；S2fn≥P 之推定機制（固定 norm 白化 → range-PNG 量化相對誤差更小），尚未以 N=200 量化。
 * [待辦/AF-049/050/051] PriCheXy 對照與未提交 re-freeze 在 AF-049/050/051 關閉前不得進論文正式表格；本條補登 PROGRESS（回應 AF-051 之只增紀錄缺口）。
+
+## 2026-10-31 · Track P2 · AF-051 收尾（還原 WIP + dirty-check 修正 + provenance）
+* [事實] 還原前一 session 遺留且 buggy（P recon 69.42 dB 超天花板）的未提交 WIP：`deploy_dpm_sweep/sweep.{csv,json}`、`t2bb_dpm_parity/parity.json` → `git checkout HEAD`（經使用者裁決）。大綱 §4.3 引用的是 committed 值，不受影響。
+* [事實] 提交 `privacy_utility_table.{json,md}`（CU-4 來源，原 untracked）。
+* [修正] `rq4_formal_redo.py` 的 git.dirty 判定改用 `--untracked-files=no`（原本把 `audit/`/`refpaper/` 等正當未追蹤檔也算 → 永遠 dirty 的 bug），並新增 `dirty_tracked_files` 欄。
+* [限制] manifest 真正「非 dirty」無法達成：尚有 3 個**不相干**已追蹤 M（`.gitignore`、`README.md`、`q11_localization_parity.py`，非我這輪、與保真 pipeline 無關）。保真**程式碼本身乾淨**、數字確定可重現；provenance 記於 `rq4_formal_dphd/git_dirty_provenance.md`（稽核方認可的「補記 dirty diff」路徑）。
