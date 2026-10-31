@@ -199,6 +199,9 @@ def main() -> None:
     ap.add_argument("--patience", type=int, default=6)
     ap.add_argument("--schemes", nargs="+", default=["S0", "S1", "S2"])
     ap.add_argument("--storage", default="range_preserving")
+    ap.add_argument("--external-anon-dir", type=Path, default=None,
+                    help="dir of <sample_id>.png anonymized by an external method (e.g. PriCheXy); "
+                         "adds a victim condition scored by the same trained attacker")
     ap.add_argument("--out", type=Path, default=ROOT / "paper_assets/tables/table_reid_external.csv")
     ap.add_argument("--json-out", type=Path, default=None)
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -285,6 +288,16 @@ def main() -> None:
         res.update(condition=f"S2phd_{args.storage}", scheme="S2phd", storage=args.storage)
         results.append(res)
         print(f"S2phd(P.H.D, no post)_{args.storage}  Top-1={res['top1']:.3f} AUC={res['auc']:.3f}", flush=True)
+
+    # External method's anonymized images (e.g. PriCheXy-Net), scored by the SAME
+    # trained attacker -> same-data, same-attacker comparison (not a cipher).
+    if args.external_anon_dir is not None:
+        ext_inputs = [u8_to_input(load_gray_u8(str(args.external_anon_dir / f"{r['sample_id']}.png")))
+                      for r in victim]
+        res = evaluate(score_matrix(net, ext_inputs, device), v_pid, v_role, rng())
+        res.update(condition=f"external_{args.external_anon_dir.name}", scheme="external", storage="external_png")
+        results.append(res)
+        print(f"external({args.external_anon_dir.name})  Top-1={res['top1']:.3f} AUC={res['auc']:.3f}", flush=True)
 
     cols = ["condition", "scheme", "storage", "top1", "top5", "auc", "neg_control_top1", "random_top1"]
     args.out.parent.mkdir(parents=True, exist_ok=True)

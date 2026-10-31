@@ -1,0 +1,11 @@
+{
+  "method": "PriCheXy-Net (mu=0.01, flow-field, GPL out-of-tree, cross-dataset inference)",
+  "encoder": "densenet121_imagenet frozen probe (ours)",
+  "seed": 1911,
+  "n": 120,
+  "n_train": 84,
+  "n_test": 36,
+  "real_to_real_auroc": 0.9228,
+  "real_to_anon_auroc": 0.8951,
+  "note": "anon = PriCheXy-anonymized test images (usable CXR, no key); compare our S2 anon=chance."
+}
