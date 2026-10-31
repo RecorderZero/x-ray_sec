@@ -118,28 +118,36 @@ def fig_sampler_time() -> None:
     Source: deploy_dpm_sweep/sweep.csv (scheme S2fn = deployment)."""
     rows = [r for r in read_rows(ROOT / "paper_assets" / "deploy_dpm_sweep" / "sweep.csv")
             if r["scheme"] == "S2fn"]
+    def curve(name):
+        return sorted([(int(r["N"]), float(r["mean_pipeline_seconds"]))
+                       for r in rows if r["sampler"] == name])
+    ddim, dpmpp = curve("DDIM"), curve("DPM++")
+    ns = [n for n, _ in ddim]
     fig, ax = plt.subplots(figsize=(7.6, 4.8))
-    # DDIM solid-thick grey UNDER, DPM++ dashed blue ON TOP -> shows they coincide.
-    for name, color, mk, ls, lw in [("DDIM", C_GREY, "o", "-", 4.5), ("DPM++", C_OURS, "D", "--", 2.0)]:
-        pts = sorted([(int(r["N"]), float(r["mean_pipeline_seconds"]))
-                      for r in rows if r["sampler"] == name])
-        ax.plot([n for n, _ in pts], [s for _, s in pts], ls, marker=mk, color=color,
-                label=f"{name} (S2fn, 4-pass)", lw=lw, ms=6)
-    ns = sorted({int(r["N"]) for r in rows})
+    # 4-pass time is NFE-bound -> all three coincide; layer styles so all show.
+    # DDIM & DPM++ measured (deploy_dpm_sweep); BDIA inferred (NFE==DDIM, code-verified).
+    ax.plot(ns, [s for _, s in ddim], "-", marker="o", color=C_GREY, lw=5.0, ms=7,
+            label="DDIM (measured)")
+    ax.plot(ns, [s for _, s in ddim], "--", marker="s", color=C_PRED, lw=2.6, ms=6,
+            label="BDIA (NFE==DDIM, inferred)")
+    ax.plot(ns, [s for _, s in dpmpp], ":", marker="D", color=C_OURS, lw=2.0, ms=6,
+            label="DPM++ (measured)")
+    for n, s in dpmpp:
+        ax.annotate(f"{s:.1f}s", (n, s), textcoords="offset points", xytext=(0, 10),
+                    ha="center", fontsize=8.3, color="#333")
     ax.axvline(100, color=C_GOOD, ls=":", lw=1.5)
-    ax.annotate("deployment: N=100\n~7.5 s / image (4-pass)", (100, 21),
-                color=C_GOOD, fontsize=9, ha="center",
-                bbox=dict(boxstyle="round", fc="white", ec=C_GOOD, alpha=0.95))
-    ax.text(0.30, 0.74, "time ≈ linear in N, sampler-independent (NFE-bound):\n"
-            "DDIM & DPM++ coincide. DPM++'s win = same PSNR at\n"
-            "fewer N (see PSNR figure), not faster per-step.",
-            transform=ax.transAxes, va="top", fontsize=8.2, color="#555",
+    ax.annotate("deployment N=100 ≈ 7.5 s", (108, 33), color=C_GOOD, fontsize=9.5,
+                ha="left", bbox=dict(boxstyle="round", fc="white", ec=C_GOOD, alpha=0.95))
+    ax.text(0.03, 0.62, "time is NFE-bound → all 3 samplers coincide\n"
+            "(DDIM≈DPM++ measured to <0.01 s; BDIA NFE==DDIM).\n"
+            "DPM++'s win = same PSNR at fewer N (fig 4.2-1).",
+            transform=ax.transAxes, va="top", fontsize=8.0, color="#555",
             bbox=dict(boxstyle="round,pad=0.3", fc="#f6f8fa", ec="#ccc"))
     ax.set_xscale("log"); ax.set_xticks(ns); ax.set_xticklabels([str(n) for n in ns])
     ax.set_xlabel("inversion steps N (= model evals per pass)")
     ax.set_ylabel("4-pass pipeline wall-clock (s / image)")
-    ax.set_title("4-pass deployment time vs N (DDIM ≈ DPM++; source deploy_dpm_sweep)", fontsize=11)
-    ax.legend(loc="upper left", fontsize=9)
+    ax.set_title("4-pass pipeline time vs N — DDIM / BDIA / DPM++ (NFE-bound, coincide)", fontsize=11)
+    ax.legend(loc="upper left", fontsize=8.5)
     ax.grid(alpha=0.3)
     fig.tight_layout()
     out = ASSETS / "fig_sampler_time.png"
