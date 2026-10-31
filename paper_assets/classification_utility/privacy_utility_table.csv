@@ -1,3 +1,3 @@
 encoder,pathology_real_auroc,pathology_recovered_auroc,pathology_anon_auroc,identity_P_link_auc,identity_S2_link_auc
-DenseNet-121 (ImageNet),0.9157,0.9087,0.5008,0.8112,0.4812
-rad-dino (CXR),0.9368,0.937,0.4968,0.9766,0.5129
+DenseNet-121 (ImageNet),0.9157,0.9087,0.5008,0.8212,0.3811
+rad-dino (CXR),0.9368,0.937,0.4968,0.9753,0.4857

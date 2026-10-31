@@ -31,16 +31,16 @@
       "pathology_real_auroc": 0.9157,
       "pathology_recovered_auroc": 0.9087,
       "pathology_anon_auroc": 0.5008,
-      "identity_P_link_auc": 0.8112,
-      "identity_S2_link_auc": 0.4812
+      "identity_P_link_auc": 0.8212,
+      "identity_S2_link_auc": 0.3811
     },
     {
       "encoder": "rad-dino (CXR)",
       "pathology_real_auroc": 0.9368,
       "pathology_recovered_auroc": 0.937,
       "pathology_anon_auroc": 0.4968,
-      "identity_P_link_auc": 0.9766,
-      "identity_S2_link_auc": 0.5129
+      "identity_P_link_auc": 0.9753,
+      "identity_S2_link_auc": 0.4857
     }
   ]
 }

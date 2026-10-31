@@ -3051,3 +3051,9 @@ S2 定義為：256-bit random master key（password mode 才使用 memory-hard K
 * [事實] 提交 `privacy_utility_table.{json,md}`（CU-4 來源，原 untracked）。
 * [修正] `rq4_formal_redo.py` 的 git.dirty 判定改用 `--untracked-files=no`（原本把 `audit/`/`refpaper/` 等正當未追蹤檔也算 → 永遠 dirty 的 bug），並新增 `dirty_tracked_files` 欄。
 * [限制] manifest 真正「非 dirty」無法達成：尚有 3 個**不相干**已追蹤 M（`.gitignore`、`README.md`、`q11_localization_parity.py`，非我這輪、與保真 pipeline 無關）。保真**程式碼本身乾淨**、數字確定可重現；provenance 記於 `rq4_formal_dphd/git_dirty_provenance.md`（稽核方認可的「補記 dirty diff」路徑）。
+
+## 2026-10-31 · Track P2 · AF-051 續（AUD-...-03）：privacy_utility_table 與 parity 一致化
+* [更正] 前一次 commit `4add767` 把 `parity.json` 的 9cc6 run 連同 `deploy_dpm_sweep` 一起還原並稱「buggy」——**不精確**：69.42 dB 的 bug 只在 `deploy_dpm_sweep/sweep`，`parity.json` 的 9cc6 只是**換金鑰的另一次 run**（非 buggy）。但 `privacy_utility_table`（§4.5 CU-4，commit `6b75848`）建基於 9cc6，與還原後的 committed `parity.json`(dde0) 不一致（densenet S2 身份連結 0.4812 vs 0.3811，差 0.10）。
+* [修正] 採稽核方選項 (a)：**以權威 committed dde0 run 重生 `privacy_utility_table`**（`build_privacy_utility_table` 直接讀 `parity.json`）→ 兩檔一致指向 dde0：densenet 身份 P 0.821 / S2 **0.381**、rad-dino P 0.975 / S2 **0.486**。
+* [結論] **「S2 身份連結 ≈ 隨機」定性結論不變**（0.381/0.486 皆遠低於 P 且在 20-pair 無 CI 下屬隨機帶）；§4.5/CU-4 文字只引「S2~隨機」仍成立。
+* [限制] 兩份部署 RQ4 manifest 仍字面 dirty=True（產生早於 `4add767` 的 check 修正）；稽核方已降為 DOC advisory，認可 provenance note，建議論文最終凍結時以修正後程式重生 manifest。

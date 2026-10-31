@@ -2,8 +2,8 @@
 
 | Encoder | Pathology real→real | Pathology real→**recovered** | Pathology real→anon | Identity P (link AUC) | Identity **S2** (link AUC) |
 |---|---:|---:|---:|---:|---:|
-| DenseNet-121 (ImageNet) | 0.916 | **0.909** | 0.501 | 0.811 | **0.481** |
-| rad-dino (CXR) | 0.937 | **0.937** | 0.497 | 0.977 | **0.513** |
+| DenseNet-121 (ImageNet) | 0.916 | **0.909** | 0.501 | 0.821 | **0.381** |
+| rad-dino (CXR) | 0.937 | **0.937** | 0.497 | 0.975 | **0.486** |
 
 External attacker (Siamese ResNet-50 (ImageNet), emb128, |ea-eb| head, BCE (Packhauser 2022 arch, reimpl)): plaintext top-1 0.15 (AUC 0.764) → **S2 top-1 0.05** (AUC 0.445; random 0.05).
 
