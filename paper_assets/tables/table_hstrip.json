@@ -5,7 +5,9 @@
   "d": 65536,
   "key_source": "d7 FIXTURE_KEY",
   "cache": "/data2/paper/artifacts/t2bb_latent_cache/latents",
-  "finding": "bare HD (H.D) is H-strip-vulnerable: the public self-inverse H is removed and |z| recovered; D.H.D and D.P.H.D keep a keyed op after H and stay at random.",
+  "random_floor": 0.035731,
+  "metric_note": "sortmag distance to true |z|: 0 = exact recovery (leak); random_floor = independent same-norm Gaussian (failed recovery). Scale is compressed because sort() aligns same-distribution vectors. This table only detects EXACT |z| recovery (bare HD); safe variants' privacy strength = re-id/linkage AUC, not this.",
+  "finding": "bare HD (H.D) is H-strip-vulnerable: the public self-inverse H is removed and |z| recovered; D.H.D and D.P.H.D keep a keyed op after H and stay at the random floor.",
   "rows": [
     {
       "variant": "bare_HD",
@@ -30,6 +32,14 @@
       "naive_sortmag_retention_mean": 0.036058,
       "vulnerable": false,
       "note": "retention~0 => |z| magnitudes recovered after H-strip => sorted-mag linkage reopens"
+    },
+    {
+      "variant": "random_floor",
+      "n": 8,
+      "hstrip_sortmag_retention_mean": 0.035731,
+      "naive_sortmag_retention_mean": 0.035731,
+      "vulnerable": false,
+      "note": "reference: independent same-norm Gaussian vs |u| (0=exact match, this=random floor)"
     }
   ]
 }

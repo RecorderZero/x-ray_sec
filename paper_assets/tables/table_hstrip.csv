@@ -2,3 +2,4 @@ variant,n,hstrip_sortmag_retention_mean,naive_sortmag_retention_mean,vulnerable,
 bare_HD,8,0.0,0.036058,True,retention~0 => |z| magnitudes recovered after H-strip => sorted-mag linkage reopens
 D.H.D,8,0.035405,0.036058,False,retention~0 => |z| magnitudes recovered after H-strip => sorted-mag linkage reopens
 D.P.H.D,8,0.034787,0.036058,False,retention~0 => |z| magnitudes recovered after H-strip => sorted-mag linkage reopens
+random_floor,8,0.035731,0.035731,False,"reference: independent same-norm Gaussian vs |u| (0=exact match, this=random floor)"

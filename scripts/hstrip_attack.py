@@ -82,6 +82,19 @@ def main() -> None:
         us.append(u)
         nonces.append(nonce_for(f"hstrip::{i}"))
 
+    # random floor: sorted-magnitude distance of an INDEPENDENT same-norm Gaussian
+    # to |u|.  This is the baseline a *failed* recovery lands on -> shows the "safe"
+    # ~0.037 is the random floor, not partial leakage (the metric's scale is
+    # compressed because sort() aligns two same-distribution vectors).
+    g = torch.Generator().manual_seed(SEED)
+    floor = []
+    for u in us:
+        w = torch.randn(u.numel(), generator=g, dtype=u.dtype)
+        w = w * (u.reshape(-1).norm() / w.norm())
+        floor.append(sortmag_retention(w, u))
+    random_floor = round(float(np.mean(floor)), 6)
+    print(f"random_floor (independent same-norm Gaussian vs |u|) = {random_floor:.4f}")
+
     variants = {
         "bare_HD":   dict(bare=True),
         "D.H.D":     dict(rounds=1, perm=False),
@@ -109,6 +122,12 @@ def main() -> None:
         rows.append(row)
         print(f"{name:10s} H-strip retention={row['hstrip_sortmag_retention_mean']:.4f} "
               f"naive={row['naive_sortmag_retention_mean']:.4f} vulnerable={row['vulnerable']}")
+    rows.append({
+        "variant": "random_floor", "n": len(us),
+        "hstrip_sortmag_retention_mean": random_floor,
+        "naive_sortmag_retention_mean": random_floor, "vulnerable": False,
+        "note": "reference: independent same-norm Gaussian vs |u| (0=exact match, this=random floor)",
+    })
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     cols = ["variant", "n", "hstrip_sortmag_retention_mean", "naive_sortmag_retention_mean", "vulnerable", "note"]
@@ -118,8 +137,13 @@ def main() -> None:
     json_out.write_text(json.dumps({
         "schema_version": 1, "task_id": "H-strip", "seed": SEED, "d": D,
         "key_source": "d7 FIXTURE_KEY", "cache": str(args.cache_dir),
+        "random_floor": random_floor,
+        "metric_note": ("sortmag distance to true |z|: 0 = exact recovery (leak); random_floor = "
+                        "independent same-norm Gaussian (failed recovery). Scale is compressed because "
+                        "sort() aligns same-distribution vectors. This table only detects EXACT |z| "
+                        "recovery (bare HD); safe variants' privacy strength = re-id/linkage AUC, not this."),
         "finding": ("bare HD (H.D) is H-strip-vulnerable: the public self-inverse H is removed "
-                    "and |z| recovered; D.H.D and D.P.H.D keep a keyed op after H and stay at random."),
+                    "and |z| recovered; D.H.D and D.P.H.D keep a keyed op after H and stay at the random floor."),
         "rows": rows,
     }, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {args.out}")
