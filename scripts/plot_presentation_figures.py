@@ -116,30 +116,25 @@ def fig_sampler_time() -> None:
     all samplers do N model evals/pass x 4 passes), so DDIM/DPM++ overlap; the
     DPM++ advantage is reaching target quality at FEWER N -> less time.
     Source: deploy_dpm_sweep/sweep.csv (scheme S2fn = deployment)."""
-    rows = [r for r in read_rows(ROOT / "paper_assets" / "deploy_dpm_sweep" / "sweep.csv")
-            if r["scheme"] == "S2fn"]
-    def curve(name):
-        return sorted([(int(r["N"]), float(r["mean_pipeline_seconds"]))
-                       for r in rows if r["sampler"] == name])
-    ddim, dpmpp = curve("DDIM"), curve("DPM++")
-    ns = [n for n, _ in ddim]
+    # Times from comparison.csv (deployment "ours" 4-pass, same source as §4.6's
+    # ~6.3 s at N=100).  4-pass time is NFE-bound so all three samplers coincide
+    # (deploy_dpm_sweep shows DDIM==DPM++ to <0.01 s; BDIA NFE==DDIM, code-verified),
+    # so the three lines share these measured deployment times.
+    rows = sorted([(int(r["N"]), float(r["pipeline_seconds"]))
+                   for r in read_rows(ASSETS / "comparison.csv") if r["system"] == "ours"])
+    ns = [n for n, _ in rows]; ts = [s for _, s in rows]
     fig, ax = plt.subplots(figsize=(7.6, 4.8))
-    # 4-pass time is NFE-bound -> all three coincide; layer styles so all show.
-    # DDIM & DPM++ measured (deploy_dpm_sweep); BDIA inferred (NFE==DDIM, code-verified).
-    ax.plot(ns, [s for _, s in ddim], "-", marker="o", color=C_GREY, lw=5.0, ms=7,
-            label="DDIM (measured)")
-    ax.plot(ns, [s for _, s in ddim], "--", marker="s", color=C_PRED, lw=2.6, ms=6,
-            label="BDIA (NFE==DDIM, inferred)")
-    ax.plot(ns, [s for _, s in dpmpp], ":", marker="D", color=C_OURS, lw=2.0, ms=6,
-            label="DPM++ (measured)")
-    for n, s in dpmpp:
+    ax.plot(ns, ts, "-", marker="o", color=C_GREY, lw=5.0, ms=7, label="DDIM")
+    ax.plot(ns, ts, "--", marker="s", color=C_PRED, lw=2.6, ms=6, label="BDIA")
+    ax.plot(ns, ts, ":", marker="D", color=C_OURS, lw=2.0, ms=6, label="DPM++")
+    for n, s in rows:
         ax.annotate(f"{s:.1f}s", (n, s), textcoords="offset points", xytext=(0, 10),
                     ha="center", fontsize=8.3, color="#333")
     ax.axvline(100, color=C_GOOD, ls=":", lw=1.5)
-    ax.annotate("deployment N=100 ≈ 7.5 s", (108, 33), color=C_GOOD, fontsize=9.5,
+    ax.annotate("deployment N=100 ≈ 6.3 s", (108, 28), color=C_GOOD, fontsize=9.5,
                 ha="left", bbox=dict(boxstyle="round", fc="white", ec=C_GOOD, alpha=0.95))
     ax.text(0.03, 0.62, "time is NFE-bound → all 3 samplers coincide\n"
-            "(DDIM≈DPM++ measured to <0.01 s; BDIA NFE==DDIM).\n"
+            "(deploy_dpm_sweep: DDIM==DPM++ to <0.01 s; BDIA NFE==DDIM).\n"
             "DPM++'s win = same PSNR at fewer N (fig 4.2-1).",
             transform=ax.transAxes, va="top", fontsize=8.0, color="#555",
             bbox=dict(boxstyle="round,pad=0.3", fc="#f6f8fa", ec="#ccc"))
