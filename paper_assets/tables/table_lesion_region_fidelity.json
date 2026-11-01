@@ -1,0 +1,295 @@
+{
+  "schema_version": 1,
+  "task_id": "lesion-region-fidelity",
+  "seed": 1911,
+  "pathology": "Pleural Effusion",
+  "n": 40,
+  "steps": 100,
+  "scheme": "S2fn (deployment D.P.H.D)",
+  "psnr_global_mean": 45.965,
+  "psnr_in_mask_mean": 47.11,
+  "psnr_out_mask_mean": 45.917,
+  "in_minus_global_mean_db": 1.145,
+  "rows": [
+    {
+      "gt_key": "patient64545_study1_view1_frontal",
+      "mask_frac": 0.0384,
+      "psnr_global": 41.758,
+      "psnr_in_mask": 47.584,
+      "psnr_out_mask": 41.632
+    },
+    {
+      "gt_key": "patient64548_study1_view1_frontal",
+      "mask_frac": 0.0625,
+      "psnr_global": 44.802,
+      "psnr_in_mask": 48.757,
+      "psnr_out_mask": 44.632
+    },
+    {
+      "gt_key": "patient64552_study1_view1_frontal",
+      "mask_frac": 0.0731,
+      "psnr_global": 46.456,
+      "psnr_in_mask": 46.981,
+      "psnr_out_mask": 46.418
+    },
+    {
+      "gt_key": "patient64571_study1_view1_frontal",
+      "mask_frac": 0.0206,
+      "psnr_global": 45.591,
+      "psnr_in_mask": 46.234,
+      "psnr_out_mask": 45.578
+    },
+    {
+      "gt_key": "patient64577_study1_view1_frontal",
+      "mask_frac": 0.0269,
+      "psnr_global": 39.243,
+      "psnr_in_mask": 46.642,
+      "psnr_out_mask": 39.146
+    },
+    {
+      "gt_key": "patient64580_study1_view1_frontal",
+      "mask_frac": 0.17,
+      "psnr_global": 45.636,
+      "psnr_in_mask": 47.259,
+      "psnr_out_mask": 45.367
+    },
+    {
+      "gt_key": "patient64582_study1_view1_frontal",
+      "mask_frac": 0.0011,
+      "psnr_global": 46.789,
+      "psnr_in_mask": 44.988,
+      "psnr_out_mask": 46.792
+    },
+    {
+      "gt_key": "patient64583_study1_view1_frontal",
+      "mask_frac": 0.002,
+      "psnr_global": 47.861,
+      "psnr_in_mask": 46.733,
+      "psnr_out_mask": 47.863
+    },
+    {
+      "gt_key": "patient64596_study1_view1_frontal",
+      "mask_frac": 0.0499,
+      "psnr_global": 46.833,
+      "psnr_in_mask": 48.087,
+      "psnr_out_mask": 46.776
+    },
+    {
+      "gt_key": "patient64603_study1_view1_frontal",
+      "mask_frac": 0.0103,
+      "psnr_global": 46.196,
+      "psnr_in_mask": 48.595,
+      "psnr_out_mask": 46.177
+    },
+    {
+      "gt_key": "patient64609_study1_view1_frontal",
+      "mask_frac": 0.0055,
+      "psnr_global": 46.375,
+      "psnr_in_mask": 47.543,
+      "psnr_out_mask": 46.369
+    },
+    {
+      "gt_key": "patient64612_study1_view1_frontal",
+      "mask_frac": 0.0027,
+      "psnr_global": 45.608,
+      "psnr_in_mask": 41.205,
+      "psnr_out_mask": 45.629
+    },
+    {
+      "gt_key": "patient64613_study1_view1_frontal",
+      "mask_frac": 0.0136,
+      "psnr_global": 48.251,
+      "psnr_in_mask": 46.363,
+      "psnr_out_mask": 48.284
+    },
+    {
+      "gt_key": "patient64613_study1_view2_lateral",
+      "mask_frac": 0.0037,
+      "psnr_global": 46.22,
+      "psnr_in_mask": 46.567,
+      "psnr_out_mask": 46.219
+    },
+    {
+      "gt_key": "patient64614_study1_view1_frontal",
+      "mask_frac": 0.0274,
+      "psnr_global": 47.491,
+      "psnr_in_mask": 47.402,
+      "psnr_out_mask": 47.493
+    },
+    {
+      "gt_key": "patient64619_study1_view1_frontal",
+      "mask_frac": 0.0048,
+      "psnr_global": 46.375,
+      "psnr_in_mask": 45.365,
+      "psnr_out_mask": 46.381
+    },
+    {
+      "gt_key": "patient64620_study1_view1_frontal",
+      "mask_frac": 0.0808,
+      "psnr_global": 47.382,
+      "psnr_in_mask": 46.721,
+      "psnr_out_mask": 47.445
+    },
+    {
+      "gt_key": "patient64623_study1_view1_frontal",
+      "mask_frac": 0.0182,
+      "psnr_global": 46.28,
+      "psnr_in_mask": 46.519,
+      "psnr_out_mask": 46.275
+    },
+    {
+      "gt_key": "patient64630_study1_view1_frontal",
+      "mask_frac": 0.0694,
+      "psnr_global": 46.452,
+      "psnr_in_mask": 48.522,
+      "psnr_out_mask": 46.331
+    },
+    {
+      "gt_key": "patient64631_study1_view1_frontal",
+      "mask_frac": 0.0385,
+      "psnr_global": 46.871,
+      "psnr_in_mask": 45.627,
+      "psnr_out_mask": 46.929
+    },
+    {
+      "gt_key": "patient64633_study1_view1_frontal",
+      "mask_frac": 0.0495,
+      "psnr_global": 46.067,
+      "psnr_in_mask": 46.752,
+      "psnr_out_mask": 46.034
+    },
+    {
+      "gt_key": "patient64635_study1_view1_frontal",
+      "mask_frac": 0.0017,
+      "psnr_global": 46.368,
+      "psnr_in_mask": 47.912,
+      "psnr_out_mask": 46.366
+    },
+    {
+      "gt_key": "patient64636_study1_view1_frontal",
+      "mask_frac": 0.034,
+      "psnr_global": 46.788,
+      "psnr_in_mask": 46.943,
+      "psnr_out_mask": 46.783
+    },
+    {
+      "gt_key": "patient64639_study1_view1_frontal",
+      "mask_frac": 0.1281,
+      "psnr_global": 47.237,
+      "psnr_in_mask": 48.571,
+      "psnr_out_mask": 47.072
+    },
+    {
+      "gt_key": "patient64640_study1_view1_frontal",
+      "mask_frac": 0.0389,
+      "psnr_global": 46.747,
+      "psnr_in_mask": 50.118,
+      "psnr_out_mask": 46.654
+    },
+    {
+      "gt_key": "patient64640_study1_view2_lateral",
+      "mask_frac": 0.1029,
+      "psnr_global": 43.235,
+      "psnr_in_mask": 43.861,
+      "psnr_out_mask": 43.168
+    },
+    {
+      "gt_key": "patient64643_study1_view1_frontal",
+      "mask_frac": 0.005,
+      "psnr_global": 45.78,
+      "psnr_in_mask": 47.058,
+      "psnr_out_mask": 45.775
+    },
+    {
+      "gt_key": "patient64644_study1_view1_frontal",
+      "mask_frac": 0.0336,
+      "psnr_global": 46.99,
+      "psnr_in_mask": 49.275,
+      "psnr_out_mask": 46.929
+    },
+    {
+      "gt_key": "patient64645_study1_view1_frontal",
+      "mask_frac": 0.0507,
+      "psnr_global": 46.248,
+      "psnr_in_mask": 46.823,
+      "psnr_out_mask": 46.219
+    },
+    {
+      "gt_key": "patient64646_study1_view1_frontal",
+      "mask_frac": 0.0555,
+      "psnr_global": 47.098,
+      "psnr_in_mask": 47.779,
+      "psnr_out_mask": 47.061
+    },
+    {
+      "gt_key": "patient64649_study1_view1_frontal",
+      "mask_frac": 0.0693,
+      "psnr_global": 40.849,
+      "psnr_in_mask": 48.072,
+      "psnr_out_mask": 40.595
+    },
+    {
+      "gt_key": "patient64650_study1_view1_frontal",
+      "mask_frac": 0.0164,
+      "psnr_global": 47.686,
+      "psnr_in_mask": 50.359,
+      "psnr_out_mask": 47.653
+    },
+    {
+      "gt_key": "patient64652_study1_view1_frontal",
+      "mask_frac": 0.0039,
+      "psnr_global": 46.429,
+      "psnr_in_mask": 47.657,
+      "psnr_out_mask": 46.425
+    },
+    {
+      "gt_key": "patient64653_study1_view1_frontal",
+      "mask_frac": 0.0007,
+      "psnr_global": 43.745,
+      "psnr_in_mask": 47.905,
+      "psnr_out_mask": 43.743
+    },
+    {
+      "gt_key": "patient64654_study1_view1_frontal",
+      "mask_frac": 0.0422,
+      "psnr_global": 46.556,
+      "psnr_in_mask": 47.285,
+      "psnr_out_mask": 46.527
+    },
+    {
+      "gt_key": "patient64655_study1_view1_frontal",
+      "mask_frac": 0.0082,
+      "psnr_global": 47.561,
+      "psnr_in_mask": 45.436,
+      "psnr_out_mask": 47.584
+    },
+    {
+      "gt_key": "patient64657_study1_view1_frontal",
+      "mask_frac": 0.1563,
+      "psnr_global": 45.417,
+      "psnr_in_mask": 46.803,
+      "psnr_out_mask": 45.202
+    },
+    {
+      "gt_key": "patient64659_study1_view1_frontal",
+      "mask_frac": 0.0011,
+      "psnr_global": 45.454,
+      "psnr_in_mask": 44.759,
+      "psnr_out_mask": 45.455
+    },
+    {
+      "gt_key": "patient64660_study1_view1_frontal",
+      "mask_frac": 0.0765,
+      "psnr_global": 47.256,
+      "psnr_in_mask": 49.78,
+      "psnr_out_mask": 47.1
+    },
+    {
+      "gt_key": "patient64667_study1_view1_frontal",
+      "mask_frac": 0.0223,
+      "psnr_global": 46.614,
+      "psnr_in_mask": 47.553,
+      "psnr_out_mask": 46.595
+    }
+  ]
+}
