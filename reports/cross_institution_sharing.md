@@ -473,7 +473,7 @@ master_key（A 院；由受信任的金鑰服務以 HSM/KMS 保護）
     （研究實驗改用標示為測試用途的 fixture stream，見 §8.8 的「金鑰策略」）
  3. info   = LP(profile_id, nonce_B, inst_id_B, key_id_B, inst_id_A, signing_key_id_A)      ← profile_id 固定放第一個欄位（§8.4 規則）
     wrap_B = hpke.Suite(X25519, HKDF_SHA256, CHACHA20_POLY1305).encrypt(k_img_B, pk_B, info)
- 4. 子金鑰 = HKDF(k_img_B, salt=nonce_B, info=LP(label, "v2"))
+ 4. 子金鑰 = HKDF(k_img_B, salt=nonce_B, info=LP(profile_id) ‖ LP(label))      ← 精確格式見 §8.4.1
            label ∈ {round/0/sign-pre, round/0/perm, round/0/sign-post, mac, private-metadata-aead}
  5. x0 → 反演 → z → fixed-norm（C = 248.261，記下原始 norm）→ DPHD → 生成 → 匿名 float 影像
     → private range：記下 lo/hi，量化成 8-bit uint8 → PNG 無損編碼（只含 IHDR/IDAT/IEND，不寫任何 lo/hi chunk）
@@ -484,7 +484,7 @@ master_key（A 院；由受信任的金鑰服務以 HSM/KMS 保護）
     H        = LP(header 欄位，不含 tag 與 sig；meta_ct 放在 H 之後的獨立欄位)
  7. tag = HMAC-SHA256(mac_key, LP("soteria-share/v2/mac", H, meta_ct, PNG))
     sig = Ed25519_A(LP("soteria-share/v2/sig", H, meta_ct, PNG, tag))
-    容器 = LP(H) ‖ LP(meta_ct) ‖ LP(PNG) ‖ tag ‖ sig      ← tag 不涵蓋自己，sig 不涵蓋自己
+    容器 = preamble ‖ LP(H) ‖ LP(meta_ct) ‖ LP(PNG) ‖ tag ‖ sig      ← tag、sig 都不涵蓋自己；preamble 與 MAC／簽章的精確範圍見 §8.4.1
  8. finally：把 k_img_B 與所有子金鑰的 bytearray 歸零
 
 【傳送】經雲端（TLS）或直接交給 B。傳輸層與 PNG／DICOM 嵌入的 adapter 屬於落地部署（§8.4）。
@@ -550,6 +550,81 @@ master_key（A 院；由受信任的金鑰服務以 HSM/KMS 保護）
 **manifest**：
 - 記錄 checkpoint 的 SHA-256、sampler（DPM-Solver++(2M)、100 步、backward=null、精確的 timestep schedule）與生成設定，由 A 簽署。
 - 容器只放 manifest 的 digest。B **必須取得完整的 manifest**，驗證 digest 與簽章後，才能啟動推論。
+
+### 8.4.1 位元組層級契約（opinion F4；2026-11-04 於 S2 開始時固定）
+
+本節是 encoder／decoder 的**唯一依據**。和 §8.3、§8.4 有衝突時，以本節為準。所有整數都是 unsigned；「LE」= little-endian、「BE」= big-endian。
+
+**(1) 長度前綴 LP**
+- `LP(x) = u32_BE(len(x)) ‖ x`。這個格式本身就是 canonical。
+- 解碼時，如果長度超過剩餘的 bytes（截斷或溢位）就拒絕。
+- 一個結構解完之後如果還有**多餘的尾端 bytes**，也拒絕。
+
+**(2) 最外層容器**
+
+```
+preamble = b"SOTERIA\x00"（8 B）‖ u16_BE(container_version = 2)            固定 10 B，永遠位於檔案開頭
+container = preamble ‖ LP(H) ‖ LP(meta_ct) ‖ LP(PNG) ‖ tag(32 B) ‖ sig(64 B)
+```
+
+- 容器版本放在**位置固定的前導區**，不放在 H 裡，所以在還不知道版本時，也能先讀出它。不認得的版本一律拒絕。
+- 大小上限：|H| ≤ 4096 B、|meta_ct| = 32 B、|PNG| ≤ 1 048 576 B，tag 與 sig 的長度固定。
+- 解析器先讀 preamble 與各個 LP 長度，確認都不超過上限，**之後**才配置記憶體。
+
+**(3) H 的欄位（固定順序、固定數量；`H = LP(f1) ‖ … ‖ LP(f8)`，不允許其他欄位或尾端 bytes）**
+
+| # | 欄位 | 格式 |
+|---|---|---|
+| f1 | profile_id | ASCII，符合 `^soteria-share/[a-z0-9-]+/v[0-9]+$`，≤ 64 B；本原型只允許 `soteria-share/m1-private-range/v2` |
+| f2 | manifest_digest | 32 B 原始 SHA-256 |
+| f3 | inst_id_A | ASCII ID，符合 `^[A-Za-z0-9._:-]{1,64}$` |
+| f4 | signing_key_id_A | 同上 |
+| f5 | inst_id_B | 同上 |
+| f6 | key_id_B | 同上 |
+| f7 | nonce_B | 16 B |
+| f8 | wrap_B | 80 B（HPKE X25519 的 enc 32 B ＋ 密文 32 B ＋ tag 16 B） |
+
+**(4) HPKE info**
+
+`info = LP(profile_id) ‖ LP(nonce_B) ‖ LP(inst_id_B) ‖ LP(key_id_B) ‖ LP(inst_id_A) ‖ LP(signing_key_id_A)`
+
+**(5) 子金鑰**
+
+- 公式：`HKDF-SHA256(ikm = k_img_B, salt = nonce_B, info = LP(profile_id) ‖ LP(label), length = 32)`。由 profile_id 承擔版本，取代 §8.3 原本寫的 `LP(label, "v2")`。
+- label 為 ASCII，只允許 `round/0/sign-pre`、`round/0/perm`、`round/0/sign-post`、`mac`、`private-metadata-aead` 這五個值。
+
+**(6) metadata**
+
+- `meta_pt = f64_LE(norm) ‖ f32_LE(lo) ‖ f32_LE(hi)`，共 16 B。
+- `meta_ct = ChaCha20-Poly1305(meta_key).encrypt(nonce = 12 個 0x00, data = meta_pt, aad = preamble ‖ LP(H))`，共 32 B。
+- 合法性：norm 必須是有限值且 > 0；lo、hi 必須是有限值且 hi ≥ lo；拒絕 NaN 與 Inf。
+- hi = lo 表示常數影像：encoder 把 q 全部設為 0，decoder 得到全部等於 lo 的影像（與 `m1_storage.encode_private_range_png` 現有的行為相同）。
+
+**(7) MAC 與簽章**
+
+```
+tag = HMAC-SHA256(mac_key, LP("soteria-share/v2/mac") ‖ preamble ‖ LP(H) ‖ LP(meta_ct) ‖ LP(PNG))
+sig = Ed25519_A(LP("soteria-share/v2/sig") ‖ preamble ‖ LP(H) ‖ LP(meta_ct) ‖ LP(PNG) ‖ tag)
+```
+
+**(8) 量化與 PNG**
+
+- 量化：沿用 `m1_storage.encode_private_range_png`，全部以 float32 運算：`q = clip(np.rint((x−lo)/(hi−lo)·255), 0, 255)`，捨入方式是 round-half-to-even。
+- 反量化：`x = q/255·(hi−lo)+lo`，同樣以 float32 運算。
+- **解壓縮之前先檢查 PNG 結構**：
+  - 開頭是 PNG 簽名，接著依序是 IHDR、一個以上**連續**的 IDAT、IEND，每個 chunk 的 CRC 都正確，最後沒有多餘 bytes。
+  - IHDR 必須是 width = height = 256、bit depth = 8、color type = 0（灰階）、compression = 0、filter = 0、interlace = 0。
+  - 解壓縮後的資料必須正好是 256 × (1 + 256) = 65 792 B，超過就中止，避免 decompression bomb。
+  - 出現任何其他 chunk 都拒絕。
+
+**(9) latent**
+
+- 形狀 (1, 1, 256, 256)，float32，d = 65 536。
+- fixed-norm 常數 C = `np.float64("248.261")`（`s2_fixed_norm.FIXED_NORM`）。
+
+**(10) 固定測試向量**
+
+在 S4 加入，涵蓋：正常編碼、截斷、長度溢位、未知版本、尺寸錯誤、非法 metadata、尾端多餘 bytes。
 
 ### 8.5 「不落地」的定義與規則（N9）
 
