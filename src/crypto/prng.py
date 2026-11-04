@@ -56,27 +56,51 @@ def _uniform_below(source: ByteSource, bound: int) -> int:
             return value % bound
 
 
-def sign_vector(master_key: bytes, nonce: bytes, round_index: int, purpose: str, size: int) -> np.ndarray:
-    if purpose not in {"sign-pre", "sign-post"}:
-        raise CryptoConfigurationError("sign purpose must be sign-pre or sign-post")
+def _require_sign_size(size: int) -> None:
     if not isinstance(size, int) or size < 1:
         raise CryptoConfigurationError("sign vector size must be positive")
-    key = derive_subkey(master_key, nonce, round_label(round_index, purpose))
-    packed = ChaCha20Stream(key).read((size + 7) // 8)
+
+
+def _require_permutation_size(size: int) -> None:
+    if not isinstance(size, int) or size < 1 or size > 2**32:
+        raise CryptoConfigurationError("permutation size must be in 1..2^32")
+
+
+def sign_vector_from_key(stream_key: bytes, size: int) -> np.ndarray:
+    """Rademacher signs from an already-derived 256-bit stream key.
+
+    Callers own key derivation and domain separation (v1: ``sign_vector``;
+    v2 sharing derives its stream keys from a per-recipient image key).
+    """
+    _require_sign_size(size)
+    packed = ChaCha20Stream(stream_key).read((size + 7) // 8)
     bits = np.unpackbits(np.frombuffer(packed, dtype=np.uint8), bitorder="little")[:size]
     return np.where(bits == 0, -1, 1).astype(np.int8)
 
 
-def permutation(master_key: bytes, nonce: bytes, round_index: int, size: int) -> np.ndarray:
-    if not isinstance(size, int) or size < 1 or size > 2**32:
-        raise CryptoConfigurationError("permutation size must be in 1..2^32")
-    key = derive_subkey(master_key, nonce, round_label(round_index, "perm"))
-    source = ChaCha20Stream(key)
+def permutation_from_key(stream_key: bytes, size: int) -> np.ndarray:
+    """Unbiased Fisher-Yates permutation from an already-derived stream key."""
+    _require_permutation_size(size)
+    source = ChaCha20Stream(stream_key)
     result = np.arange(size, dtype=np.int64)
     for index in range(size - 1, 0, -1):
         other = _uniform_below(source, index + 1)
         result[index], result[other] = result[other], result[index]
     return result
+
+
+def sign_vector(master_key: bytes, nonce: bytes, round_index: int, purpose: str, size: int) -> np.ndarray:
+    if purpose not in {"sign-pre", "sign-post"}:
+        raise CryptoConfigurationError("sign purpose must be sign-pre or sign-post")
+    _require_sign_size(size)
+    key = derive_subkey(master_key, nonce, round_label(round_index, purpose))
+    return sign_vector_from_key(key, size)
+
+
+def permutation(master_key: bytes, nonce: bytes, round_index: int, size: int) -> np.ndarray:
+    _require_permutation_size(size)
+    key = derive_subkey(master_key, nonce, round_label(round_index, "perm"))
+    return permutation_from_key(key, size)
 
 
 def inverse_permutation(indices: np.ndarray) -> np.ndarray:
