@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "experiment": "E1",
+  "evidence_role": "formal",
+  "n": 200,
+  "plan": "reports/cross_institution_sharing.md \u00a78.8 P4/E1",
+  "pre_registered": "patient-bootstrap 95% CI of mean dPSNR (v2 - v1 S2fn) inside +-0.5 dB",
+  "result": {
+    "delta_psnr_db": {
+      "method": "v2_receiver_bound",
+      "metric": "delta_psnr_db",
+      "n": 200,
+      "mean": -0.009827379312194502,
+      "ci95_low": -0.24610559744322721,
+      "ci95_high": 0.21568554645955415,
+      "ci_method": "percentile bootstrap, seed 1911, 10000 resamples, cluster=patient",
+      "median": -0.06693793863210828,
+      "p95": 1.985512340146759,
+      "min": -9.50887095946861,
+      "max": 7.134028186244187
+    },
+    "within_preregistered_bound": true,
+    "claim_if_within": "mean reconstruction PSNR within the pre-set bound (no extension to SSIM/LPIPS/per-patient/lesion/security)"
+  },
+  "worst_delta_psnr_samples": [
+    {
+      "sample_id": "security_v1_0100",
+      "psnr_db": 37.10555962449827,
+      "v1_psnr_db": 46.61443058396688,
+      "delta_psnr_db": -9.50887095946861
+    },
+    {
+      "sample_id": "security_v1_0088",
+      "psnr_db": 38.98801699668513,
+      "v1_psnr_db": 48.02090226938194,
+      "delta_psnr_db": -9.03288527269681
+    },
+    {
+      "sample_id": "security_v1_0071",
+      "psnr_db": 41.33298935007968,
+      "v1_psnr_db": 46.38577330068771,
+      "delta_psnr_db": -5.052783950608031
+    },
+    {
+      "sample_id": "security_v1_0053",
+      "psnr_db": 42.35181222951791,
+      "v1_psnr_db": 45.83590788775291,
+      "delta_psnr_db": -3.484095658234999
+    },
+    {
+      "sample_id": "security_v1_0152",
+      "psnr_db": 42.98455721790744,
+      "v1_psnr_db": 46.44967097628477,
+      "delta_psnr_db": -3.465113758377335
+    }
+  ],
+  "v1_reference": {
+    "file": "paper_assets/rq4_formal_dphd/per_sample_long.csv",
+    "scheme": "S2fn",
+    "provenance_note": "frozen rq4_formal_dphd result; see paper_assets/rq4_formal_dphd/git_dirty_provenance.md",
+    "v1_marginal_psnr_mean_db": 46.39854044572381
+  },
+  "runtime_binding": {
+    "checkpoint_sha256": "3f61b80a2b2df4f5f1780fe9a7ce639f6a94ddb5057e5f9e88dc300de4786b14",
+    "steps": 100,
+    "timesteps_match": true,
+    "backward": "null (Respaced backward_null=True)",
+    "manifest_digest": "e5a3440b870902aaf4804d9a639e4af2f64e01907249679996a5c19d6979c4ab"
+  },
+  "operating_point": {
+    "sampler": "DPM-Solver++(2M)",
+    "steps": 100,
+    "backward": "null",
+    "storage": "range_preserving_png_private_range/v2 (8-bit, lo/hi in AEAD metadata)"
+  },
+  "keys": "PUBLIC test fixtures (S10/E1/<sample_id>/B); HPKE ephemeral random",
+  "ci_method": "percentile bootstrap, seed 1911, 10000 resamples, cluster=patient",
+  "bootstrap_resamples": 10000,
+  "lpips": {
+    "metric": "LPIPS",
+    "net": "alex",
+    "available": true,
+    "reason": "",
+    "backend": "torchmetrics",
+    "torchmetrics_version": "1.9.0",
+    "linear_weights_sha256": "df73285e35b22355a2df87cdb6b70b343713b667eddbda73e1977e0c860835c0",
+    "backbone_weights": "alexnet-owt-7be5be79.pth",
+    "backbone_weights_sha256": "7be5be791159472b1fbf3c69796f7cb30dca7ad8466c2df70058c37116cdee02"
+  },
+  "split": "splits/security_v1.csv",
+  "split_sha256": "49d3139cf16a8bf6fb96e8a7aa906b6ab2e9557a7d617a510bb2fcdfa2dcafd1",
+  "timing_note": "sender/receiver seconds measured in this run; compare to other runtimes only with matching conditions",
+  "wall_seconds_total": 1270.3132693767548,
+  "git": {
+    "commit": "e2501429ecb02d91dd11bc541e78ff624c523053",
+    "dirty": true,
+    "dirty_tracked_files": "M .gitignore\n M PROGRESS.md\n M README.md\n M presentation/assets/fig_attack_flow.png\n M \"presentation/\\345\\240\\261\\345\\221\\212\\345\\244\\247\\347\\266\\261.md\"\n M scripts/build_t2bb_inner_split.py\n M scripts/plot_presentation_figures.py\n M scripts/q11_localization_parity.py\n M scripts/reid_external_attacker.py\n M scripts/t2bb_inner_linkage.py"
+  },
+  "gpu": "NVIDIA GeForce RTX 5090"
+}

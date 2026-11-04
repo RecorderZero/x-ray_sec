@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "experiment": "E2",
+  "evidence_role": "formal",
+  "n_patients": 200,
+  "plan": "reports/cross_institution_sharing.md \u00a78.8 E2 (F3=(a))",
+  "design": {
+    "gallery": "B versions (reused from E1 containers)",
+    "query": "C versions (same x0, fresh image key)",
+    "positives": "same x0 B/C",
+    "negatives": "different-patient B/C",
+    "random_top1": 0.005,
+    "random_top5": 0.025,
+    "attacker_view": "public PNG only, decoded as q/255 (decode_private_png_attacker_view); no sample/patient ids, paths, private metadata or keys",
+    "routing": "all gallery items carry B routing, all queries C routing (same for positives and negatives)",
+    "scorers": [
+      "cos",
+      "norm",
+      "densenet121"
+    ],
+    "score_direction": "higher similarity = same image",
+    "ties": "numpy argsort order; continuous scores make exact ties measure-zero",
+    "densenet121_weights": "https://download.pytorch.org/models/densenet121-a639ec97.pth",
+    "ci": "conditional-on-fixed-gallery: bootstrap of query-patient blocks, 2000x, seed 1911 (t2bb_inner_linkage._boot_auc_ci); does not cover gallery-population uncertainty",
+    "controls": "positive = plaintext x0 copies; negative = shuffled query->gallery pairing (neg_control_top1)"
+  },
+  "reading": "AUC/Top-k are scientific results, not an engineering pass gate; a CI containing 0.5 only means no difference was detected with these scorers -- it is not a proof of unlinkability.",
+  "b_containers_sha256": "93a0a3df5890460511a19396a1fafb0accdcff6d39f0095a5458dc056d2b7896",
+  "c_containers_sha256": "a55e2615642e9c59e1c658459b096296cd747e34ada9ad8df334e2ced13fb104",
+  "runtime_binding": {
+    "checkpoint_sha256": "3f61b80a2b2df4f5f1780fe9a7ce639f6a94ddb5057e5f9e88dc300de4786b14",
+    "steps": 100,
+    "timesteps_match": true,
+    "backward": "null (Respaced backward_null=True)",
+    "manifest_digest": "e5a3440b870902aaf4804d9a639e4af2f64e01907249679996a5c19d6979c4ab"
+  },
+  "keys": "PUBLIC test fixtures (S10/E1/<sid>/B, S10/E2/<sid>/C)",
+  "split": "splits/security_v1.csv",
+  "split_sha256": "49d3139cf16a8bf6fb96e8a7aa906b6ab2e9557a7d617a510bb2fcdfa2dcafd1",
+  "wall_seconds_c_generation": 661.5295948982239,
+  "git": {
+    "commit": "e2501429ecb02d91dd11bc541e78ff624c523053",
+    "dirty": true,
+    "dirty_tracked_files": "M .gitignore\n M PROGRESS.md\n M README.md\n M presentation/assets/fig_attack_flow.png\n M \"presentation/\\345\\240\\261\\345\\221\\212\\345\\244\\247\\347\\266\\261.md\"\n M scripts/build_t2bb_inner_split.py\n M scripts/plot_presentation_figures.py\n M scripts/q11_localization_parity.py\n M scripts/reid_external_attacker.py\n M scripts/t2bb_inner_linkage.py"
+  },
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "rows": [
+    {
+      "condition": "v2_public_png",
+      "scorer": "cos",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 0.01,
+      "top5": 0.03,
+      "auc": 0.504444472361809,
+      "auc_ci_low": 0.4727,
+      "auc_ci_high": 0.5393,
+      "neg_control_top1": 0.005,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "v2_public_png",
+      "scorer": "norm",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 0.005,
+      "top5": 0.035,
+      "auc": 0.5038616834170855,
+      "auc_ci_low": 0.4694,
+      "auc_ci_high": 0.5434,
+      "neg_control_top1": 0.015,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "v2_public_png",
+      "scorer": "densenet121",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 0.0,
+      "top5": 0.02,
+      "auc": 0.4755633793969849,
+      "auc_ci_low": 0.4394,
+      "auc_ci_high": 0.5078,
+      "neg_control_top1": 0.01,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "positive_control_plaintext_x0",
+      "scorer": "cos",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 1.0,
+      "top5": 1.0,
+      "auc": 1.0,
+      "auc_ci_low": 1.0,
+      "auc_ci_high": 1.0,
+      "neg_control_top1": 0.005,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "positive_control_plaintext_x0",
+      "scorer": "norm",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 1.0,
+      "top5": 1.0,
+      "auc": 1.0,
+      "auc_ci_low": 1.0,
+      "auc_ci_high": 1.0,
+      "neg_control_top1": 0.005,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "positive_control_plaintext_x0",
+      "scorer": "densenet121",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 1.0,
+      "top5": 1.0,
+      "auc": 1.0,
+      "auc_ci_low": 1.0,
+      "auc_ci_high": 1.0,
+      "neg_control_top1": 0.005,
+      "random_top1": 0.005
+    }
+  ]
+}

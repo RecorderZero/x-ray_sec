@@ -1,0 +1,7 @@
+condition,scorer,n_patients,n_positive_pairs,n_negative_pairs,top1,top5,auc,auc_ci_low,auc_ci_high,neg_control_top1,random_top1
+v2_public_png,cos,200,200,39800,0.01,0.03,0.504444472361809,0.4727,0.5393,0.005,0.005
+v2_public_png,norm,200,200,39800,0.005,0.035,0.5038616834170855,0.4694,0.5434,0.015,0.005
+v2_public_png,densenet121,200,200,39800,0.0,0.02,0.4755633793969849,0.4394,0.5078,0.01,0.005
+positive_control_plaintext_x0,cos,200,200,39800,1.0,1.0,1.0,1.0,1.0,0.005,0.005
+positive_control_plaintext_x0,norm,200,200,39800,1.0,1.0,1.0,1.0,1.0,0.005,0.005
+positive_control_plaintext_x0,densenet121,200,200,39800,1.0,1.0,1.0,1.0,1.0,0.005,0.005
