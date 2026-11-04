@@ -834,40 +834,44 @@ sig = Ed25519_A(LP("soteria-share/v2/sig") ‖ preamble ‖ LP(H) ‖ LP(meta_ct
 **一句話**（AF-058 修正）：在同樣的 x0、模型與 sampler 下，接收方綁定的 v2 與原始 master key DPHD 的**平均**重構 PSNR 在預設界限內（ΔPSNR −0.01 dB [−0.25, +0.22]），但逐張差異大，原因尚未確認；同一張圖分給不同院所的兩個版本，**在這三種 scorer 與這批樣本下未偵測到連結訊號**。
 
 
-## 9. 病人層金鑰：v3 規劃（2026-11-04 第二版，依 opinion §10 修訂；⏸ 尚未實作）
+## 9. 病人層金鑰：v3 規劃（2026-11-05 第三版：容器一律搭配它的信使用，移除 key hint 與候選信封搜尋；⏸ 尚未實作，待使用者確認）
 
 > 在 §8（v2，每張影像一把隨機鎖）的基礎上，加入「**以病人為單位分享**」：A 院為「這位病人目前的這批影像」產生**一把**只有 B 打得開的隨機根金鑰 k_pat_B，再從它推導出每張影像的金鑰。
 > v2 **保留**，單張分享仍走 §8；v3 使用新的 profile。§8 的威脅模型、不落地規則、註冊表、manifest、private-range PNG，以及 opinion／稽核意見的原則（浮點容差、分層測試、每次使用都檢查、v1/v2/v3 證據分離、不過度宣稱）**全部沿用**，本章只寫差異。
 > **第二版變更**（依 opinion §10 V3-R1～R7）：
 > - P3' 拆成「離散值必須逐位元一致」與「浮點值看容差」兩層（R1）。
 > - 固定信封的組裝順序與 AAD（R2）。
-> - EnvelopeHandle 每次使用時都要重新驗證，並定義候選信封失敗時的處理規則（R3）。
+> - EnvelopeHandle 每次使用時都要重新驗證，並定義候選信封失敗時的處理規則（R3；候選信封的部分在第三版已移除）。
 > - 定義 verify_bundle 的驗證範圍，並規定它是整批交付前必須通過的關卡（R4）。
 > - 預先凍結 E4 的評估協定，並加入 v3−v2 的配對比較（R5）。
 > - 收窄隱私與「結構上不可能」的說法（R6）。
 > - 加入整批的資源上限與失敗語意（R7）。
+> **第三版變更（使用者 11-05 裁決 (a)）**：
+> - 容器**一律搭配它所屬的信**一起使用，B 端自行保存兩者的對應關係。
+> - 移除 key hint 與候選信封搜尋。
+> - 容器是否屬於這封信，改由「用這封信推導出的金鑰驗證 MAC」判定。
+> - 整批完整性的摘要改為對排序後的 nonce 清單計算。
+> - 取代 11-04 的 G2（key hint）。
 
 ### 9.1 設計決定 `[決定]`（使用者 11-04；措辭依 R6 收窄）
 
 | # | 項目 | 內容 |
 |---|---|---|
 | G1 | k_pat_B 的壽命 | **每次分享一把**：每次 B 申請，A 就為「當下要分享的這批影像」產生新的隨機 k_pat_B，打包完立刻丟棄。B 要新照片就重新申請，由 A 重新打包。**不需要 epoch**。「病人層」指的是**這一批影像的授權範圍**，不是一把永久的病人主金鑰 |
-| G2 | 容器如何對應信封 | **key hint**。在 k_pat_B 保密、每批新產生、nonce 正確的前提下，hint **不會直接暴露**固定的病人識別碼。整體是否可連結，仍要依指定的威脅模型與實驗（E4、W9）評估；**不能只因為 HMAC 輸出看起來隨機，就推論 PNG、檔案長度、批次也都無法連結** |
+| G2 | 容器如何對應信封（11-05 修訂） | **容器一律搭配它所屬的信使用**：A 交付的一定是「一封信＋這批容器」；B 自行保存兩者的對應關係，還原時呼叫端必須提供那封信。**不使用 key hint，也不做候選信封搜尋**。容器屬不屬於這封信，由「用這封信的 k_pat_B 推導出的 k_img_i 能否通過 MAC 驗證」判定。補傳等同一次新申請，會產生新的信（G1）。B 若自己弄丟對應關係，屬於 B 的內部管理問題，協定不提供搜尋。容器 header 只有每張隨機的 nonce，**沒有同一位病人共用的欄位**；整體是否可連結，仍要依指定的威脅模型與實驗（E4、W9）評估，**不能只因 header 沒有共用欄位，就推論 PNG、檔案長度、批次也都無法連結** |
 | G3 | 與 v2 的關係 | v2（單張）與 v3（病人層）並存，各自使用不同的 profile 與容器版本 |
 | G4 | 單次使用 | A 端只提供 `share_patient(影像清單) → Bundle` 這種一次完成整批的介面，結束時清除 k_pat_B，**沒有任何介面能接受既有的 k_pat 或信封再追加容器**。這項保證的前提是：**A 誠實執行這個一次性介面、清除受控的金鑰、不保留副本**。它**不涵蓋**惡意的 A、k_pat 外洩、測試 fixture 被重複使用，也不涵蓋已獲授權的 B 自行保存資料；k_pat 外洩時這一批資料會曝光，這是已接受的代價 |
-| G5 | 信封私有 metadata | 影像張數與 hint 清單的摘要，以 k_pat_B 推導出的金鑰加密。這樣**信封欄位本身不會直接揭露張數**。不過，如果整批一起上傳、共用物件索引、出現在同一份檔案清單、同一個 API 回應或同一次取件，數量與分組仍可能被看出來；這屬於流量分析，列為 non-goal，**不另外做 padding 或混流** |
+| G5 | 信封私有 metadata | 影像張數與 **nonce 清單**的摘要，以 k_pat_B 推導出的金鑰加密。這樣**信封欄位本身不會直接揭露張數**。不過，如果整批一起上傳、共用物件索引、出現在同一份檔案清單、同一個 API 回應或同一次取件，數量與分組仍可能被看出來；這屬於流量分析，列為 non-goal，**不另外做 padding 或混流** |
 | G6 | 病人歸屬的責任（R6） | 「這批影像確實屬於同一位病人，而且 B 有權取得」由 A 院的**上游授權流程**（資料委員會／病歷系統）負責。`share_patient` 只是一個密碼學打包介面，**它不會、也無法證明**輸入的影像都屬於同一位病人 |
 
 ### 9.2 金鑰階層（全部使用 HKDF-SHA256，輸出 32 B）
 
 ```
 k_pat_B（CSPRNG 32 B；研究實驗用標示為測試用途的 fixture）     grant_id ← CSPRNG 16 B
- ├─ hint_key    = HKDF(k_pat_B, salt = grant_id, info = LP(profile_id) ‖ LP("hint"))
  ├─ envmeta_key = HKDF(k_pat_B, salt = grant_id, info = LP(profile_id) ‖ LP("envelope-meta-aead"))
  ├─ wrap_pat    = HPKE.encrypt(k_pat_B, pk_B, info_env)
  └─ 每張影像 i（nonce_i ← CSPRNG 16 B）：
       k_img_i    = HKDF(k_pat_B, salt = nonce_i, info = LP(profile_id) ‖ LP("image"))
-      key_hint_i = HMAC-SHA256(hint_key, LP("soteria-share/v3/hint") ‖ nonce_i) 取前 16 B
       子金鑰     = HKDF(k_img_i, salt = nonce_i, info = LP(profile_id) ‖ LP(label))     ← 與 v2 相同
 ```
 
@@ -880,25 +884,24 @@ k_pat_B（CSPRNG 32 B；研究實驗用標示為測試用途的 fixture）     g
 【A 院：share_patient(x0_list, recipient) → Bundle】整段包在 try/finally 中；任何一步失敗，整批失敗，不回傳部分結果（R7）
  0. 檢查張數 1 ≤ N ≤ MAX_IMAGES（9.4 (5)）；空清單或超過上限 → 拒絕
  1. 註冊表查詢 B 的 X25519 公鑰（每次使用都檢查，同 AF-052）；fail closed
- 2. k_pat_B、grant_id ← CSPRNG；推導 hint_key、envmeta_key
+ 2. k_pat_B、grant_id ← CSPRNG；推導 envmeta_key
  3. info_env = LP(profile_id) ‖ LP(grant_id) ‖ LP(inst_id_B) ‖ LP(key_id_B) ‖ LP(inst_id_A) ‖ LP(signing_key_id_A)
     wrap_pat  = HPKE.encrypt(k_pat_B, pk_B, info_env)
  4. **固定 E**（8 個欄位，見 9.4 (2)）；E 從此不再變動
  5. 對每張影像（依輸入順序；opinion §11.2：**H3 必須在 metadata AEAD 之前固定，之後不可變**）：
       a. nonce_i ← CSPRNG；若和同批先前的 nonce 重複，最多重抽 3 次，仍重複就整批失敗
-      b. key_hint_i = HMAC(hint_key, …nonce_i)；若和同批先前的 hint 碰撞 → **整批失敗**（必須用新的 k_pat／grant 重新打包，不在同一把金鑰下重試）
-      c. **固定完整的 H3**（8 個欄位，含 nonce_i 與 key_hint_i），計算 LP(H3)
-      d. k_img_i → 子金鑰 → x0 → 反演 → fixed-norm → DPHD → 生成 → private-range PNG
-      e. metadata AEAD（aad = preamble3(kind=0x02) ‖ LP(H3)，使用步驟 c 的 H3 bytes）→ MAC → Ed25519 → 容器 i；清除 k_img_i 與子金鑰
-      f. 累計容器 bytes；超過 MAX_BUNDLE_BYTES → 整批失敗
- 6. envmeta_pt = u32_BE(N) ‖ SHA-256(依 bytes 排序後所有 key_hint 的串接)
+      b. **固定完整的 H3**（7 個欄位，含 nonce_i），計算 LP(H3)
+      c. k_img_i → 子金鑰 → x0 → 反演 → fixed-norm → DPHD → 生成 → private-range PNG
+      d. metadata AEAD（aad = preamble3(kind=0x02) ‖ LP(H3)，使用步驟 b 的 H3 bytes）→ MAC → Ed25519 → 容器 i；清除 k_img_i 與子金鑰
+      e. 累計容器 bytes；超過 MAX_BUNDLE_BYTES → 整批失敗
+ 6. envmeta_pt = u32_BE(N) ‖ SHA-256(依 bytes 排序後所有 nonce_i 的串接)
     envmeta_ct = ChaCha20-Poly1305(envmeta_key, nonce = 12 個 0x00, aad = preamble3(kind=0x01) ‖ LP(E))
     ← envmeta_key 只加密這一次；任何重試都會重新產生 k_pat／grant_id，所以不會在同一把金鑰、同一個 nonce 下加密不同的清單
  7. sig_env = Ed25519_A(LP("soteria-share/v3/envelope-sig") ‖ preamble3(kind=0x01) ‖ LP(E) ‖ LP(envmeta_ct))
  8. 回傳 Bundle(envelope, containers[0..N-1])
- 9. finally：清除 k_pat_B、hint_key、envmeta_key，以及任何尚未清除的 k_img／子金鑰
+ 9. finally：清除 k_pat_B、envmeta_key，以及任何尚未清除的 k_img／子金鑰
 
-【傳送】信封與容器可以一起或分開，經雲端（TLS）或直接傳送
+【傳送】信封與這批容器**作為一個 Bundle 一起交付**，經雲端（TLS）或直接傳送；B 收到後自行保存兩者的對應關係（G2）
 
 【B 院：open_envelope(envelope_bytes) → EnvelopeHandle】
  - 驗證（同下方的 _verify_envelope）通過後，回傳只含「信封 bytes」的 handle，**不含任何金鑰**，也**不是不可偽造的權杖**（R3）
@@ -927,16 +930,16 @@ k_pat_B（CSPRNG 32 B；研究實驗用標示為測試用途的 fixture）     g
  1. _verify_envelope(handle 的信封 bytes)
  2. 張數 = N；容器數 ≤ MAX_IMAGES，總 bytes ≤ MAX_BUNDLE_BYTES（在解析前先檢查）
  3. 每個容器：有大小上限的解析；sender、recipient、profile、manifest 都和信封相同；Ed25519 簽章有效；
-    nonce 與 hint 在這批中不重複；hint == HMAC(hint_key, …nonce_i)；
-    k_img_i → MAC 驗證 → metadata AEAD 解開並檢查數值（金鑰確認＋完整內容驗證）
- 4. SHA-256(排序後的 hint 串接) == envmeta 裡的摘要
+    nonce 在這批中不重複；
+    k_img_i（由這封信的 k_pat_B 推導）→ MAC 驗證 → metadata AEAD 解開並檢查數值（同時確認容器屬於這封信，以及完整內容驗證）
+ 4. SHA-256(排序後的 nonce 串接) == envmeta 裡的摘要
  5. finally：清除所有金鑰
 
-【B 院：recover_patient_image(handle_list, container)】單張取用（另外提供）
- - 篩選候選：同一個 sender、recipient、profile、manifest；候選數 ≤ 64，**在解封任何信封之前**就檢查
- - 每個候選都重新執行 _verify_envelope；**任何一個候選驗證失敗 → 整個請求 fail closed**，不跳過（R3）
- - 解封每個候選後計算 hint，以固定時間比對；**0 個或 2 個以上命中 → 拒絕**（不採用「第一個命中」）
- - 每個候選的 k_pat／hint_key 不論命中、失配或出錯，都在自己的 finally 中清除；命中的那一個，只把推導好的 k_img_i 交給後續步驟，交接後由後續步驟負責清除
+【B 院：recover_patient_image(handle, container)】單張取用（另外提供；呼叫端必須提供這個容器所屬的信）
+ - 重新執行 _verify_envelope（每次使用都檢查）；驗證失敗 → 拒絕
+ - 容器的 sender、recipient、profile、manifest 必須和信相同；簽章有效
+ - 由這封信的 k_pat_B 推導 k_img_i → MAC 驗證；**MAC 失敗表示容器不屬於這封信（或已被竄改）→ 拒絕**，不呼叫模型
+ - k_pat_B 與推導出的金鑰都在 finally 中清除
  - ⚠ **單張取用無法偵測整批被刪掉了哪些容器**；只有呼叫 verify_bundle 或 recover_patient_bundle 才能偵測
 ```
 
@@ -952,11 +955,11 @@ k_pat_B（CSPRNG 32 B；研究實驗用標示為測試用途的 fixture）     g
 envelope   = preamble3(0x01) ‖ LP(E) ‖ LP(envmeta_ct) ‖ sig_env(64)
 E          = LP(profile_id) ‖ LP(grant_id[16]) ‖ LP(manifest_digest[32]) ‖ LP(inst_id_A) ‖ LP(signing_key_id_A)
              ‖ LP(inst_id_B) ‖ LP(key_id_B) ‖ LP(wrap_pat[80])            （固定 8 個欄位、固定順序，不允許尾端 bytes）
-envmeta_pt = u32_BE(N) ‖ hint_list_digest[32]                              （正好 36 B）
+envmeta_pt = u32_BE(N) ‖ nonce_list_digest[32]                             （正好 36 B）
 envmeta_ct                                                                  （正好 52 B）
 ```
 
-- hint_list_digest = SHA-256(依 bytes 排序後的 N 個 key_hint 串接)。它是 **list**，同批內的 hint 必須不重複（9.3 步驟 5），所以不存在「去重後才比對」的情況。
+- nonce_list_digest = SHA-256(依 bytes 排序後的 N 個 nonce_i 串接)。它是 **list**，同批內的 nonce 必須不重複（9.3 步驟 5），所以不存在「去重後才比對」的情況。
 - 大小上限：|E| ≤ 1024、envelope ≤ 1200 B；grant_id 正好 16、manifest_digest 正好 32、wrap_pat 正好 80。
 
 **(3) v3 影像容器**
@@ -964,7 +967,7 @@ envmeta_ct                                                                  （�
 ```
 container3 = preamble3(0x02) ‖ LP(H3) ‖ LP(meta_ct) ‖ LP(PNG) ‖ tag(32) ‖ sig(64)
 H3         = LP(profile_id) ‖ LP(manifest_digest[32]) ‖ LP(inst_id_A) ‖ LP(signing_key_id_A)
-             ‖ LP(inst_id_B) ‖ LP(key_id_B) ‖ LP(nonce_i[16]) ‖ LP(key_hint[16])      （固定 8 個欄位；不含 wrap，也不含 grant_id）
+             ‖ LP(inst_id_B) ‖ LP(key_id_B) ‖ LP(nonce_i[16])                         （固定 7 個欄位；不含 wrap、grant_id，也不含 hint）
 meta_ct    = ChaCha20-Poly1305(meta_key, nonce = 12 個 0x00, aad = preamble3(0x02) ‖ LP(H3))     （正好 32 B）
 tag        = HMAC-SHA256(mac_key, LP("soteria-share/v3/mac") ‖ preamble3(0x02) ‖ LP(H3) ‖ LP(meta_ct) ‖ LP(PNG))
 sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3) ‖ LP(meta_ct) ‖ LP(PNG) ‖ tag)
@@ -980,7 +983,6 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 
 - MAX_IMAGES = 256 張／批。
 - MAX_BUNDLE_BYTES = 64 MiB（所有容器加總）。
-- 候選信封 ≤ 64 個。
 - sender 依序處理每張影像，並累計 bytes，一超過上限就整批失敗。receiver 在解析任何容器之前，先檢查張數與總 bytes。
 - 本原型**不支援串流交付**。
 - **A 端（share_patient）維持全有全無**：一個 Bundle 只有「整批完成」或「整批失敗」兩種狀態，因為整批共用同一把只用一次的 k_pat 與張數摘要，失敗就用新的 k_pat 重新打包。使用者 11-04 決定**不做**「A 端暫存反演 latent」的加速。
@@ -988,16 +990,16 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 
 ### 9.5 公開欄位與隱私
 
-- **容器**：header 中**沒有同一位病人共用、而且能讓外人分組的欄位**。inst、key、manifest、profile 這類欄位允許重複，理由同 §8.4。hint 在 G2 的前提下不直接暴露病人識別碼。
+- **容器**：header 中**沒有同一位病人共用、而且能讓外人分組的欄位**。inst、key、manifest、profile 這類欄位允許重複，理由同 §8.4；每張影像只帶自己的隨機 nonce。
 - **信封**：公開欄位只有 profile、grant_id、manifest digest、雙方身分與 wrap_pat；張數不在公開欄位裡（G5，受批次與流量限制）。
-- **不落地**：k_pat_B、hint_key、envmeta_key 比照 k_img 處理；EnvelopeHandle 不保存任何金鑰。
+- **不落地**：k_pat_B、envmeta_key 比照 k_img 處理；EnvelopeHandle 不保存任何金鑰。
 
 ### 9.6 威脅模型的差異（其餘同 §8.2）
 
 | 項目 | v3 的處理 |
 |---|---|
-| 外人把同一位病人的影像分組 | header 不放 grant_id，hint 在 G2 的前提下看起來是隨機值。**只用公開 PNG 的 scorer**由 E4 評估；header 結構由 W9 檢查。**不宣稱**已經測過所有可能的 header 或流量攻擊 |
-| 把某位病人的容器混進另一位病人的信封 | hint 對不上就拒絕；即使把 hint 照抄過去，MAC 也會失敗（k_img 不同） |
+| 外人把同一位病人的影像分組 | header 不放 grant_id，也沒有任何同一位病人共用的欄位（只有每張隨機的 nonce）。**只用公開 PNG 的 scorer**由 E4 評估；header 結構由 W9 檢查。**不宣稱**已經測過所有可能的 header 或流量攻擊 |
+| 把某位病人的容器混進另一位病人的信封 | 用錯的信推導出的 k_img 不同，**MAC 驗證失敗**，不呼叫模型 |
 | 刪除或增加整批中的容器 | recover_patient_bundle 會透過 verify_bundle 偵測；**單張取用無法偵測刪除** |
 | 往舊授權追加新影像 | 在 G4 的前提下不可能 |
 | k_pat_B 外洩 | 這一批影像全部曝光（已接受的代價） |
@@ -1013,7 +1015,7 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 
 | 層 | 對象 | 判準 |
 |---|---|---|
-| (a) 密碼與序列化的離散值 | 給定上述明確輸入時的 k_img_i、子金鑰、key_hint、hint_list_digest、envmeta 明文；metadata 打包再解包的 bytes；固定 key／nonce／AAD 下的 envmeta 與 meta AEAD 向量 | **逐位元一致**。HPKE 的臨時金鑰是隨機的，所以 wrap_pat 與整份信封的 bytes **不要求**每次相同 |
+| (a) 密碼與序列化的離散值 | 給定上述明確輸入時的 k_img_i、子金鑰、nonce_list_digest、envmeta 明文；metadata 打包再解包的 bytes；固定 key／nonce／AAD 下的 envmeta 與 meta AEAD 向量 | **逐位元一致**。HPKE 的臨時金鑰是隨機的，所以 wrap_pat 與整份信封的 bytes **不要求**每次相同 |
 | (b) 由 x0 獨立算出的浮點 metadata | norm、lo、hi | 沿用 AF-054 已採用的容差：norm 相對誤差 ≤ 1e-9、lo/hi 絕對誤差 ≤ 1e-5。**reference 不得直接採用服務寫入的 metadata** |
 | (c) 完整數值管線 | 解碼端／編碼端／有損誤差 | 解碼端 max-abs < 1e-5；編碼端 max\|Δq\| ≤ 1，且差異比例 ≤ 1e-3（事後門檻，引用時要註明）；有損誤差只報告、不設門檻；norm ×1.01、lo/hi 偏移等突變必須被抓到 |
 
@@ -1028,14 +1030,14 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 | W1 | v2 迴歸與跨版本 | 既有的 v2 測試全部不需修改就通過；v2 容器在 v3 解析器中被拒絕，反之亦然；kind 與 profile 交錯使用時被拒絕 |
 | W2 | 整批往返 | recover_patient_bundle 還原整批 N 張；P2'、P3' 成立 |
 | W3 | HPKE／信封層（直接測函式庫） | 錯誤的私鑰、錯誤的 info_env（換掉 grant_id 或任一身分欄位）、截斷或格式錯誤的 wrap_pat → 解封失敗；改寄給 C 並重新簽章的信封，C 解不開 |
-| W4 | 竄改（分層觸發） | 信封簽章層；用測試 signer 重新簽章後，envmeta AEAD 層失敗；容器的簽章／MAC／metadata 層同 v2 的 V4；改了 key_hint 並重新簽章 → hint 不符。另外以**獨立撰寫的序列化**（不共用 sender／receiver 的 helper）重算 envmeta 與 meta 的 AAD bytes，並以 P3'(a) 的固定向量比對，避免兩端共用同一個錯誤的 helper 而自洽（opinion §11.2） |
-| W5 | 跨批次混用 | p1 的容器配 p2 的信封 → 拒絕；把 p2 某容器的 hint 照抄到 p1 容器上並重新簽章 → hint 對上 p2，但 **MAC 失敗**；兩種情況都不呼叫模型 |
-| W6 | 整批驗證（R4） | 少一個容器、多一個其他批次的容器、重複同一個容器、兩個不同的容器使用相同的 hint、**hint 不變但 PNG 或簽章被改**、sender／recipient 欄位混用 → verify_bundle 失敗，而且 recover_patient_bundle **不交付任何一張影像**（續跑時也一樣）；張數與摘要只存在加密的 envmeta 中；只呼叫單張取用時無法偵測刪除，這點以文件說明，並用測試記錄這個行為 |
-| W7 | 單次使用與批次失敗（G4、R2、R7） | 公開 API 沒有任何函式接受既有的 k_pat 或信封來產生容器；每次呼叫的 grant_id 與 k_pat 都是新的；同批內 nonce 與 hint 都不重複（以注入碰撞測試：nonce 重抽上限、hint 碰撞 → 整批失敗）；空清單、N 超過上限、累計 bytes 超過上限 → 拒絕；A 端第 k 張失敗或被取消時，**沒有任何成功的回傳值**，重試一定會產生新的 k_pat 與 grant_id。**B 端續跑**：在第 k 張注入運作環境錯誤 → 回傳 status = "partial"，只含前 k−1 張，不是 complete；用 previous 續跑時會重新驗證整批，只補還原剩下的影像，最後狀態才是 complete，而且結果與一次跑完的結果相同（stub pipeline）；previous 不屬於本批（信封 SHA、profile、manifest、依順序的容器 SHA 清單、pipeline 設定任一不符）→ 拒絕；previous 的已完成索引錯序、重複、越界、缺少對應影像、影像 shape／dtype 不符或含非有限值 → 拒絕；驗證之後再修改呼叫端的容器 list → 不影響本次計算（使用快照）；續跑前竄改容器 → 驗證關卡拒絕；只有 OperationalError 會變成 partial，其他 RuntimeError 與取消訊號照常往外拋；ReceiverService 沒有接受外部 previous 的介面；BundleRecovery 中沒有金鑰 |
-| W8 | 不落地（受監控路徑） | 比照 V7 與 AF-053：在信封封裝、第 1／中間／最後一張影像的每個步驟、hint 計算、envmeta、**第 1／中間／最後一個候選信封**的解封與比對處，分別注入一般例外與取消類例外；sender／receiver 所有**曾經建立**的 SecretKey 都已歸零；traceback、log、stdout/stderr、檔案中找不到 k_pat、hint_key、envmeta_key、k_img、子金鑰（raw／hex／base64） |
-| W9 | 公開視角 | 容器 header 符合 allowlist，不含 grant_id 或病人欄位；同一位病人的 N 張影像，key_hint 兩兩不同，除了允許重複的欄位之外沒有相同的值；信封公開欄位符合 allowlist，張數不公開 |
+| W4 | 竄改（分層觸發） | 信封簽章層；用測試 signer 重新簽章後，envmeta AEAD 層失敗；容器的簽章／MAC／metadata 層同 v2 的 V4；改了 nonce 並重新簽章 → MAC 失敗（k_img 隨 nonce 改變）。另外以**獨立撰寫的序列化**（不共用 sender／receiver 的 helper）重算 envmeta 與 meta 的 AAD bytes，並以 P3'(a) 的固定向量比對，避免兩端共用同一個錯誤的 helper 而自洽（opinion §11.2） |
+| W5 | 跨批次混用 | p1 的容器配 p2 的信（整批與單張兩種入口都測）→ **MAC 失敗**、拒絕；把 p1 的容器改寫成 p2 信的身分欄位並重新簽章 → 仍然 MAC 失敗；所有情況都不呼叫模型 |
+| W6 | 整批驗證（R4） | 少一個容器、多一個其他批次的容器、重複同一個容器、兩個不同的容器使用相同的 nonce、**nonce 不變但 PNG 或簽章被改**、sender／recipient 欄位混用 → verify_bundle 失敗，而且 recover_patient_bundle **不交付任何一張影像**（續跑時也一樣）；張數與摘要只存在加密的 envmeta 中；只呼叫單張取用時無法偵測刪除，這點以文件說明，並用測試記錄這個行為 |
+| W7 | 單次使用與批次失敗（G4、R2、R7） | 公開 API 沒有任何函式接受既有的 k_pat 或信封來產生容器；每次呼叫的 grant_id 與 k_pat 都是新的；同批內 nonce 不重複（以注入碰撞測試 nonce 重抽上限，超過就整批失敗）；空清單、N 超過上限、累計 bytes 超過上限 → 拒絕；A 端第 k 張失敗或被取消時，**沒有任何成功的回傳值**，重試一定會產生新的 k_pat 與 grant_id。**B 端續跑**：在第 k 張注入運作環境錯誤 → 回傳 status = "partial"，只含前 k−1 張，不是 complete；用 previous 續跑時會重新驗證整批，只補還原剩下的影像，最後狀態才是 complete，而且結果與一次跑完的結果相同（stub pipeline）；previous 不屬於本批（信封 SHA、profile、manifest、依順序的容器 SHA 清單、pipeline 設定任一不符）→ 拒絕；previous 的已完成索引錯序、重複、越界、缺少對應影像、影像 shape／dtype 不符或含非有限值 → 拒絕；驗證之後再修改呼叫端的容器 list → 不影響本次計算（使用快照）；續跑前竄改容器 → 驗證關卡拒絕；只有 OperationalError 會變成 partial，其他 RuntimeError 與取消訊號照常往外拋；ReceiverService 沒有接受外部 previous 的介面；BundleRecovery 中沒有金鑰 |
+| W8 | 不落地（受監控路徑） | 比照 V7 與 AF-053：在信封封裝、第 1／中間／最後一張影像的每個步驟、envmeta、B 端解封信與推導 k_img 處，分別注入一般例外與取消類例外；sender／receiver 所有**曾經建立**的 SecretKey 都已歸零；traceback、log、stdout/stderr、檔案中找不到 k_pat、envmeta_key、k_img、子金鑰（raw／hex／base64） |
+| W9 | 公開視角 | 容器 header 符合 allowlist（7 個欄位），不含 grant_id、hint 或病人欄位；同一位病人的 N 張影像，nonce 兩兩不同，除了允許重複的欄位之外沒有相同的值；信封公開欄位符合 allowlist，張數不公開 |
 | W10 | 註冊表、manifest 與 handle（R3） | 信封與容器都走 TrustStore 的每次使用檢查：取得 handle 之後時鐘過期，或註冊表更新為撤銷 → 再使用該 handle 時被拒絕；handle 內的信封 bytes 被改 → 被拒絕；**自行建構或反序列化出來的 handle** 也會被重新驗證；信封與容器的 manifest 不一致 → 拒絕；查不到 manifest → 受控的拒絕 |
-| W11 | 資源與候選（R3、R7） | framing 超過上限、N 超出範圍、總 bytes 超過上限、候選超過 64 個 → 在解封或配置大量記憶體之前就拒絕；候選中有一個驗證失敗 → 整個請求 fail closed；hint 有 0 個或 2 個以上命中 → 拒絕；取消訊號與程式錯誤不會被吞掉 |
+| W11 | 資源限制（R7） | framing 超過上限、N 超出範圍、總 bytes 超過上限 → 在解封或配置大量記憶體之前就拒絕；取消訊號與程式錯誤不會被吞掉 |
 
 ### 9.9 實驗（GPU；先 smoke；推算超過 30 分鐘就先問；使用者 11-04 已同意 E3＋E4，合計約 64 分鐘）
 
@@ -1065,11 +1067,11 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 
 | 步驟 | 檔案 | 內容 | 對應驗證 |
 |---|---|---|---|
-| T1 | `src/share/encoding.py`、`keys.py` | v3 前導區與 kind、v3 profile、大小上限常數；`derive_patient_keys()`、`derive_image_key()`、`compute_hint()`、`build_envelope_info()`；中途失敗時自己清理（同 AF-053） | W1、W7、W8、P3'(a) |
+| T1 | `src/share/encoding.py`、`keys.py` | v3 前導區與 kind、v3 profile、大小上限常數；`derive_patient_keys()`、`derive_image_key()`、`build_envelope_info()`；中途失敗時自己清理（同 AF-053） | W1、W7、W8、P3'(a) |
 | T2 | `src/share/envelope.py` | 信封的編碼與解碼（依 9.3 的順序：E 先固定，再處理 envmeta）、envmeta AEAD、Ed25519、`_verify_envelope()` | P2'、W3、W4、W11 |
 | T3 | `src/share/container.py` | Header3 與 container3（保留 v2）；AAD、MAC、簽章使用 preamble3(0x02) | P2'、W4、W9 |
-| T4 | `src/share/sender.py` | `share_patient()`：檢查張數、nonce 與 hint 唯一性、累計 bytes、整批失敗語意、清除 k_pat | W2、W7、W8 |
-| T5 | `src/share/receiver.py` | `open_envelope()`、`verify_bundle()`、`recover_patient_bundle()`（不可變快照、OperationalError、續跑時綁定與檢查 previous）、`recover_patient_image()`；每次使用都驗證、候選上限、fail closed、0 或多個命中就拒絕、清理的責任歸屬；ReceiverService 支援 v3、不接受外部 previous，錯誤一律統一 | W2–W7、W10、W11 |
+| T4 | `src/share/sender.py` | `share_patient()`：檢查張數、nonce 唯一性、累計 bytes、整批失敗語意、清除 k_pat | W2、W7、W8 |
+| T5 | `src/share/receiver.py` | `open_envelope()`、`verify_bundle()`、`recover_patient_bundle()`（不可變快照、OperationalError、續跑時綁定與檢查 previous）、`recover_patient_image(handle, container)`；每次使用都驗證、MAC 判定容器是否屬於這封信、清理的責任歸屬；ReceiverService 支援 v3、不接受外部 previous，錯誤一律統一 | W2–W7、W10、W11 |
 | T6 | `src/share/manifest.py` | 加入 v3 profile 的 manifest | W10 |
 | T7 | `tests/security/test_share_patient.py`、`_share_reference.py` | W1–W11、P3'（分層） | 全部 |
 | T8 | `scripts/soteria_share_demo.py` | 加入 v3 情境 → `table_share_patient_protocol.{csv,json}` | W 系列示範 |
@@ -1080,24 +1082,24 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 - 同 §8.10：每個子任務通過就 commit，稽核方事後複驗；不寫入任何真實金鑰材料；GPU 先跑 smoke，推算超過 30 分鐘就先問。
 - v1、v2 的凍結結果都不變。**E3、E4 完成之前，不宣稱 v3 的品質或連結風險與 v2 相同**。
 
-### 9.12 我在第二版先選定、需要你確認的設計選項（opinion R3／R4／R7 要求先固定）
+### 9.12 設計選項（第三版；全部已由使用者確認或因簡化而不再需要）
 
-| 項目 | 我的選擇 | 另一個可行做法 |
-|---|---|---|
-| 候選信封中有一個驗證失敗 | **整個請求 fail closed**（行為最單純，避免模糊授權） | 跳過失效的候選、繼續搜尋 |
-| hint 有 0 個或 2 個以上命中 | 一律拒絕 | 採用第一個命中（不建議） |
-| verify_bundle 的角色 | 做**完整內容驗證**（簽章、MAC、metadata AEAD、hint、張數、摘要），而且是 `recover_patient_bundle` **必須先通過的關卡**；另外保留單張取用，但註明它無法偵測刪除 | 只做成員清單驗證 |
-| B 端逐張還原失敗（✅ 11-04 使用者裁決） | **驗證全有全無，計算可以續跑**：運作環境錯誤時回傳 partial 並保留已完成的影像，續跑時重新驗證並只補剩下的影像；只有全部完成才是 complete | 整批失敗（原第二版，已放棄） |
-| A 端暫存反演 latent（✅ 11-04 使用者裁決） | **不做** | — |
-| 整批上限 | 每批最多 256 張、所有容器合計 64 MiB；不串流。**A 端打包**只有「整批完成」或「整批失敗」兩種狀態；**B 端還原**依已裁決的 partial／complete 語意（9.3） | 調整數值，或支援串流 |
-| nonce 碰撞與 hint 碰撞 | nonce 最多重抽 3 次；hint 碰撞 → 整批失敗，用新的 k_pat 重新打包 | — |
+| 項目 | 狀態 |
+|---|---|
+| 候選信封中有一個驗證失敗 | **不再適用**：第三版沒有候選信封搜尋（11-05，(a)） |
+| hint 有 0 個或 2 個以上命中 | **不再適用**：第三版沒有 hint（11-05，(a)） |
+| verify_bundle 的角色 | ✅ 11-05 確認：做**完整內容驗證**（簽章、MAC、metadata AEAD、nonce、張數、摘要），而且是 `recover_patient_bundle` **必須先通過的關卡**；另外保留單張取用（必須提供所屬的信），但註明它無法偵測刪除 |
+| B 端逐張還原失敗 | ✅ 11-04 確認：驗證全有全無，計算可以續跑 |
+| A 端暫存反演 latent | ✅ 11-04 確認：不做 |
+| 整批上限 | ✅ 11-05 確認：每批最多 256 張、所有容器合計 64 MiB；不串流。**A 端打包**只有「整批完成」或「整批失敗」兩種狀態；**B 端還原**依 partial／complete 語意（9.3） |
+| nonce 碰撞 | ✅ 11-05 確認：nonce 最多重抽 3 次，仍重複就整批失敗、用新的 k_pat 重新打包（第三版沒有 hint 碰撞） |
 
 ### 9.13 裁決紀錄
 
 | 日期 | 項目 | 裁決 |
 |---|---|---|
 | 11-04 | G1 | ✅ 每次分享產生一把新的 k_pat_B；不需要 epoch |
-| 11-04 | G2 | ✅ 使用 key hint |
+| 11-04 | G2 | ✅ 使用 key hint（**11-05 已被第三版取代**） |
 | 11-04 | Q9 | ✅ **做** E3（v3 的保真度，與 v1 S2fn 逐樣本配對；第二版另外報告 v3−v2） |
 | 11-04 | Q10 | ✅ **做** E4，**包含 v2 對照**。使用者已同意約 43 分鐘的 GPU 時間 |
 | 11-04 | 第二版 | ✅ 依 opinion §10（V3-R1～R7）修訂；9.12 的設計選項待使用者確認 |
@@ -1105,7 +1107,10 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 | 11-04 | A 端 latent 暫存 | ✅ 不做；A 端打包維持全有全無 |
 | 11-04 | opinion §11 | 已修入：§11.2 A 端先固定 H3 再做 AEAD，並加入獨立的 AAD 比對；§11.3 previous 的信任邊界（只限本地 process 內的快取、不接受外部提交）、綁定項目、索引與影像檢查、不可變快照、OperationalError；§11.4 釐清「全有全無」只適用於 A 端打包 |
 
-**狀態**：第二版規劃完成，**尚未實作**。等 9.12 確認後，依 T1→T9 執行。
+| 11-05 | G2（修訂） | ✅ **(a)**：容器一律搭配它所屬的信使用；移除 key hint 與候選信封搜尋；容器是否屬於這封信由 MAC 判定；完整性摘要改用 nonce 清單 |
+| 11-05 | 9.12 | ✅ verify_bundle 的角色、整批上限、nonce 碰撞處理確認；候選與 hint 相關選項不再適用 |
+
+**狀態**：第三版規劃完成，**尚未實作**；使用者表示還要再確認。確認後依 T1→T9 執行。
 
 ---
 
