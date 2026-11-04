@@ -31,14 +31,15 @@ def _snap(version: int, *, b_status: str = "active", issued=NOW - 10, expires=NO
     return build_snapshot(root or _root(), version, issued, expires, records if records is not None else _records(b_status))
 
 
-def _store(tmp_path) -> TrustStore:
-    return TrustStore(_root().public_key(), tmp_path / "trust_state.json")
+def _store(tmp_path, clock=lambda: NOW) -> TrustStore:
+    return TrustStore(_root().public_key(), tmp_path / "trust_state.json", clock=clock)
 
 
 def test_valid_snapshot_loads_and_lookups_work(tmp_path) -> None:
-    reg = _store(tmp_path).load(_snap(1), now=NOW)
-    assert reg.recipient_key("hospital-B", "B-x25519-2026a").public_bytes_raw() == fixture_x25519("B").public_key().public_bytes_raw()
-    reg.signing_key("hospital-A", "A-ed25519-2026a")
+    store = _store(tmp_path)
+    store.load(_snap(1), now=NOW)
+    assert store.recipient_key("hospital-B", "B-x25519-2026a").public_bytes_raw() == fixture_x25519("B").public_key().public_bytes_raw()
+    store.signing_key("hospital-A", "A-ed25519-2026a")
     assert json.loads((tmp_path / "trust_state.json").read_text())["highest_version"] == 1
 
 
@@ -49,15 +50,17 @@ def test_valid_snapshot_loads_and_lookups_work(tmp_path) -> None:
     ("hospital-B", "B-x25519-2026a", "sign"),     # recipient key used as signing key
 ])
 def test_lookup_fails_closed(tmp_path, inst, key, purpose) -> None:
-    reg = _store(tmp_path).load(_snap(1), now=NOW)
+    store = _store(tmp_path)
+    store.load(_snap(1), now=NOW)
     with pytest.raises(RegistryError):
-        (reg.recipient_key if purpose == "recv" else reg.signing_key)(inst, key)
+        (store.recipient_key if purpose == "recv" else store.signing_key)(inst, key)
 
 
 def test_revoked_key_is_refused(tmp_path) -> None:
-    reg = _store(tmp_path).load(_snap(2, b_status="revoked"), now=NOW)
+    store = _store(tmp_path)
+    store.load(_snap(2, b_status="revoked"), now=NOW)
     with pytest.raises(RegistryError):
-        reg.recipient_key("hospital-B", "B-x25519-2026a")
+        store.recipient_key("hospital-B", "B-x25519-2026a")
 
 
 def _payload_offset(snapshot: bytes) -> int:
@@ -150,3 +153,36 @@ def test_corrupt_state_file_fails_closed(tmp_path) -> None:
     (tmp_path / "trust_state.json").write_text("{not json")
     with pytest.raises(RegistryError):
         _store(tmp_path).load(_snap(1), now=NOW)
+
+
+# ------------------------------------------------------------------ AF-052 use-time freshness
+def test_af052_cached_store_rejects_after_expiry(tmp_path) -> None:
+    clock = {"now": NOW}
+    store = _store(tmp_path, clock=lambda: clock["now"])
+    store.load(_snap(1, expires=NOW + 100), now=NOW)
+    store.recipient_key("hospital-B", "B-x25519-2026a")            # valid now
+    clock["now"] = NOW + 100                                       # expires_at reached
+    with pytest.raises(RegistryError):
+        store.recipient_key("hospital-B", "B-x25519-2026a")
+    with pytest.raises(RegistryError):
+        store.signing_key("hospital-A", "A-ed25519-2026a")
+
+
+def test_af052_store_superseded_by_another_store_on_same_state_is_stale(tmp_path) -> None:
+    old_store = _store(tmp_path)
+    old_store.load(_snap(1, b_status="active"), now=NOW)
+    new_store = _store(tmp_path)                                    # e.g. another worker / restarted service
+    new_store.load(_snap(2, b_status="revoked"), now=NOW)
+    with pytest.raises(RegistryError):
+        old_store.recipient_key("hospital-B", "B-x25519-2026a")    # cannot keep serving v1
+    with pytest.raises(RegistryError):
+        new_store.recipient_key("hospital-B", "B-x25519-2026a")    # revoked in v2
+    new_store.signing_key("hospital-A", "A-ed25519-2026a")         # latest valid state still works
+
+
+def test_af052_unloaded_store_and_registry_object_have_no_lookup_path(tmp_path) -> None:
+    store = _store(tmp_path)
+    with pytest.raises(RegistryError):
+        store.recipient_key("hospital-B", "B-x25519-2026a")
+    reg = store.load(_snap(1), now=NOW)
+    assert not hasattr(reg, "recipient_key") and not hasattr(reg, "signing_key")

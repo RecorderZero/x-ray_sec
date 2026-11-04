@@ -68,7 +68,9 @@ class World:
             KeyRecord("hospital-C", "C-x25519-2026a", "x25519-recv", "active", self.c.private_key.public_key().public_bytes_raw()),
         ]
         snapshot = build_snapshot(self.root, 1, NOW - 10, NOW + 3600, records)
-        self.registry = TrustStore(self.root.public_key(), self.tmp_path / "trust.json").load(snapshot, now=NOW)
+        self.now = NOW                                    # test clock; advance it to exercise use-time checks
+        self.registry = TrustStore(self.root.public_key(), self.tmp_path / "trust.json", clock=lambda: self.now)
+        self.registry.load(snapshot)
         self.manifest_blobs = {MANIFEST.digest(): sign_manifest(MANIFEST, self.a_sign)}
 
     def fetch_manifest(self, digest: bytes) -> bytes:

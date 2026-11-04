@@ -22,7 +22,7 @@ from .container import decode_anon_png, open_metadata, parse, verify_signature, 
 from .errors import RecipientError, ShareFormatError
 from .keys import build_info, derive_subkeys, unwrap_image_key, wipe_all
 from .manifest import Manifest, verify_manifest
-from .registry import Registry
+from .registry import TrustStore
 from .transform import LATENT_SHAPE, decrypt_latent
 
 
@@ -44,11 +44,13 @@ def recover_image(
     container: bytes,
     *,
     recipient: RecipientIdentity,
-    registry: Registry,
+    registry: TrustStore,
     fetch_manifest: Callable[[bytes], bytes],
     pipeline_factory: PipelineFactory,
 ) -> torch.Tensor:
     """Internal flow; raises the layer-specific error that fired (for tests / audit)."""
+    if not isinstance(registry, TrustStore):
+        raise ShareFormatError("registry must be a TrustStore (use-time freshness checks, AF-052)")
     parsed = parse(container)                                                      # 1
     header = parsed.header
     sender_pub = registry.signing_key(header.inst_id_a, header.signing_key_id_a)   # 2
@@ -79,7 +81,7 @@ def recover_image(
 class ReceiverService:
     """Public service boundary: image out, or one generic rejection (no key, no layer detail)."""
 
-    def __init__(self, recipient: RecipientIdentity, registry: Registry,
+    def __init__(self, recipient: RecipientIdentity, registry: TrustStore,
                  fetch_manifest: Callable[[bytes], bytes], pipeline_factory: PipelineFactory):
         self._recipient = recipient
         self._registry = registry

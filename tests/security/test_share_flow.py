@@ -10,7 +10,9 @@ from src.share.keys import TestFixtureStream
 from src.share.receiver import ReceiverService, recover_image
 from src.share.sender import share_image
 
-from tests.security._share_world import MANIFEST, FactorySpy, World, ed25519, identity, x0_fixture
+from tests.security._share_world import MANIFEST, NOW, FactorySpy, World, ed25519, identity, x0_fixture
+
+NOW_PLUS_EXPIRED = NOW + 3600
 
 
 def _share(world: World, to: str = "B", fixture: str | None = None, x0=None) -> bytes:
@@ -122,3 +124,56 @@ def test_fixture_mode_is_reproducible_and_csprng_mode_is_fresh(tmp_path) -> None
     assert f1.header.wrap != f2.header.wrap                           # HPKE ephemeral still random
     r1, r2 = parse(_share(world)), parse(_share(world))
     assert r1.header.nonce != r2.header.nonce and r1.png != r2.png
+
+
+# ------------------------------------------------------------------ AF-052 regressions (services)
+class _CountingInvert:
+    def __init__(self):
+        self.calls = 0
+
+    def __call__(self, x):
+        self.calls += 1
+        return identity(x)
+
+
+def test_af052_long_lived_services_reject_after_expiry_before_inference(tmp_path) -> None:
+    world = World(tmp_path)
+    blob = _share(world)
+    spy = FactorySpy()
+    service = ReceiverService(world.b, world.registry, world.fetch_manifest, spy)
+    service.recover(blob)                                   # within validity
+    world.now = NOW_PLUS_EXPIRED
+    with pytest.raises(AuthenticationError):
+        service.recover(blob)
+    assert spy.calls == 1                                    # the rejected request never reached the model
+    inv = _CountingInvert()
+    with pytest.raises(RegistryError):
+        share_image(x0_fixture(), sender=world.sender, recipient_inst_id=world.b.inst_id, recipient_key_id=world.b.key_id,
+                    registry=world.registry, manifest_digest=MANIFEST.digest(), invert=inv, generate=identity)
+    assert inv.calls == 0
+
+
+def test_af052_cached_services_reject_after_newer_revocation_is_persisted(tmp_path) -> None:
+    from src.share.registry import KeyRecord, TrustStore, build_snapshot
+    world = World(tmp_path)
+    blob = _share(world)
+    spy = FactorySpy()
+    service = ReceiverService(world.b, world.registry, world.fetch_manifest, spy)
+    revoked = [KeyRecord(r.inst_id, r.key_id, r.purpose, "revoked" if r.inst_id in ("hospital-A", "hospital-B") else r.status,
+                         r.public_key) for r in world.registry.records]
+    other = TrustStore(world.root.public_key(), tmp_path / "trust.json", clock=lambda: world.now)   # same state path
+    other.load(build_snapshot(world.root, 2, NOW - 10, NOW + 3600, revoked))
+    with pytest.raises(AuthenticationError):
+        service.recover(blob)                                # cached v1 store is now stale
+    with pytest.raises(RegistryError):
+        _share(world)                                        # cached v1 sender path refuses too
+    assert spy.calls == 0
+    with pytest.raises(RegistryError):
+        other.recipient_key(world.b.inst_id, world.b.key_id)  # and v2 says revoked
+
+
+def test_raw_registry_object_is_not_accepted_by_services(tmp_path) -> None:
+    world = World(tmp_path)
+    with pytest.raises(Exception):
+        share_image(x0_fixture(), sender=world.sender, recipient_inst_id=world.b.inst_id, recipient_key_id=world.b.key_id,
+                    registry=world.registry.current, manifest_digest=MANIFEST.digest(), invert=identity, generate=identity)

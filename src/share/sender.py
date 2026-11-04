@@ -18,7 +18,7 @@ from .container import Header, assemble, compute_tag, encode_anon_png, seal_meta
 from .encoding import PROFILE_M1_PRIVATE_RANGE_V2, require_id, require_profile
 from .errors import ShareFormatError
 from .keys import TestFixtureStream, build_info, derive_subkeys, new_image_key, new_nonce, wipe_all, wrap_image_key
-from .registry import Registry
+from .registry import TrustStore
 from .transform import LATENT_SHAPE, encrypt_latent
 
 
@@ -51,7 +51,7 @@ def share_image(
     sender: SenderIdentity,
     recipient_inst_id: str,
     recipient_key_id: str,
-    registry: Registry,
+    registry: TrustStore,
     manifest_digest: bytes,
     invert: Pipeline,
     generate: Pipeline,
@@ -64,6 +64,8 @@ def share_image(
     image key/nonce with a PUBLIC labelled stream (§8.8 key policy).
     """
     require_profile(profile_id)
+    if not isinstance(registry, TrustStore):
+        raise ShareFormatError("registry must be a TrustStore (use-time freshness checks, AF-052)")
     require_id(recipient_inst_id, "inst_id_B")
     require_id(recipient_key_id, "key_id_B")
     recipient_pk = registry.recipient_key(recipient_inst_id, recipient_key_id)   # fail closed (RegistryError)

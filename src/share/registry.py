@@ -10,7 +10,10 @@ Snapshot bytes::
 The root public key is pinned by configuration and never read from a snapshot.
 A snapshot is accepted only if its signature and every validity rule hold; only
 then is the highest-seen (version, payload digest) persisted atomically, so a
-failed or unverified snapshot never changes trusted state. This is a bounded
+failed or unverified snapshot never changes trusted state. Lookups are served
+only by :class:`TrustStore`, which re-checks the clock and the persisted
+high-water mark on every call, so a long-lived service cannot keep using an
+expired or superseded snapshot (AF-052). This is a bounded
 anti-rollback mechanism for the prototype, not a full federation PKI.
 """
 
@@ -21,6 +24,7 @@ import json
 import os
 import struct
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -59,6 +63,8 @@ class KeyRecord:
 
 @dataclass(frozen=True)
 class Registry:
+    """Verified snapshot data. Key lookups go only through :class:`TrustStore` (AF-052)."""
+
     version: int
     issued_at: int
     expires_at: int
@@ -75,11 +81,6 @@ class Registry:
                 return record
         raise RegistryError("unknown registry key")
 
-    def recipient_key(self, inst_id: str, key_id: str) -> X25519PublicKey:
-        return X25519PublicKey.from_public_bytes(self._find(inst_id, key_id, "x25519-recv").public_key)
-
-    def signing_key(self, inst_id: str, key_id: str) -> Ed25519PublicKey:
-        return Ed25519PublicKey.from_public_bytes(self._find(inst_id, key_id, "ed25519-sign").public_key)
 
 
 def build_payload(version: int, issued_at: int, expires_at: int, records: list[KeyRecord]) -> bytes:
@@ -122,11 +123,43 @@ def _parse_payload(payload: bytes) -> tuple[int, int, int, tuple[KeyRecord, ...]
 class TrustStore:
     """Pinned root + persisted highest-seen (version, digest); shared by sender and receiver."""
 
-    def __init__(self, root: Ed25519PublicKey, state_path: Path):
+    def __init__(self, root: Ed25519PublicKey, state_path: Path, clock: Callable[[], float] | None = None):
         if not isinstance(root, Ed25519PublicKey):
             raise ShareFormatError("pinned root must be an Ed25519 public key")
         self._root = root
         self._state_path = Path(state_path)
+        self._clock = clock if clock is not None else (lambda: time.time())
+        self._current: Registry | None = None
+
+    # ---- use-time resolution (AF-052): every lookup re-checks clock and persisted high-water
+    def _checked_current(self) -> Registry:
+        current = self._current
+        if current is None:
+            raise RegistryError("no verified registry snapshot is loaded")
+        now = int(self._clock())
+        if not current.issued_at <= now < current.expires_at:
+            raise RegistryError("loaded registry snapshot is expired or not yet valid")
+        state = self._read_state()
+        if state is None or state != (current.version, current.digest):
+            raise RegistryError("loaded registry snapshot is stale relative to the persisted high-water mark")
+        return current
+
+    def recipient_key(self, inst_id: str, key_id: str) -> X25519PublicKey:
+        record = self._checked_current()._find(inst_id, key_id, "x25519-recv")
+        return X25519PublicKey.from_public_bytes(record.public_key)
+
+    def signing_key(self, inst_id: str, key_id: str) -> Ed25519PublicKey:
+        record = self._checked_current()._find(inst_id, key_id, "ed25519-sign")
+        return Ed25519PublicKey.from_public_bytes(record.public_key)
+
+    @property
+    def current(self) -> Registry | None:
+        """Read-only view of the last verified snapshot (inspection only; never used for lookups)."""
+        return self._current
+
+    @property
+    def records(self) -> tuple[KeyRecord, ...]:
+        return self._current.records if self._current is not None else ()
 
     def _read_state(self) -> tuple[int, str] | None:
         if not self._state_path.exists():
@@ -147,8 +180,8 @@ class TrustStore:
         os.replace(tmp, self._state_path)
 
     def load(self, snapshot: bytes, *, now: int | None = None) -> Registry:
-        """Verify fully, then (and only then) advance the persisted anti-rollback state."""
-        now = int(time.time()) if now is None else int(now)
+        """Verify fully, then (and only then) advance the persisted anti-rollback state and adopt it."""
+        now = int(self._clock()) if now is None else int(now)
         try:
             if not isinstance(snapshot, (bytes, bytearray)) or len(snapshot) > MAX_SNAPSHOT_BYTES:
                 raise ShareFormatError("registry snapshot missing or too large")
@@ -178,4 +211,6 @@ class TrustStore:
                 raise RegistryError("registry equivocation: same version, different content")
         if state is None or version > state[0]:
             self._write_state(version, digest)
-        return Registry(version, issued_at, expires_at, records, digest)
+        registry = Registry(version, issued_at, expires_at, records, digest)
+        self._current = registry
+        return registry
