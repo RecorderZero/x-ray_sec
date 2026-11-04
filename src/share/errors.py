@@ -32,3 +32,7 @@ class MacError(AuthenticationError):
 
 class MetadataError(AuthenticationError):
     """Private metadata failed AEAD authentication or its value checks."""
+
+
+class ManifestError(AuthenticationError):
+    """The model/sampler manifest is missing, mismatched, unsigned, or outside the profile."""
