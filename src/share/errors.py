@@ -36,3 +36,7 @@ class MetadataError(AuthenticationError):
 
 class ManifestError(AuthenticationError):
     """The model/sampler manifest is missing, mismatched, unsigned, or outside the profile."""
+
+
+class RecipientError(AuthenticationError):
+    """The container is not addressed to this recipient institution/key."""
