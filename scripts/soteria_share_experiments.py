@@ -129,6 +129,8 @@ def _aggregate(blobs: list[bytes]) -> str:
 def write_container_manifest(container_dir: Path, role: str, rows: list[dict], blobs: list[bytes], split: Path,
                              created_by: str, extra: dict | None = None) -> Path:
     """Research-private map sample/patient -> container SHA-256 (never put into the public header)."""
+    if len(rows) != len(blobs) or not rows:
+        raise SystemExit(f"{role}: rows ({len(rows)}) and containers ({len(blobs)}) must be equal and non-empty")
     entries = [{"sample_id": r["sample_id"], "patient_id": r["patient_id"], "file": f"{r['sample_id']}.soteria",
                 "sha256": hashlib.sha256(b).hexdigest()} for r, b in zip(rows, blobs)]
     payload = {"schema_version": 1, "role": role, "created_by": created_by,
@@ -152,6 +154,8 @@ def load_verified_containers(container_dir: Path, role: str, rows: list[dict], s
         raise SystemExit(f"{role}: container manifest role/profile/manifest mismatch")
     if man.get("split_sha256") != sha256_file(split) or man.get("n") != len(rows):
         raise SystemExit(f"{role}: container manifest was built for a different split")
+    if not isinstance(man.get("entries"), list) or len(man["entries"]) != len(rows) or man["n"] != len(man["entries"]):
+        raise SystemExit(f"{role}: container manifest entry count does not equal n and the split rows")
     blobs = []
     for r, e in zip(rows, man["entries"]):
         if (e["sample_id"], e["patient_id"]) != (r["sample_id"], r["patient_id"]):
@@ -482,6 +486,18 @@ def run_backfill(args) -> None:
     """AF-057: build manifests for containers produced before manifests existed; verified against the formal E2 JSON."""
     rows, tag = _rows_for(args)
     ref = json.loads(args.reference.read_text())
+    # AF-057: bind the backfill to the exact run being referenced BEFORE anything is written.
+    problems = []
+    if ref.get("experiment") != "E2":
+        problems.append("reference is not an E2 result")
+    if ref.get("evidence_role") != args.evidence_role:
+        problems.append(f"reference evidence_role {ref.get('evidence_role')!r} != {args.evidence_role!r}")
+    if ref.get("split_sha256") != sha256_file(args.split):
+        problems.append("current split SHA-256 differs from the split recorded by the reference run")
+    if ref.get("n_patients") != len(rows):
+        problems.append(f"reference n_patients {ref.get('n_patients')} != {len(rows)} rows")
+    if problems:
+        raise SystemExit("backfill refused: " + "; ".join(problems))
     for role, sub, key in (("E1-B", f"e1{tag}/containers_B", "b_containers_sha256"),
                            ("E2-C", f"e2{tag}/containers_C", "c_containers_sha256")):
         d = args.artifact_dir / sub
