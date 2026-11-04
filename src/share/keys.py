@@ -136,9 +136,15 @@ def derive_subkeys(image_key: SecretKey, nonce: bytes, profile_id: str) -> dict[
         raise ShareFormatError("nonce_B must be 16 bytes")
     ikm = image_key.raw()
     out: dict[str, SecretKey] = {}
-    for label in SUBKEY_LABELS:
-        info = lp(profile_id.encode("ascii")) + lp(label.encode("ascii"))
-        out[label] = SecretKey(HKDF(algorithm=hashes.SHA256(), length=SUBKEY_BYTES, salt=nonce, info=info).derive(ikm))
+    try:
+        for label in SUBKEY_LABELS:
+            info = lp(profile_id.encode("ascii")) + lp(label.encode("ascii"))
+            out[label] = SecretKey(HKDF(algorithm=hashes.SHA256(), length=SUBKEY_BYTES, salt=nonce, info=info).derive(ikm))
+    except BaseException:
+        # AF-053: the caller never receives a partially built dict, so this function owns
+        # its cleanup on every abnormal exit (including KeyboardInterrupt / cancellation).
+        wipe_all(out)
+        raise
     return out
 
 

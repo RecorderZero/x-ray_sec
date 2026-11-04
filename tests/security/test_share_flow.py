@@ -177,3 +177,74 @@ def test_raw_registry_object_is_not_accepted_by_services(tmp_path) -> None:
     with pytest.raises(Exception):
         share_image(x0_fixture(), sender=world.sender, recipient_inst_id=world.b.inst_id, recipient_key_id=world.b.key_id,
                     registry=world.registry.current, manifest_digest=MANIFEST.digest(), invert=identity, generate=identity)
+
+
+# ------------------------------------------------------------------ AF-053 partial-derivation cleanup
+import src.share.keys as keys_mod  # noqa: E402
+from src.share.keys import SecretKey  # noqa: E402
+
+
+class _Interrupt(KeyboardInterrupt):
+    pass
+
+
+def _tracking(monkeypatch) -> list:
+    created = []
+    original = SecretKey.__init__
+
+    def init(self, material):
+        original(self, material)
+        created.append(self)
+    monkeypatch.setattr(SecretKey, "__init__", init)
+    return created
+
+
+def _failing_hkdf(monkeypatch, fail_at: int, exc: type[BaseException]) -> None:
+    real = keys_mod.HKDF
+    state = {"n": 0}
+
+    class FailingHKDF:
+        def __init__(self, *a, **k):
+            self._inner = real(*a, **k)
+
+        def derive(self, ikm):
+            state["n"] += 1
+            if state["n"] == fail_at:
+                raise exc("injected HKDF failure")
+            return self._inner.derive(ikm)
+    monkeypatch.setattr(keys_mod, "HKDF", FailingHKDF)
+
+
+@pytest.mark.parametrize("exc", [RuntimeError, _Interrupt])
+@pytest.mark.parametrize("fail_at", [1, 2, 3, 4, 5])
+def test_af053_sender_wipes_every_buffer_when_any_hkdf_step_fails(tmp_path, monkeypatch, fail_at, exc) -> None:
+    world = World(tmp_path)
+    created = _tracking(monkeypatch)
+    _failing_hkdf(monkeypatch, fail_at, exc)
+    with pytest.raises(exc):
+        _share(world)
+    assert len(created) == fail_at            # image key + (fail_at - 1) finished subkeys
+    assert all(k.wiped and k.buffer_is_zero() for k in created)
+
+
+@pytest.mark.parametrize("exc", [RuntimeError, _Interrupt])
+@pytest.mark.parametrize("fail_at", [1, 2, 3, 4, 5])
+def test_af053_receiver_wipes_every_buffer_when_any_hkdf_step_fails(tmp_path, monkeypatch, fail_at, exc) -> None:
+    world = World(tmp_path)
+    blob = _share(world)
+    created = _tracking(monkeypatch)
+    _failing_hkdf(monkeypatch, fail_at, exc)
+    spy = FactorySpy()
+    with pytest.raises(exc):
+        _recover(world, blob, spy=spy)
+    assert spy.calls == 0
+    assert len(created) == fail_at            # unwrapped image key + finished subkeys
+    assert all(k.wiped and k.buffer_is_zero() for k in created)
+
+
+def test_af053_normal_paths_still_wipe_everything(tmp_path, monkeypatch) -> None:
+    world = World(tmp_path)
+    created = _tracking(monkeypatch)
+    blob = _share(world)
+    _recover(world, blob)
+    assert len(created) == 12 and all(k.wiped and k.buffer_is_zero() for k in created)
