@@ -1,0 +1,1221 @@
+{
+  "schema_version": 1,
+  "role": "E1-B",
+  "created_by": "retroactive backfill 2026-11-04 (AF-057); not produced by the original run",
+  "run_id": "81f611400f376dfd",
+  "profile_id": "soteria-share/m1-private-range/v2",
+  "manifest_digest": "e5a3440b870902aaf4804d9a639e4af2f64e01907249679996a5c19d6979c4ab",
+  "split": "splits/security_v1.csv",
+  "split_sha256": "49d3139cf16a8bf6fb96e8a7aa906b6ab2e9557a7d617a510bb2fcdfa2dcafd1",
+  "n": 200,
+  "aggregate_sha256": "93a0a3df5890460511a19396a1fafb0accdcff6d39f0095a5458dc056d2b7896",
+  "git": {
+    "commit": "a3eef4941a11b6a87f76e1d979f0725a286dd82d",
+    "dirty": true,
+    "dirty_tracked_files": "M .gitignore\n M PROGRESS.md\n M README.md\n M presentation/assets/fig_attack_flow.png\n M \"presentation/\\345\\240\\261\\345\\221\\212\\345\\244\\247\\347\\266\\261.md\"\n M scripts/build_t2bb_inner_split.py\n M scripts/plot_presentation_figures.py\n M scripts/q11_localization_parity.py\n M scripts/reid_external_attacker.py\n M scripts/t2bb_inner_linkage.py"
+  },
+  "entries": [
+    {
+      "sample_id": "security_v1_0000",
+      "patient_id": "patient00241",
+      "file": "security_v1_0000.soteria",
+      "sha256": "13d0f04fe3ac5d0f3e0721c00860f9c492b7d7a4279723fbc8431b9e1571bebc"
+    },
+    {
+      "sample_id": "security_v1_0001",
+      "patient_id": "patient00327",
+      "file": "security_v1_0001.soteria",
+      "sha256": "44df9bf0848a7acb19523776ab12b284f2d18c03b267711fa99cbd72357ddcb2"
+    },
+    {
+      "sample_id": "security_v1_0002",
+      "patient_id": "patient01452",
+      "file": "security_v1_0002.soteria",
+      "sha256": "39e6b6ed0e8d69b520d418d18c4a9fc7c6c97e5d2ff4c369b6a6e5d90064c2ef"
+    },
+    {
+      "sample_id": "security_v1_0003",
+      "patient_id": "patient01598",
+      "file": "security_v1_0003.soteria",
+      "sha256": "5914781148bb4dd7eeed27df4f87c8b17118813882a8b06ee3e49b5247a06677"
+    },
+    {
+      "sample_id": "security_v1_0004",
+      "patient_id": "patient02025",
+      "file": "security_v1_0004.soteria",
+      "sha256": "7e6f6d1f24ee79818bdbb5260ec03fdb07def6467b8567b7379311e5810460b2"
+    },
+    {
+      "sample_id": "security_v1_0005",
+      "patient_id": "patient02555",
+      "file": "security_v1_0005.soteria",
+      "sha256": "2dc518cce38a51c8f5882677e0ad7ea06fcfc92fff3f728fdb13d8564d4d9faf"
+    },
+    {
+      "sample_id": "security_v1_0006",
+      "patient_id": "patient02724",
+      "file": "security_v1_0006.soteria",
+      "sha256": "febbe8f7aeec32556d6cba9684dfcb12c4e49d41e938c50f4654a267e436e46f"
+    },
+    {
+      "sample_id": "security_v1_0007",
+      "patient_id": "patient03846",
+      "file": "security_v1_0007.soteria",
+      "sha256": "51d3b72bc08a174f72195475e2f058c0804ef1d4ae60b3bc327153b5c70cdec2"
+    },
+    {
+      "sample_id": "security_v1_0008",
+      "patient_id": "patient04005",
+      "file": "security_v1_0008.soteria",
+      "sha256": "bd1d254353c78face4c6ca090acaab0bd7fcdcd876b15abe72a01f19128c5a66"
+    },
+    {
+      "sample_id": "security_v1_0009",
+      "patient_id": "patient05238",
+      "file": "security_v1_0009.soteria",
+      "sha256": "a18bd83402b4471857d0f76fca57c9a2fb88c4870f19baf16c16b6adcd511fd2"
+    },
+    {
+      "sample_id": "security_v1_0010",
+      "patient_id": "patient05261",
+      "file": "security_v1_0010.soteria",
+      "sha256": "e9a7bcb8ba0f738d7c390c390624b6a5bf2f0ec1f4cbb26fd4c656d0db209b05"
+    },
+    {
+      "sample_id": "security_v1_0011",
+      "patient_id": "patient06117",
+      "file": "security_v1_0011.soteria",
+      "sha256": "498315525e0d35a1fdc40f09ddf4d711e0a95a9b149aaf4b5f4ad4e87e74d088"
+    },
+    {
+      "sample_id": "security_v1_0012",
+      "patient_id": "patient06456",
+      "file": "security_v1_0012.soteria",
+      "sha256": "2bca34e4038d9ee428908972b5f62783cbf50ef9dc461b1ba524515db1d69e92"
+    },
+    {
+      "sample_id": "security_v1_0013",
+      "patient_id": "patient06646",
+      "file": "security_v1_0013.soteria",
+      "sha256": "07209c407a07de005089b47ba55cce7f816dc8be47df112368b141d41af34cdf"
+    },
+    {
+      "sample_id": "security_v1_0014",
+      "patient_id": "patient07485",
+      "file": "security_v1_0014.soteria",
+      "sha256": "44a254f33a3ff367d629d68a8d9c94dbba2036ff390251048ec7c49993cefddb"
+    },
+    {
+      "sample_id": "security_v1_0015",
+      "patient_id": "patient07487",
+      "file": "security_v1_0015.soteria",
+      "sha256": "be4a4e55affaedb85959b1e7a67619c426922e349e5555b829c64472c2f4700d"
+    },
+    {
+      "sample_id": "security_v1_0016",
+      "patient_id": "patient07790",
+      "file": "security_v1_0016.soteria",
+      "sha256": "7c9f9a798ac3a30563247580aa8f6be79005a4c8cef18ed437610b19f6de7c58"
+    },
+    {
+      "sample_id": "security_v1_0017",
+      "patient_id": "patient08144",
+      "file": "security_v1_0017.soteria",
+      "sha256": "cfa5d0ea782251f9f583f27b3aeff30227abbe2277fdcaf225fc13f6e2740e78"
+    },
+    {
+      "sample_id": "security_v1_0018",
+      "patient_id": "patient08627",
+      "file": "security_v1_0018.soteria",
+      "sha256": "5c3ed9854a702eff34dfc9b751ddec62cdf9199df39d786aea2ab0b54acc0e04"
+    },
+    {
+      "sample_id": "security_v1_0019",
+      "patient_id": "patient09088",
+      "file": "security_v1_0019.soteria",
+      "sha256": "994cb99d859a7d89663c0b852cfd1f2ff3915aa1cb7eb479c91eb5a8364f9614"
+    },
+    {
+      "sample_id": "security_v1_0020",
+      "patient_id": "patient09121",
+      "file": "security_v1_0020.soteria",
+      "sha256": "b0fea360b902993f9cff4a1a092dba7e2e419b9709d95c6c849942468e662042"
+    },
+    {
+      "sample_id": "security_v1_0021",
+      "patient_id": "patient11086",
+      "file": "security_v1_0021.soteria",
+      "sha256": "bf7e816233f61d789398b6ecfc7293f990c63c82636efcf8ed4be816c640c29d"
+    },
+    {
+      "sample_id": "security_v1_0022",
+      "patient_id": "patient11613",
+      "file": "security_v1_0022.soteria",
+      "sha256": "b66411c7210df2d783610f27c92c49e0b5ab3b41645c786cc390839171cf8e05"
+    },
+    {
+      "sample_id": "security_v1_0023",
+      "patient_id": "patient11767",
+      "file": "security_v1_0023.soteria",
+      "sha256": "78bd69449ba438936ac2a0bb50529014b82db365dff87cb8ea30aa4f8868cdfa"
+    },
+    {
+      "sample_id": "security_v1_0024",
+      "patient_id": "patient11849",
+      "file": "security_v1_0024.soteria",
+      "sha256": "1fff212ccac9e1b8f6cf79e6cce28b6335fc5b12a55c2bed4c8d2b017bf9fb89"
+    },
+    {
+      "sample_id": "security_v1_0025",
+      "patient_id": "patient12986",
+      "file": "security_v1_0025.soteria",
+      "sha256": "fc3631d5172ae1ab7012a99d600cf717b45c32808e7f3543f1e2b4c92be683b2"
+    },
+    {
+      "sample_id": "security_v1_0026",
+      "patient_id": "patient13537",
+      "file": "security_v1_0026.soteria",
+      "sha256": "568388fe9047d28b01c4dbb25c8abea14a1b4f38d8b71183dc4cdddbd80c91b8"
+    },
+    {
+      "sample_id": "security_v1_0027",
+      "patient_id": "patient13761",
+      "file": "security_v1_0027.soteria",
+      "sha256": "863036783e5c5ccf6539668e01bb2be7df98581fe6ac0e54fbdb961eedde4092"
+    },
+    {
+      "sample_id": "security_v1_0028",
+      "patient_id": "patient14724",
+      "file": "security_v1_0028.soteria",
+      "sha256": "71e947f497a339ecbfb50764729eda4d5b05828592877ea9ea7bcac19d8c3d57"
+    },
+    {
+      "sample_id": "security_v1_0029",
+      "patient_id": "patient15008",
+      "file": "security_v1_0029.soteria",
+      "sha256": "62df3faae89b157a8115e0d7bf928bc3903e6464c4030f2b5d1a0aa9df73dc7a"
+    },
+    {
+      "sample_id": "security_v1_0030",
+      "patient_id": "patient16278",
+      "file": "security_v1_0030.soteria",
+      "sha256": "25ecde51ca098773e19fdb6648507ef30b4c2012f7b8db56ccbf671653e0e4aa"
+    },
+    {
+      "sample_id": "security_v1_0031",
+      "patient_id": "patient16379",
+      "file": "security_v1_0031.soteria",
+      "sha256": "9750d950257727cde3885635e50f858aba8d31451619fb77cbb4bbf7b216cf21"
+    },
+    {
+      "sample_id": "security_v1_0032",
+      "patient_id": "patient19329",
+      "file": "security_v1_0032.soteria",
+      "sha256": "5f100a7047dba2f575ee0f11b8319372c63a47d9194570880dd6ac0a3b8f50ca"
+    },
+    {
+      "sample_id": "security_v1_0033",
+      "patient_id": "patient20650",
+      "file": "security_v1_0033.soteria",
+      "sha256": "2ccdcfaaa33d06647bee1d024037760cac51b6aba0c658b615406244d0d0abf5"
+    },
+    {
+      "sample_id": "security_v1_0034",
+      "patient_id": "patient20931",
+      "file": "security_v1_0034.soteria",
+      "sha256": "2b5a4210474f1a116a22ded6df36ad8ce04627776217ce7e372d974c2cdcfa63"
+    },
+    {
+      "sample_id": "security_v1_0035",
+      "patient_id": "patient22095",
+      "file": "security_v1_0035.soteria",
+      "sha256": "0a87ae59536a2f07f9f5ada29f42fcbd15c812d2bf9c7cae2d2962fc679b447a"
+    },
+    {
+      "sample_id": "security_v1_0036",
+      "patient_id": "patient22539",
+      "file": "security_v1_0036.soteria",
+      "sha256": "94d3977606d1d00da58c85c9db9bd8629b5b50077db808406d68f4b0e725b2ba"
+    },
+    {
+      "sample_id": "security_v1_0037",
+      "patient_id": "patient22872",
+      "file": "security_v1_0037.soteria",
+      "sha256": "43dbfadcce32d75ced458b65bd5b5bcbdf8c1a21571dab648b9d8d95a37fbc5b"
+    },
+    {
+      "sample_id": "security_v1_0038",
+      "patient_id": "patient23049",
+      "file": "security_v1_0038.soteria",
+      "sha256": "158200e1d0e7a7b2260d62ea481f81b1990df562657d3efaa98e201246cdd21f"
+    },
+    {
+      "sample_id": "security_v1_0039",
+      "patient_id": "patient23276",
+      "file": "security_v1_0039.soteria",
+      "sha256": "a6dfdc496c8d44b293c8b8d4d328ba8fe1cb8a66d54e63286c65e5b94273e6da"
+    },
+    {
+      "sample_id": "security_v1_0040",
+      "patient_id": "patient24119",
+      "file": "security_v1_0040.soteria",
+      "sha256": "fb0b59eed5007897e903aa426ddaf3c89eb49b883b58084aad1cffd431e9cf2c"
+    },
+    {
+      "sample_id": "security_v1_0041",
+      "patient_id": "patient24302",
+      "file": "security_v1_0041.soteria",
+      "sha256": "e14d64b9a9c1fb89ca8242553cfe2078bca6d926233ac38fb837333696bec54c"
+    },
+    {
+      "sample_id": "security_v1_0042",
+      "patient_id": "patient24706",
+      "file": "security_v1_0042.soteria",
+      "sha256": "05c9b65207dcadc4d800b19046f6168d2761f2611bfa9c98c230e8979c9a6003"
+    },
+    {
+      "sample_id": "security_v1_0043",
+      "patient_id": "patient25167",
+      "file": "security_v1_0043.soteria",
+      "sha256": "d11877966ebfb6853f33a83b9df6d104538f8481930e766a982ed7f565d23c0f"
+    },
+    {
+      "sample_id": "security_v1_0044",
+      "patient_id": "patient26050",
+      "file": "security_v1_0044.soteria",
+      "sha256": "38aca82751adc00238fbd7198ba5699cfa4a83a5d2577169fd8f89db0f9a1f8c"
+    },
+    {
+      "sample_id": "security_v1_0045",
+      "patient_id": "patient26478",
+      "file": "security_v1_0045.soteria",
+      "sha256": "b2daac6c25978e742981d3c45eced0374d2cd5c0471c2a52e2d9aba25a27157d"
+    },
+    {
+      "sample_id": "security_v1_0046",
+      "patient_id": "patient26996",
+      "file": "security_v1_0046.soteria",
+      "sha256": "f919ce7978664b7678c3d3671048a42790af1f2e9b4ad3ddb6864e8d709d2f42"
+    },
+    {
+      "sample_id": "security_v1_0047",
+      "patient_id": "patient27040",
+      "file": "security_v1_0047.soteria",
+      "sha256": "63a1344ae8a9454f346e6ceb04f7b7c72442f7906db40641f07d2836ca14e21a"
+    },
+    {
+      "sample_id": "security_v1_0048",
+      "patient_id": "patient27273",
+      "file": "security_v1_0048.soteria",
+      "sha256": "9299cc38d8397e8990fc077f3c70ffcf09f79bb89491fc92f97348b4f6d14037"
+    },
+    {
+      "sample_id": "security_v1_0049",
+      "patient_id": "patient28074",
+      "file": "security_v1_0049.soteria",
+      "sha256": "f631c289564edc6b605c1af1e1a59dfdd3bdc05439f2546acfbbcc1c0c2bfc62"
+    },
+    {
+      "sample_id": "security_v1_0050",
+      "patient_id": "patient28947",
+      "file": "security_v1_0050.soteria",
+      "sha256": "9ea8523a2b875e3b36a8524ae0ff1b5af656bf348c61e2e5677af4ab2aecdb20"
+    },
+    {
+      "sample_id": "security_v1_0051",
+      "patient_id": "patient29425",
+      "file": "security_v1_0051.soteria",
+      "sha256": "47303eaf9c9004080d785f040b4ab25159d4df1527b275c458246aa8a03782fc"
+    },
+    {
+      "sample_id": "security_v1_0052",
+      "patient_id": "patient29621",
+      "file": "security_v1_0052.soteria",
+      "sha256": "f9e4622c7484683e49b407c4d48f1f724b9389314278048739ebe5391341d898"
+    },
+    {
+      "sample_id": "security_v1_0053",
+      "patient_id": "patient32448",
+      "file": "security_v1_0053.soteria",
+      "sha256": "666d7de21466420f5b5f97e859ed2a2daae1af8f2b784d7bfceedbf5cf1aeb03"
+    },
+    {
+      "sample_id": "security_v1_0054",
+      "patient_id": "patient32586",
+      "file": "security_v1_0054.soteria",
+      "sha256": "5a37846cf001b2a8ff722b712770913d65f46d29205c972ec5948d98b97f08cf"
+    },
+    {
+      "sample_id": "security_v1_0055",
+      "patient_id": "patient32644",
+      "file": "security_v1_0055.soteria",
+      "sha256": "0c36d32bc7964f15af1e544ebff7d5f3032787371a953dc72f17c36aa38d5fb0"
+    },
+    {
+      "sample_id": "security_v1_0056",
+      "patient_id": "patient34218",
+      "file": "security_v1_0056.soteria",
+      "sha256": "00802982ef4ec30b82fb2fb76c790b4bd84e6b60e16ddc853457b132e746dfb4"
+    },
+    {
+      "sample_id": "security_v1_0057",
+      "patient_id": "patient34582",
+      "file": "security_v1_0057.soteria",
+      "sha256": "cf7c88276607aef2f44f612e163e944c647c9a8b0e406dc7700cc43fda078fe7"
+    },
+    {
+      "sample_id": "security_v1_0058",
+      "patient_id": "patient34970",
+      "file": "security_v1_0058.soteria",
+      "sha256": "612d9d125e1457071a47fadb9acc89f8255ffed16691b81568efd8124688bb6a"
+    },
+    {
+      "sample_id": "security_v1_0059",
+      "patient_id": "patient35289",
+      "file": "security_v1_0059.soteria",
+      "sha256": "615eb572496d818df73227e2aa4d5f95d310eca9c2458d3da6523e6adf6574ea"
+    },
+    {
+      "sample_id": "security_v1_0060",
+      "patient_id": "patient35473",
+      "file": "security_v1_0060.soteria",
+      "sha256": "751466e34a917b7f4453ea37c263f4e357f57d341b9bf98871a41f4509625581"
+    },
+    {
+      "sample_id": "security_v1_0061",
+      "patient_id": "patient35828",
+      "file": "security_v1_0061.soteria",
+      "sha256": "564588985a93f12397781e4267fb27a0959a58054c2cfd154a8efad5f02fb252"
+    },
+    {
+      "sample_id": "security_v1_0062",
+      "patient_id": "patient36269",
+      "file": "security_v1_0062.soteria",
+      "sha256": "cb7ddcf51e5977db35de833fb2e1393428f6eb676882fad46da2dd192992b5b9"
+    },
+    {
+      "sample_id": "security_v1_0063",
+      "patient_id": "patient37583",
+      "file": "security_v1_0063.soteria",
+      "sha256": "efd08e4197d6f8d733db6bc0f67ba89f3552d938c158947c96a039d8213aae93"
+    },
+    {
+      "sample_id": "security_v1_0064",
+      "patient_id": "patient38374",
+      "file": "security_v1_0064.soteria",
+      "sha256": "12f8b73c54417d0ff2a6dd27b7b16530aa4a71f96a4587366ac6f054e37e8bd2"
+    },
+    {
+      "sample_id": "security_v1_0065",
+      "patient_id": "patient39425",
+      "file": "security_v1_0065.soteria",
+      "sha256": "0ac4e8b0a0b04a32c92081d695b729c43bd8dac1dfba9cfa972af252d530d8dc"
+    },
+    {
+      "sample_id": "security_v1_0066",
+      "patient_id": "patient40874",
+      "file": "security_v1_0066.soteria",
+      "sha256": "06094193617379f293876cc296f653aeb0605b8c34bba708677e724b0b0f2e6c"
+    },
+    {
+      "sample_id": "security_v1_0067",
+      "patient_id": "patient41245",
+      "file": "security_v1_0067.soteria",
+      "sha256": "ef3437eb3e8f83e4067f89c72b89fcd49f08b83e4d5dac09e328c09dc2978f10"
+    },
+    {
+      "sample_id": "security_v1_0068",
+      "patient_id": "patient43209",
+      "file": "security_v1_0068.soteria",
+      "sha256": "725e21ade87bb7fb29fb27cc2ddef888641bd26d2b2e0ade6a7cffef163658ad"
+    },
+    {
+      "sample_id": "security_v1_0069",
+      "patient_id": "patient43847",
+      "file": "security_v1_0069.soteria",
+      "sha256": "1742248d1c66d0d05ed004590bd7bad8c4382f98c5e4b8822612fa04c420d96f"
+    },
+    {
+      "sample_id": "security_v1_0070",
+      "patient_id": "patient44329",
+      "file": "security_v1_0070.soteria",
+      "sha256": "26e8d5cdbbeb776aafb33c7d99ee990fa61dee70c2fbf2e74116ba773d9134b6"
+    },
+    {
+      "sample_id": "security_v1_0071",
+      "patient_id": "patient44776",
+      "file": "security_v1_0071.soteria",
+      "sha256": "ba483e3d64afbd1ea4f753771b84421fb4a2e07263e0f83a1be35b5be6cc5369"
+    },
+    {
+      "sample_id": "security_v1_0072",
+      "patient_id": "patient45477",
+      "file": "security_v1_0072.soteria",
+      "sha256": "5bc5d129a1e91c85cb27864e5c549e89541b110926080375748e9b413c1307b9"
+    },
+    {
+      "sample_id": "security_v1_0073",
+      "patient_id": "patient46008",
+      "file": "security_v1_0073.soteria",
+      "sha256": "d13c4b2047bc872c9a39fd0e7a087aaaf6042ae7a5fad6123d928f1210e11b8c"
+    },
+    {
+      "sample_id": "security_v1_0074",
+      "patient_id": "patient46264",
+      "file": "security_v1_0074.soteria",
+      "sha256": "b53372e6568420273c3d550401a77e5570d970d5664137c34679ddb4d093d968"
+    },
+    {
+      "sample_id": "security_v1_0075",
+      "patient_id": "patient49495",
+      "file": "security_v1_0075.soteria",
+      "sha256": "9578f293725b3f854a7596f63a872a74ac6672f425cfa55fbc42bd2c6e92a984"
+    },
+    {
+      "sample_id": "security_v1_0076",
+      "patient_id": "patient49703",
+      "file": "security_v1_0076.soteria",
+      "sha256": "099a6821077d049d9d400ea7de17f04b7b9e1a1155a33c9a08bde2adf77fe8d1"
+    },
+    {
+      "sample_id": "security_v1_0077",
+      "patient_id": "patient49872",
+      "file": "security_v1_0077.soteria",
+      "sha256": "47ae55137c509a78122f62d9ea79b1e6b297eda5c129b29eca8912458d4a67b4"
+    },
+    {
+      "sample_id": "security_v1_0078",
+      "patient_id": "patient49971",
+      "file": "security_v1_0078.soteria",
+      "sha256": "d9902c1e9ec633b6e10d92f62584eae1ef8d5b819ffd5cf68f9b7ecbd737c329"
+    },
+    {
+      "sample_id": "security_v1_0079",
+      "patient_id": "patient50413",
+      "file": "security_v1_0079.soteria",
+      "sha256": "09454f58c60a8baa1caf04530717a582d429b413bc35832e3abb9d6a82976c59"
+    },
+    {
+      "sample_id": "security_v1_0080",
+      "patient_id": "patient50878",
+      "file": "security_v1_0080.soteria",
+      "sha256": "edfbd2bacd77c828b0372bfb2d4a0f3c3e22021f1297eefaa5070a116d524229"
+    },
+    {
+      "sample_id": "security_v1_0081",
+      "patient_id": "patient50899",
+      "file": "security_v1_0081.soteria",
+      "sha256": "f47c3353d4757386d6408ad7571caad3c0c4377c6bd95f221dd2aff9806495e0"
+    },
+    {
+      "sample_id": "security_v1_0082",
+      "patient_id": "patient53081",
+      "file": "security_v1_0082.soteria",
+      "sha256": "9c56744c9fea49e038539eee5846f4eacc870caff295b713cd6f28bba6e61829"
+    },
+    {
+      "sample_id": "security_v1_0083",
+      "patient_id": "patient53208",
+      "file": "security_v1_0083.soteria",
+      "sha256": "078f1c065a16689c0d299533c152c149cb262b9879dd01b51f09e58047ea8ef8"
+    },
+    {
+      "sample_id": "security_v1_0084",
+      "patient_id": "patient53650",
+      "file": "security_v1_0084.soteria",
+      "sha256": "82c4cd88bb7c601a4b915fd81108b15ee0610af7730b2fd2993be9a790817295"
+    },
+    {
+      "sample_id": "security_v1_0085",
+      "patient_id": "patient54309",
+      "file": "security_v1_0085.soteria",
+      "sha256": "d5529cc19af43715a7f37dfb5411bbe1e00b2eeb732c62e2c42ab4885f48f966"
+    },
+    {
+      "sample_id": "security_v1_0086",
+      "patient_id": "patient54516",
+      "file": "security_v1_0086.soteria",
+      "sha256": "c71fd2c302a682c2c8aa7ce3ad62e872ec5ac4c82388847f7e077b762d02bacf"
+    },
+    {
+      "sample_id": "security_v1_0087",
+      "patient_id": "patient54571",
+      "file": "security_v1_0087.soteria",
+      "sha256": "50725c3cd3b0e16ce1e1a4ee86a2b472bd8abfca32154c69313a9aa7e2fc8f21"
+    },
+    {
+      "sample_id": "security_v1_0088",
+      "patient_id": "patient55346",
+      "file": "security_v1_0088.soteria",
+      "sha256": "880daae09d229c40f2545d84240be723d28a35bb0d517e749befec53455a1f37"
+    },
+    {
+      "sample_id": "security_v1_0089",
+      "patient_id": "patient55567",
+      "file": "security_v1_0089.soteria",
+      "sha256": "dea66e9462ce00a77924fae80d10a8be3e877984584fa418a2fc2f9e2dac90df"
+    },
+    {
+      "sample_id": "security_v1_0090",
+      "patient_id": "patient57420",
+      "file": "security_v1_0090.soteria",
+      "sha256": "4b7df18f75ca467bfa9eab6e7c117ce13489eb349b3b6b3b85083d2cbd270811"
+    },
+    {
+      "sample_id": "security_v1_0091",
+      "patient_id": "patient57884",
+      "file": "security_v1_0091.soteria",
+      "sha256": "b63749904852a368ba3dbc4368ea5d2e78bf89c87359872b2f85243f2d1de7f1"
+    },
+    {
+      "sample_id": "security_v1_0092",
+      "patient_id": "patient58145",
+      "file": "security_v1_0092.soteria",
+      "sha256": "05118a6a1dc6c7e07c5bb09fc9296d4e481b308044b454fa4c5945957bf762f7"
+    },
+    {
+      "sample_id": "security_v1_0093",
+      "patient_id": "patient59342",
+      "file": "security_v1_0093.soteria",
+      "sha256": "0ff12e86e4f7ee7ffcfdd8e814660a11d90fa14979c3b4093084ec89c9a2e709"
+    },
+    {
+      "sample_id": "security_v1_0094",
+      "patient_id": "patient59558",
+      "file": "security_v1_0094.soteria",
+      "sha256": "c94e2528deab75c92e0f90481b3b68dcc19ecc1b44f60fcd56e55a39c174413a"
+    },
+    {
+      "sample_id": "security_v1_0095",
+      "patient_id": "patient59858",
+      "file": "security_v1_0095.soteria",
+      "sha256": "e928b02778c9c9ae8e72541f796e104b6094f604e9f87affb811b22ae68bb8bb"
+    },
+    {
+      "sample_id": "security_v1_0096",
+      "patient_id": "patient60997",
+      "file": "security_v1_0096.soteria",
+      "sha256": "a7d5a044e6b32752fc7ccf83cc235945e583e1d99f23da8bf88f760ca74171fa"
+    },
+    {
+      "sample_id": "security_v1_0097",
+      "patient_id": "patient61068",
+      "file": "security_v1_0097.soteria",
+      "sha256": "b4a4413821854976ef0eb659e0948eb4e67c6b0392cd1299bd3dcc2485c6059a"
+    },
+    {
+      "sample_id": "security_v1_0098",
+      "patient_id": "patient62635",
+      "file": "security_v1_0098.soteria",
+      "sha256": "604d21e43a69f7109b9ac90e8a1be235329a1d85215dee49f67edeb79ed11e90"
+    },
+    {
+      "sample_id": "security_v1_0099",
+      "patient_id": "patient64186",
+      "file": "security_v1_0099.soteria",
+      "sha256": "9d972cff1624b121099403b6b2ccbd523a770688e743eb3003e602280849d15f"
+    },
+    {
+      "sample_id": "security_v1_0100",
+      "patient_id": "patient00269",
+      "file": "security_v1_0100.soteria",
+      "sha256": "ee18990464e3851456cab10a4614370c1f9376c74c8e6a264951497ae69be28f"
+    },
+    {
+      "sample_id": "security_v1_0101",
+      "patient_id": "patient00725",
+      "file": "security_v1_0101.soteria",
+      "sha256": "9d3b0bd7b47eddb0de1571e92636a1900c4b4f149706b6a05372954f8f25ea64"
+    },
+    {
+      "sample_id": "security_v1_0102",
+      "patient_id": "patient01925",
+      "file": "security_v1_0102.soteria",
+      "sha256": "1a632a42572e8ffe8f7c62026a77e18d1b5b4ce7e354d865e29350d745ee2361"
+    },
+    {
+      "sample_id": "security_v1_0103",
+      "patient_id": "patient02268",
+      "file": "security_v1_0103.soteria",
+      "sha256": "bd3e8315551ed1117feeb9205fbdba795bfc7122945bc6ddaabf6ba9e19e4dac"
+    },
+    {
+      "sample_id": "security_v1_0104",
+      "patient_id": "patient02301",
+      "file": "security_v1_0104.soteria",
+      "sha256": "6eb99603dfd5e0e407f134f73a6a48fd73d481c0394a024e693881fb69baa9a8"
+    },
+    {
+      "sample_id": "security_v1_0105",
+      "patient_id": "patient02494",
+      "file": "security_v1_0105.soteria",
+      "sha256": "f44e664e3d6432c25e18c6e5f76c2e97704697881751aae80a7fdc0dddadda8b"
+    },
+    {
+      "sample_id": "security_v1_0106",
+      "patient_id": "patient02761",
+      "file": "security_v1_0106.soteria",
+      "sha256": "ebd0755c539b4928ba09f0db5f4a308d5a8778d03cb2be1c430a2262fee44c57"
+    },
+    {
+      "sample_id": "security_v1_0107",
+      "patient_id": "patient03662",
+      "file": "security_v1_0107.soteria",
+      "sha256": "e901add9f912c41fb6e51f0597997a1a19967d6ead00677697098f18251e0def"
+    },
+    {
+      "sample_id": "security_v1_0108",
+      "patient_id": "patient03927",
+      "file": "security_v1_0108.soteria",
+      "sha256": "05d7e9204fcb2f8269895337857b2dd7f84331fc97d84d0116b7689ce67d9dbe"
+    },
+    {
+      "sample_id": "security_v1_0109",
+      "patient_id": "patient04489",
+      "file": "security_v1_0109.soteria",
+      "sha256": "27bab75c3e4e133aaa2b6d8c5626d5e9e68cf2a735eec796f7514f895cb4ac61"
+    },
+    {
+      "sample_id": "security_v1_0110",
+      "patient_id": "patient05673",
+      "file": "security_v1_0110.soteria",
+      "sha256": "6b395dacfad382a4e6e53c38f567e81ab5d513b379636b639dc0bdc92c4c4028"
+    },
+    {
+      "sample_id": "security_v1_0111",
+      "patient_id": "patient05856",
+      "file": "security_v1_0111.soteria",
+      "sha256": "9a6b9baa31b806955afc82438e5067fa8dd2c020bb4ada51ff01dcb080fdc3bf"
+    },
+    {
+      "sample_id": "security_v1_0112",
+      "patient_id": "patient08209",
+      "file": "security_v1_0112.soteria",
+      "sha256": "c3e5f55b137dee46c664ade50ba7d317f01463b696d216dd0b31b397422d91e8"
+    },
+    {
+      "sample_id": "security_v1_0113",
+      "patient_id": "patient09908",
+      "file": "security_v1_0113.soteria",
+      "sha256": "243147d589a1c4a3f6e480609e84d57baf4bee678ffbc264fd1901dd209c6e47"
+    },
+    {
+      "sample_id": "security_v1_0114",
+      "patient_id": "patient10497",
+      "file": "security_v1_0114.soteria",
+      "sha256": "c79ffc95521fdb151ef11307fed771d45b12b299438498892a9d44483110a7f2"
+    },
+    {
+      "sample_id": "security_v1_0115",
+      "patient_id": "patient10760",
+      "file": "security_v1_0115.soteria",
+      "sha256": "8184bad93e5a8d9627317250cb528d813755986fd35081d23e5d48b01f106734"
+    },
+    {
+      "sample_id": "security_v1_0116",
+      "patient_id": "patient12244",
+      "file": "security_v1_0116.soteria",
+      "sha256": "c6e7e4d145067f7583d459fe6b7fdda239a373829008a163ed01bb124af0960e"
+    },
+    {
+      "sample_id": "security_v1_0117",
+      "patient_id": "patient12317",
+      "file": "security_v1_0117.soteria",
+      "sha256": "cad79e09dd4049aa93d6fa681275e8e81378b7117cfb453ac2ef92d24ed4946e"
+    },
+    {
+      "sample_id": "security_v1_0118",
+      "patient_id": "patient12621",
+      "file": "security_v1_0118.soteria",
+      "sha256": "c970c5db0bec7af4c8f58eee6cc61072176a967f14c779b4c4d38cd851b6b18b"
+    },
+    {
+      "sample_id": "security_v1_0119",
+      "patient_id": "patient12721",
+      "file": "security_v1_0119.soteria",
+      "sha256": "252043c497d83b272e3f9f79b7e9e33556b722c93b19fffdfce7ffb484ecd85d"
+    },
+    {
+      "sample_id": "security_v1_0120",
+      "patient_id": "patient14026",
+      "file": "security_v1_0120.soteria",
+      "sha256": "50e41ecfd29058d9718f8360bd028a80cb84f6b80894570aff04a4458c3fdca1"
+    },
+    {
+      "sample_id": "security_v1_0121",
+      "patient_id": "patient15192",
+      "file": "security_v1_0121.soteria",
+      "sha256": "eb5d43a0356c240b432d1e183d683b41053a6e349a94d7311440d2cce60b3230"
+    },
+    {
+      "sample_id": "security_v1_0122",
+      "patient_id": "patient16075",
+      "file": "security_v1_0122.soteria",
+      "sha256": "e8b09bee8054b763b0a166245f13189bf88f078ecc6c1b155f1b804e5e89f73a"
+    },
+    {
+      "sample_id": "security_v1_0123",
+      "patient_id": "patient16736",
+      "file": "security_v1_0123.soteria",
+      "sha256": "793582599ad6def751a26b048a08f445e75d97b9ed63ddde8e544bfcde99df96"
+    },
+    {
+      "sample_id": "security_v1_0124",
+      "patient_id": "patient18251",
+      "file": "security_v1_0124.soteria",
+      "sha256": "f62b4655f850f46a9351f4ac1f94fc43c83943bcedc97a7aab0073572fb4f3ba"
+    },
+    {
+      "sample_id": "security_v1_0125",
+      "patient_id": "patient18693",
+      "file": "security_v1_0125.soteria",
+      "sha256": "2d32ce4ceddd99cac92f5054552067d06144040c2506f83e9f55e7cd8870999d"
+    },
+    {
+      "sample_id": "security_v1_0126",
+      "patient_id": "patient21462",
+      "file": "security_v1_0126.soteria",
+      "sha256": "2f45d41b7edc4e4a02201a164ecd17f33ec164a5c04de425bc26b1e534be493f"
+    },
+    {
+      "sample_id": "security_v1_0127",
+      "patient_id": "patient21463",
+      "file": "security_v1_0127.soteria",
+      "sha256": "f9fe6f77322bafdb9f8a0960e1c4a727948f22d4a526f6aa9b895efa89ef5b95"
+    },
+    {
+      "sample_id": "security_v1_0128",
+      "patient_id": "patient21702",
+      "file": "security_v1_0128.soteria",
+      "sha256": "25cddb3d393da065be40f507823f4daf11e5c8f3047a91f4e8f5a699839a3408"
+    },
+    {
+      "sample_id": "security_v1_0129",
+      "patient_id": "patient23950",
+      "file": "security_v1_0129.soteria",
+      "sha256": "35af9f9ff9a5cbcabbcc59e07f1ea02f40fcaf070b96c1915ba7e81cec3fb9f9"
+    },
+    {
+      "sample_id": "security_v1_0130",
+      "patient_id": "patient25813",
+      "file": "security_v1_0130.soteria",
+      "sha256": "1b973bdb86ff1bc0ee835ce1ff35b133abd2f650fa8bf6ea7635e2d7ecb8087e"
+    },
+    {
+      "sample_id": "security_v1_0131",
+      "patient_id": "patient27058",
+      "file": "security_v1_0131.soteria",
+      "sha256": "1260cfe8a9a4c725f2c16f2a60d441442561f7041e66ca7735da64347522d0fc"
+    },
+    {
+      "sample_id": "security_v1_0132",
+      "patient_id": "patient28476",
+      "file": "security_v1_0132.soteria",
+      "sha256": "5658916afb184df4b78dc81015b18cb2a9ae98c9e502a916cf9a121512cf8e4e"
+    },
+    {
+      "sample_id": "security_v1_0133",
+      "patient_id": "patient28527",
+      "file": "security_v1_0133.soteria",
+      "sha256": "b6a74c63f127e07a123d89d14891f12813fb31fd159de45b7bc6c1d96f29d6cb"
+    },
+    {
+      "sample_id": "security_v1_0134",
+      "patient_id": "patient29024",
+      "file": "security_v1_0134.soteria",
+      "sha256": "fa14004b238c1cde648b9116774c4b7baba83819366dcd0146bb32600577d5b8"
+    },
+    {
+      "sample_id": "security_v1_0135",
+      "patient_id": "patient29876",
+      "file": "security_v1_0135.soteria",
+      "sha256": "2fd21faaf76e8b33ea7bdfdce1c9bdcaec44d70cd2f20299800f7fcc1e3ae345"
+    },
+    {
+      "sample_id": "security_v1_0136",
+      "patient_id": "patient30013",
+      "file": "security_v1_0136.soteria",
+      "sha256": "52d6486a9b967f883f7d106f24004c6da0215498ee2962371096eef5bb3350e3"
+    },
+    {
+      "sample_id": "security_v1_0137",
+      "patient_id": "patient30300",
+      "file": "security_v1_0137.soteria",
+      "sha256": "64182fc2ce80a3fc4b6b24e1b36a38c65ea454bddd108478383b3e63d4865e50"
+    },
+    {
+      "sample_id": "security_v1_0138",
+      "patient_id": "patient30616",
+      "file": "security_v1_0138.soteria",
+      "sha256": "026594fead6fa3be46f77f01f048af22b9739aaf2c7ca2a90ff506b6df8ba480"
+    },
+    {
+      "sample_id": "security_v1_0139",
+      "patient_id": "patient31216",
+      "file": "security_v1_0139.soteria",
+      "sha256": "0a00ca1b5568b705074ae5f16c4edbb95d5748526792e2319a19bb3dbbec92ff"
+    },
+    {
+      "sample_id": "security_v1_0140",
+      "patient_id": "patient31404",
+      "file": "security_v1_0140.soteria",
+      "sha256": "e59dfd39c4edde39f374e2551a792d784d8a46d711d9628bf2046dd14cf86b8a"
+    },
+    {
+      "sample_id": "security_v1_0141",
+      "patient_id": "patient31867",
+      "file": "security_v1_0141.soteria",
+      "sha256": "ea034cc708108ba9b6a275686e2fd4e7f928c3a69fe7d0e9f2187f8999875aad"
+    },
+    {
+      "sample_id": "security_v1_0142",
+      "patient_id": "patient32258",
+      "file": "security_v1_0142.soteria",
+      "sha256": "fa7eb1f233aef9c045ba41e7384f17d3859219b7b8c8dca453ce3fa0e5dfd25d"
+    },
+    {
+      "sample_id": "security_v1_0143",
+      "patient_id": "patient32400",
+      "file": "security_v1_0143.soteria",
+      "sha256": "70c4af975cc26d74d7537e7b6c8f508396109416b8fb9e52e6c16c7e650a6710"
+    },
+    {
+      "sample_id": "security_v1_0144",
+      "patient_id": "patient32613",
+      "file": "security_v1_0144.soteria",
+      "sha256": "32b5872b6fdfbc5641421cd299097eb9a16d13bea4aa8d0139d68a5d2602de1e"
+    },
+    {
+      "sample_id": "security_v1_0145",
+      "patient_id": "patient34837",
+      "file": "security_v1_0145.soteria",
+      "sha256": "3d0d9b1c39270b8c32d5a2a408f64747b8232e99eaad80d16950b41f3e08f96f"
+    },
+    {
+      "sample_id": "security_v1_0146",
+      "patient_id": "patient35334",
+      "file": "security_v1_0146.soteria",
+      "sha256": "752e5c43d73217646973d6f00f5126d0a446d4841f6d9e43a4d7e9d444967894"
+    },
+    {
+      "sample_id": "security_v1_0147",
+      "patient_id": "patient35482",
+      "file": "security_v1_0147.soteria",
+      "sha256": "53c677954481206d525a5ec5937a136aa3d591755fddbb69fae5950aedc46716"
+    },
+    {
+      "sample_id": "security_v1_0148",
+      "patient_id": "patient36148",
+      "file": "security_v1_0148.soteria",
+      "sha256": "1a30100a4b90396d2051f5179c7c960712eb3795f53d5feaf48392d0284099e9"
+    },
+    {
+      "sample_id": "security_v1_0149",
+      "patient_id": "patient36336",
+      "file": "security_v1_0149.soteria",
+      "sha256": "cc89efa5e4acba65173b401af9266a991cd7cbb19c2c1b251b677e240efd7497"
+    },
+    {
+      "sample_id": "security_v1_0150",
+      "patient_id": "patient36950",
+      "file": "security_v1_0150.soteria",
+      "sha256": "3f80f89fc0651709d89315d44c5aabd536e439fe17d78846722c04fc5495440c"
+    },
+    {
+      "sample_id": "security_v1_0151",
+      "patient_id": "patient38285",
+      "file": "security_v1_0151.soteria",
+      "sha256": "05e82d04ab28eb31187023238da60de07ac307f66b19b967af33cda7a5b41b68"
+    },
+    {
+      "sample_id": "security_v1_0152",
+      "patient_id": "patient38346",
+      "file": "security_v1_0152.soteria",
+      "sha256": "2418e597d6a371511d9768eb79d4600364b4e7199086c4856f37801a9279b0e9"
+    },
+    {
+      "sample_id": "security_v1_0153",
+      "patient_id": "patient41735",
+      "file": "security_v1_0153.soteria",
+      "sha256": "7179a95aa3508555cb9757e757d3c73e4f949cdd1d4d770e57130dc14d7f33ef"
+    },
+    {
+      "sample_id": "security_v1_0154",
+      "patient_id": "patient41776",
+      "file": "security_v1_0154.soteria",
+      "sha256": "45b837f185d34ea20954070cbff85299f9f076fe83ff3d3f3e2ae78dbbc99225"
+    },
+    {
+      "sample_id": "security_v1_0155",
+      "patient_id": "patient41875",
+      "file": "security_v1_0155.soteria",
+      "sha256": "82708643fec2811cc3c4a8676b525fd30433d77ccc37d1e219937b57a6673f3c"
+    },
+    {
+      "sample_id": "security_v1_0156",
+      "patient_id": "patient42575",
+      "file": "security_v1_0156.soteria",
+      "sha256": "211d73039cb97a85832922435a5555b3e8060910912bc6b7665914955e73b0cb"
+    },
+    {
+      "sample_id": "security_v1_0157",
+      "patient_id": "patient45337",
+      "file": "security_v1_0157.soteria",
+      "sha256": "35c30a72af06b33d467c87021fa97ee87ae61bde8ded4f8d5ba86633a8fdf676"
+    },
+    {
+      "sample_id": "security_v1_0158",
+      "patient_id": "patient45343",
+      "file": "security_v1_0158.soteria",
+      "sha256": "6eed261e88ae3f672e6d9f3abdf5465e81ad82473b41c981ed55d61cff1daf02"
+    },
+    {
+      "sample_id": "security_v1_0159",
+      "patient_id": "patient45469",
+      "file": "security_v1_0159.soteria",
+      "sha256": "db3ee064168ff84c8cdfb9e4af89c25f31cc787b0cdcfff816dd55796d1724f4"
+    },
+    {
+      "sample_id": "security_v1_0160",
+      "patient_id": "patient45494",
+      "file": "security_v1_0160.soteria",
+      "sha256": "ffefd931586674da61b2e9e392fa89e72e85e566e8ec6e0e7a85023abf1e6a09"
+    },
+    {
+      "sample_id": "security_v1_0161",
+      "patient_id": "patient45632",
+      "file": "security_v1_0161.soteria",
+      "sha256": "392955270b048165e266a6336e9ef78567cd1bf94eab8197371400e952fefa5c"
+    },
+    {
+      "sample_id": "security_v1_0162",
+      "patient_id": "patient46335",
+      "file": "security_v1_0162.soteria",
+      "sha256": "9432245ceb12b5d45fecc2b5d372d75fbe51d7e38017c1f71300019cf5ae3e78"
+    },
+    {
+      "sample_id": "security_v1_0163",
+      "patient_id": "patient46610",
+      "file": "security_v1_0163.soteria",
+      "sha256": "27264a1f6cd8113ed575d0d5468aaeec53ec324676e26b2f40627c39f88acc2e"
+    },
+    {
+      "sample_id": "security_v1_0164",
+      "patient_id": "patient47569",
+      "file": "security_v1_0164.soteria",
+      "sha256": "961446796df556cf09b7982471dd9076109d98b722ed6b03fd6f0ba053c8bb9f"
+    },
+    {
+      "sample_id": "security_v1_0165",
+      "patient_id": "patient47876",
+      "file": "security_v1_0165.soteria",
+      "sha256": "10e4f2125c96d21763bc972b31408b47f535677e4931a1f2a5d22b1392a6629f"
+    },
+    {
+      "sample_id": "security_v1_0166",
+      "patient_id": "patient48169",
+      "file": "security_v1_0166.soteria",
+      "sha256": "16a98056b51bc22dcfb2d836a24b61cfd1ff0e3204847bc3c0223a8a86814e3d"
+    },
+    {
+      "sample_id": "security_v1_0167",
+      "patient_id": "patient49580",
+      "file": "security_v1_0167.soteria",
+      "sha256": "f716b751b738891f1ba3b132354243734b5844578e1208c64caa63e9ac25102f"
+    },
+    {
+      "sample_id": "security_v1_0168",
+      "patient_id": "patient49581",
+      "file": "security_v1_0168.soteria",
+      "sha256": "a8c7def578e45c7d2a6143e57323ad0c822564f09526740d6c5cea7a6862ccf0"
+    },
+    {
+      "sample_id": "security_v1_0169",
+      "patient_id": "patient50477",
+      "file": "security_v1_0169.soteria",
+      "sha256": "f7553fb01b5476b17a044624a0ccaaa5836a78438baaafdc546a988df2ba98a0"
+    },
+    {
+      "sample_id": "security_v1_0170",
+      "patient_id": "patient50650",
+      "file": "security_v1_0170.soteria",
+      "sha256": "9cfb273b7c247a469677429345f7d77a08c18d4bdac97b8cee31145a49bc0655"
+    },
+    {
+      "sample_id": "security_v1_0171",
+      "patient_id": "patient50704",
+      "file": "security_v1_0171.soteria",
+      "sha256": "0ef175882f43643f06dfa16407f9ba73370f3aff6d052d67555229fd35a232f4"
+    },
+    {
+      "sample_id": "security_v1_0172",
+      "patient_id": "patient50889",
+      "file": "security_v1_0172.soteria",
+      "sha256": "05bf8a2325ebd8590315ad7552a69eade372cd05d535f4a09167913b62bd15a1"
+    },
+    {
+      "sample_id": "security_v1_0173",
+      "patient_id": "patient51014",
+      "file": "security_v1_0173.soteria",
+      "sha256": "139a708f400cbc3ad2774dc7ff8e024736333344dcc343918f6c09a1d1259cbc"
+    },
+    {
+      "sample_id": "security_v1_0174",
+      "patient_id": "patient51467",
+      "file": "security_v1_0174.soteria",
+      "sha256": "e573e50f185fcee8079058156e63a78c732f11ab4edefe341a87811f1c0a3cd2"
+    },
+    {
+      "sample_id": "security_v1_0175",
+      "patient_id": "patient51488",
+      "file": "security_v1_0175.soteria",
+      "sha256": "47457daf583d9bd776bf197fec94cee64803ee902d48b394ab1b38f13dbbddac"
+    },
+    {
+      "sample_id": "security_v1_0176",
+      "patient_id": "patient51729",
+      "file": "security_v1_0176.soteria",
+      "sha256": "8af821b818df6c24448d76660602b5d4cd04ab4d9b1e8e5290cecba3b3329e14"
+    },
+    {
+      "sample_id": "security_v1_0177",
+      "patient_id": "patient53137",
+      "file": "security_v1_0177.soteria",
+      "sha256": "f364dab0baf055bf9fab3d87831d3d16f248c80e038964efe8433ad01b161d33"
+    },
+    {
+      "sample_id": "security_v1_0178",
+      "patient_id": "patient53268",
+      "file": "security_v1_0178.soteria",
+      "sha256": "b0e25a84fd6260ce1a28e0cb74d202895a3056195c594c40cd6a0b68b9958a3d"
+    },
+    {
+      "sample_id": "security_v1_0179",
+      "patient_id": "patient53550",
+      "file": "security_v1_0179.soteria",
+      "sha256": "60cc7e7e31a6dea463de69213d15dfb7d5d318e8302e76eb8e95635fbf27a013"
+    },
+    {
+      "sample_id": "security_v1_0180",
+      "patient_id": "patient54250",
+      "file": "security_v1_0180.soteria",
+      "sha256": "f209f1f88d2dccfd2f84bbca2373f8f436698de5a6efaa2309686439c6b5f5e7"
+    },
+    {
+      "sample_id": "security_v1_0181",
+      "patient_id": "patient55228",
+      "file": "security_v1_0181.soteria",
+      "sha256": "9e16f20fa6c2a5d7437f053077db61b61aae11c387d92a0a8618fa742d615f8e"
+    },
+    {
+      "sample_id": "security_v1_0182",
+      "patient_id": "patient55316",
+      "file": "security_v1_0182.soteria",
+      "sha256": "7cdee0f11a249b4689e5622b0e4171b4cde26f26ccc411c6a91ede59a571208c"
+    },
+    {
+      "sample_id": "security_v1_0183",
+      "patient_id": "patient55987",
+      "file": "security_v1_0183.soteria",
+      "sha256": "c4b4f1d133054a1cd23faa40d4d4462284841a25cca88c0c6777ed7be4e69043"
+    },
+    {
+      "sample_id": "security_v1_0184",
+      "patient_id": "patient56764",
+      "file": "security_v1_0184.soteria",
+      "sha256": "d7200a8d63f952f898ca170ffed89c22386abf245c231ccfce1d6ac473a31f7c"
+    },
+    {
+      "sample_id": "security_v1_0185",
+      "patient_id": "patient56820",
+      "file": "security_v1_0185.soteria",
+      "sha256": "a5d3caea054836970894cfffa0640416ec54a3316fc160759117132439b21cb7"
+    },
+    {
+      "sample_id": "security_v1_0186",
+      "patient_id": "patient56990",
+      "file": "security_v1_0186.soteria",
+      "sha256": "eeb0a21ff237c690b2da500265614963be292de0715ca0b33817afbdafb9c483"
+    },
+    {
+      "sample_id": "security_v1_0187",
+      "patient_id": "patient57140",
+      "file": "security_v1_0187.soteria",
+      "sha256": "211716678b365b2e8997203fe349ad3031d4280a2049b41d540dc6533d3fac72"
+    },
+    {
+      "sample_id": "security_v1_0188",
+      "patient_id": "patient57455",
+      "file": "security_v1_0188.soteria",
+      "sha256": "b092608c0d7459e29b6b51953dd67363c75dc39ca26d44a4f6f61662ecf33833"
+    },
+    {
+      "sample_id": "security_v1_0189",
+      "patient_id": "patient57846",
+      "file": "security_v1_0189.soteria",
+      "sha256": "6def2cd7aeb31b5013c923b7cfef0f9109869e398b7eda707a4cd5df54cedac9"
+    },
+    {
+      "sample_id": "security_v1_0190",
+      "patient_id": "patient58146",
+      "file": "security_v1_0190.soteria",
+      "sha256": "6d325704524b07e26b52eea952895d77e5d71d21d43a5f966f1a771a1236f661"
+    },
+    {
+      "sample_id": "security_v1_0191",
+      "patient_id": "patient58345",
+      "file": "security_v1_0191.soteria",
+      "sha256": "3593c5a8a30cf7d834612d25ba95ff47db5b89f319362fbb2be3bc5039006726"
+    },
+    {
+      "sample_id": "security_v1_0192",
+      "patient_id": "patient59103",
+      "file": "security_v1_0192.soteria",
+      "sha256": "fc291d92db687883fbc4162bf24dceea294fdcb7d6cc22bd8ab04d28603d2ab3"
+    },
+    {
+      "sample_id": "security_v1_0193",
+      "patient_id": "patient59687",
+      "file": "security_v1_0193.soteria",
+      "sha256": "b0f8074bd5301f42583eb1860848b8ab3fc67b36212517addb49fbb20e983573"
+    },
+    {
+      "sample_id": "security_v1_0194",
+      "patient_id": "patient59893",
+      "file": "security_v1_0194.soteria",
+      "sha256": "15d78da615b59d2188f61ace05bd84bc27e8130d3348a4bc18c2445b43c82f46"
+    },
+    {
+      "sample_id": "security_v1_0195",
+      "patient_id": "patient60247",
+      "file": "security_v1_0195.soteria",
+      "sha256": "a5c5eb13260ee2b5fe39871c635b51b10d1f198f5e202b65b71fabbd2b5aef77"
+    },
+    {
+      "sample_id": "security_v1_0196",
+      "patient_id": "patient61061",
+      "file": "security_v1_0196.soteria",
+      "sha256": "a75f6e4ce3c0f6c252cb7053340766e0c38e15d08e17dbf98f98e9b6d0d3b0fb"
+    },
+    {
+      "sample_id": "security_v1_0197",
+      "patient_id": "patient62085",
+      "file": "security_v1_0197.soteria",
+      "sha256": "9ef4f45d72a5df85153e0a32eb9eb42143a6f83fab70d414b000decefb9c3466"
+    },
+    {
+      "sample_id": "security_v1_0198",
+      "patient_id": "patient62404",
+      "file": "security_v1_0198.soteria",
+      "sha256": "8e03395a99ee2af1d5ade705ed04040b5352ad63e7c64ea99e7728fe0f0024b6"
+    },
+    {
+      "sample_id": "security_v1_0199",
+      "patient_id": "patient62740",
+      "file": "security_v1_0199.soteria",
+      "sha256": "216fa116caa710607047913acba82dab10bb763c9868d344299c1ec6dc32e0fa"
+    }
+  ],
+  "verified_against": "paper_assets/tables/table_share_cross_recipient_linkage.json",
+  "verified_field": "b_containers_sha256"
+}

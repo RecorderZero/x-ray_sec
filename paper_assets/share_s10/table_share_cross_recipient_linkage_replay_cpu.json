@@ -1,0 +1,211 @@
+{
+  "schema_version": 2,
+  "experiment": "E2",
+  "evidence_role": "formal",
+  "n_patients": 200,
+  "plan": "reports/cross_institution_sharing.md \u00a78.8 E2 (F3=(a))",
+  "design": {
+    "gallery": "B versions (reused from E1 containers, verified against the E1 container manifest)",
+    "query": "C versions (same x0, fresh image key)",
+    "positives": "same x0 B/C",
+    "negatives": "different-patient B/C",
+    "random_top1": 0.005,
+    "random_top5": 0.025,
+    "attacker_view": "public PNG only, decoded as q/255 (decode_private_png_attacker_view); no sample/patient ids, paths, private metadata or keys",
+    "routing": "all gallery items carry B routing, all queries C routing (same for positives and negatives)",
+    "scorers": [
+      "cos",
+      "norm",
+      "densenet121"
+    ],
+    "score_direction": "higher similarity = same image",
+    "ties": "numpy argsort order for ranks; AUC uses average ranks for ties",
+    "ci": "conditional-on-fixed-gallery: bootstrap of query-patient blocks, 2000x, seed 1911; does not cover gallery-population uncertainty",
+    "controls": "positive = plaintext x0 copies; negative = shuffled query->gallery pairing (neg_control_top1)"
+  },
+  "reading": "AUC/Top-k are scientific results, not an engineering pass gate; a CI containing 0.5 only means no linkage signal was detected with these scorers and samples -- not a proof of unlinkability.",
+  "scoring": {
+    "evaluator_module": "scripts/share_linkage_eval.py",
+    "evaluator_module_sha256": "d7eadf47d21f0bfdb1ae5bf9f39276557ceec2c0d3a30a0192d7d7c00891aef3",
+    "evaluator_origin": "verbatim copy of scripts/t2bb_inner_linkage.py working tree sha256 b02f78b6d10406da9dbf9523778c51b8acee64aaa4243bddec8e9205e14ba055",
+    "densenet121_weights_url": "https://download.pytorch.org/models/densenet121-a639ec97.pth",
+    "densenet121_weights_sha256": "a639ec97d7c33b07ae66f0b5fb7d0192f95a3b11b7576c66c0126c2a727c4395",
+    "densenet_preprocess": "per-image min-max -> uint8 -> Grayscale(3) -> Resize(224, bicubic) -> ToTensor -> ImageNet Normalize; features -> ReLU -> global avg pool; L2-normalized cosine",
+    "torch": "2.14.0+cu130",
+    "torchvision": "0.29.0+cu130"
+  },
+  "keys": "PUBLIC test fixtures (S10/E1/<sid>/B, S10/E2/<sid>/C)",
+  "split": "splits/security_v1.csv",
+  "split_sha256": "49d3139cf16a8bf6fb96e8a7aa906b6ab2e9557a7d617a510bb2fcdfa2dcafd1",
+  "git": {
+    "commit": "a3eef4941a11b6a87f76e1d979f0725a286dd82d",
+    "dirty": true,
+    "dirty_tracked_files": "M .gitignore\n M PROGRESS.md\n M README.md\n M presentation/assets/fig_attack_flow.png\n M \"presentation/\\345\\240\\261\\345\\221\\212\\345\\244\\247\\347\\266\\261.md\"\n M scripts/build_t2bb_inner_split.py\n M scripts/plot_presentation_figures.py\n M scripts/q11_localization_parity.py\n M scripts/reid_external_attacker.py\n M scripts/t2bb_inner_linkage.py"
+  },
+  "mode": "analysis-only replay (no diffusion)",
+  "device": "cpu",
+  "b_source": {
+    "path": "artifacts/runs/share_s10/e1/containers_B/container_manifest.json",
+    "run_id": "81f611400f376dfd",
+    "created_by": "retroactive backfill 2026-11-04 (AF-057); not produced by the original run",
+    "aggregate_sha256": "93a0a3df5890460511a19396a1fafb0accdcff6d39f0095a5458dc056d2b7896",
+    "manifest_sha256": "41e2eab9000071c27d44a0ffea961559d2015f4f508bbd1a191cbcd773bf30f1"
+  },
+  "c_source": {
+    "path": "artifacts/runs/share_s10/e2/containers_C/container_manifest.json",
+    "run_id": "07d6bcbcddbc8f92",
+    "created_by": "retroactive backfill 2026-11-04 (AF-057); not produced by the original run",
+    "aggregate_sha256": "a55e2615642e9c59e1c658459b096296cd747e34ada9ad8df334e2ced13fb104",
+    "manifest_sha256": "3092482a32a15201f02754dd070205e351c71c4293f5346835814d4037290ab3"
+  },
+  "analysis_seconds": 63.58568978309631,
+  "reference": "paper_assets/tables/table_share_cross_recipient_linkage.json",
+  "comparison_to_reference": [
+    {
+      "condition": "v2_public_png",
+      "scorer": "cos",
+      "abs_diff_auc": 0.0,
+      "abs_diff_auc_ci_low": 0.0,
+      "abs_diff_auc_ci_high": 0.0,
+      "abs_diff_top1": 0.0,
+      "abs_diff_top5": 0.0,
+      "abs_diff_neg_control_top1": 0.0
+    },
+    {
+      "condition": "v2_public_png",
+      "scorer": "norm",
+      "abs_diff_auc": 0.0,
+      "abs_diff_auc_ci_low": 0.0,
+      "abs_diff_auc_ci_high": 0.0,
+      "abs_diff_top1": 0.0,
+      "abs_diff_top5": 0.0,
+      "abs_diff_neg_control_top1": 0.0
+    },
+    {
+      "condition": "v2_public_png",
+      "scorer": "densenet121",
+      "abs_diff_auc": 6.344221105514247e-06,
+      "abs_diff_auc_ci_low": 9.999999999998899e-05,
+      "abs_diff_auc_ci_high": 0.0,
+      "abs_diff_top1": 0.0,
+      "abs_diff_top5": 0.0,
+      "abs_diff_neg_control_top1": 0.0
+    },
+    {
+      "condition": "positive_control_plaintext_x0",
+      "scorer": "cos",
+      "abs_diff_auc": 0.0,
+      "abs_diff_auc_ci_low": 0.0,
+      "abs_diff_auc_ci_high": 0.0,
+      "abs_diff_top1": 0.0,
+      "abs_diff_top5": 0.0,
+      "abs_diff_neg_control_top1": 0.0
+    },
+    {
+      "condition": "positive_control_plaintext_x0",
+      "scorer": "norm",
+      "abs_diff_auc": 0.0,
+      "abs_diff_auc_ci_low": 0.0,
+      "abs_diff_auc_ci_high": 0.0,
+      "abs_diff_top1": 0.0,
+      "abs_diff_top5": 0.0,
+      "abs_diff_neg_control_top1": 0.0
+    },
+    {
+      "condition": "positive_control_plaintext_x0",
+      "scorer": "densenet121",
+      "abs_diff_auc": 0.0,
+      "abs_diff_auc_ci_low": 0.0,
+      "abs_diff_auc_ci_high": 0.0,
+      "abs_diff_top1": 0.0,
+      "abs_diff_top5": 0.0,
+      "abs_diff_neg_control_top1": 0.0
+    }
+  ],
+  "rows": [
+    {
+      "condition": "v2_public_png",
+      "scorer": "cos",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 0.01,
+      "top5": 0.03,
+      "auc": 0.504444472361809,
+      "auc_ci_low": 0.4727,
+      "auc_ci_high": 0.5393,
+      "neg_control_top1": 0.005,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "v2_public_png",
+      "scorer": "norm",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 0.005,
+      "top5": 0.035,
+      "auc": 0.5038616834170855,
+      "auc_ci_low": 0.4694,
+      "auc_ci_high": 0.5434,
+      "neg_control_top1": 0.015,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "v2_public_png",
+      "scorer": "densenet121",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 0.0,
+      "top5": 0.02,
+      "auc": 0.4755570351758794,
+      "auc_ci_low": 0.4393,
+      "auc_ci_high": 0.5078,
+      "neg_control_top1": 0.01,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "positive_control_plaintext_x0",
+      "scorer": "cos",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 1.0,
+      "top5": 1.0,
+      "auc": 1.0,
+      "auc_ci_low": 1.0,
+      "auc_ci_high": 1.0,
+      "neg_control_top1": 0.005,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "positive_control_plaintext_x0",
+      "scorer": "norm",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 1.0,
+      "top5": 1.0,
+      "auc": 1.0,
+      "auc_ci_low": 1.0,
+      "auc_ci_high": 1.0,
+      "neg_control_top1": 0.005,
+      "random_top1": 0.005
+    },
+    {
+      "condition": "positive_control_plaintext_x0",
+      "scorer": "densenet121",
+      "n_patients": 200,
+      "n_positive_pairs": 200,
+      "n_negative_pairs": 39800,
+      "top1": 1.0,
+      "top5": 1.0,
+      "auc": 1.0,
+      "auc_ci_low": 1.0,
+      "auc_ci_high": 1.0,
+      "neg_control_top1": 0.005,
+      "random_top1": 0.005
+    }
+  ]
+}

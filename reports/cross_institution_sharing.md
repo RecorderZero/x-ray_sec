@@ -810,7 +810,7 @@ sig = Ed25519_A(LP("soteria-share/v2/sig") ‖ preamble ‖ LP(H) ‖ LP(meta_ct
 
 - [事實] 預先登記的判準成立：ΔPSNR 的 95% 病患 bootstrap CI 完全落在 ±0.5 dB 之內。可以寫「**平均重構 PSNR 在預設界限內**」，不延伸到 SSIM／LPIPS、每一位患者、病灶或安全性。
 - [事實] **逐樣本波動很大**：ΔPSNR 的標準差 1.69 dB，35 張差距超過 1 dB、15 張超過 3 dB，最大 −9.5／+7.1 dB；v1 與 v2 的逐樣本相關只有 0.49。但兩版的分布幾乎相同（最低 37.5／37.1、p5 43.4／43.7、中位數 46.75／46.73 dB；低於 42 dB 的 v1 有 10 張、v2 有 6 張），最差的 5 張也大多不是同一批病患。
-- [推論] 單張影像的還原品質會隨「這次抽到的隨機金鑰（即匿名圖）」改變，這是 DPHD 本身的性質，v1 也有，**不是 v2 造成的退步**。論文報告逐張品質時應註明：同一張影像換一把金鑰，PSNR 可能相差數 dB。
+- [推論，AF-058 修正] 逐張的大幅波動**可能**和「不同金鑰生成的匿名圖不同」有關，但**尚未以同一版本、同一張影像多把金鑰的受控實驗確認**。這次每個版本每張影像只用了一把金鑰，版本、金鑰推導方式與金鑰本身同時改變，**無法把差異全部歸因於金鑰，也不能排除個別病人在 v2 上確實比較差**。目前能確認的只有：平均重構 PSNR 在預設界限內，而且兩版的整體分布相近。
 - [事實] 每張耗時：A 端 3.11 s、B 端 3.12 s（RTX 5090，本次量測條件）；真實匿名圖的容器平均 56.0 KB（53.7–57.8 KB）。
 - [事實] runtime 綁定檢查通過：checkpoint SHA-256、steps、101 個 timestep 都和已簽署的 manifest 一致。
 
@@ -824,11 +824,14 @@ sig = Ed25519_A(LP("soteria-share/v2/sig") ‖ preamble ‖ LP(H) ‖ LP(meta_ct
 | v2 公開 PNG | DenseNet121 | 0.476 [0.439, 0.508] | 0.000 |
 | 正控制：原圖 x0 | cos／norm／DenseNet121 | 1.000 | 1.000 |
 
-- [事實] 三個指定 scorer 的 CI 都含 0.5，Top-1 都在隨機基準附近：**在這些 scorer 下，未偵測到同一張影像的 B、C 版本可以被連起來**。這不是不可連結的證明，也不涵蓋學習式 re-id 或 WB 反演攻擊（§8.2）。
+- [事實] 三個指定 scorer 的 CI 都含 0.5，Top-1 都在隨機基準附近：**在這些 scorer 與這批樣本下，未偵測到同一張影像 B、C 版本之間的連結訊號**。這不是不可連結的證明，也不涵蓋學習式 re-id 或 WB 反演攻擊（§8.2）。
+- [事實，AF-056] 正式 E2 原本依賴當時尚未 commit 的 `scripts/t2bb_inner_linkage.py`（SHA-256 b02f78b6…）。現已凍結為 `scripts/share_linkage_eval.py`（`a3eef49`），並以 `--mode e2-analysis` 從經過 manifest 驗證的既有容器重播（`paper_assets/share_s10/table_share_cross_recipient_linkage_replay_{cuda,cpu}.json`）：GPU 重播與正式表**所有欄位完全一致**；CPU 重播的 cos／norm 完全一致，DenseNet 的 AUC 差 6.3e-6、CI 下界差 1e-4（四捨五入到小數第四位的一格）。原始 run 的來源版本是「工作區中未 commit 的 helper」，這點照實記錄，**不把新的 commit 回填成舊 run 的 commit**。
+- [事實，AF-057] E1、E2 的容器原本沒有逐樣本的來源清單。已事後補建 manifest（標為 retroactive），並確認磁碟上的容器與正式 E2 JSON 記錄的總雜湊一致（`paper_assets/share_s10/e{1_B,2_C}_container_manifest.json`）。之後的 run 會在產生容器時直接寫入 manifest，E2 會在載入模型之前驗證。
+- [注意] 正式 E2 JSON 的 `wall_seconds_c_generation`（662 s）實際上包含 C 版本生成**加上**評分分析的時間，不是單純的 diffusion 時間；新版 runner 已分開記錄。
 - [限制] 正控制是兩份完全相同的 x0，只能證明「配對與評估流程本身正常」，**無法證明 scorer 對較弱訊號的偵測力**。較強的正控制（例如 v1 的 S0／S1 共用金鑰版本）不在本次預先登記的範圍內。
 - DenseNet121 的 AUC 0.476 略低於 0.5，CI 上界 0.508 仍含 0.5。依預先登記，**不事後翻轉分數方向**。
 
-**一句話**：在同樣的 x0、模型與 sampler 下，接收方綁定的 v2 與原始 master key DPHD 的平均還原品質沒有可偵測的差異（ΔPSNR −0.01 dB，CI ±0.25 dB 內）；同一張圖分給不同院所的兩個版本，用這三種 scorer 連不起來。
+**一句話**（AF-058 修正）：在同樣的 x0、模型與 sampler 下，接收方綁定的 v2 與原始 master key DPHD 的**平均**重構 PSNR 在預設界限內（ΔPSNR −0.01 dB [−0.25, +0.22]），但逐張差異大，原因尚未確認；同一張圖分給不同院所的兩個版本，**在這三種 scorer 與這批樣本下未偵測到連結訊號**。
 
 
 ## 9. 病人層金鑰：v3 規劃（2026-11-04；⏸ 尚未實作）
