@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "purpose": "S9 CPU demo of receiver-bound sharing (reports/cross_institution_sharing.md \u00a78)",
+  "pipelines": "identity stubs (no diffusion model); GPU diffusion cost excluded",
+  "keys": "PUBLIC test fixtures only",
+  "seed": 1911,
+  "n_images": 20,
+  "profile_id": "soteria-share/m1-private-range/v2",
+  "host": {
+    "python": "3.10.19",
+    "torch": "2.14.0+cu130",
+    "machine": "x86_64",
+    "processor": "x86_64"
+  },
+  "caveats": [
+    "PNG size here is the quantized protected latent, not a real anonymous image; real sizes come from E1.",
+    "Timings are single-process CPU wall-clock on this host; not a security result.",
+    "Scenario rejections are functional checks under these fixtures, not general security proofs."
+  ],
+  "rows": [
+    {
+      "kind": "scenario",
+      "item": "A->B normal recovery",
+      "actor": "B",
+      "outcome": "accepted",
+      "layer": "-"
+    },
+    {
+      "kind": "scenario",
+      "item": "C intercepts B's container",
+      "actor": "C",
+      "outcome": "rejected",
+      "layer": "RecipientError"
+    },
+    {
+      "kind": "scenario",
+      "item": "re-addressed to C and re-signed (test signer)",
+      "actor": "C",
+      "outcome": "rejected",
+      "layer": "UnwrapError"
+    },
+    {
+      "kind": "scenario",
+      "item": "PNG byte changed, re-signed (test signer)",
+      "actor": "B",
+      "outcome": "rejected",
+      "layer": "MacError"
+    },
+    {
+      "kind": "scenario",
+      "item": "meta_ct changed, tag recomputed + re-signed (fault injection)",
+      "actor": "B",
+      "outcome": "rejected",
+      "layer": "MetadataError"
+    },
+    {
+      "kind": "scenario",
+      "item": "signature forged by non-registered key",
+      "actor": "B",
+      "outcome": "rejected",
+      "layer": "SignatureError"
+    },
+    {
+      "kind": "scenario",
+      "item": "unknown signing_key_id_A",
+      "actor": "B",
+      "outcome": "rejected",
+      "layer": "RegistryError"
+    },
+    {
+      "kind": "scenario",
+      "item": "off-profile manifest (steps=50)",
+      "actor": "B",
+      "outcome": "rejected",
+      "layer": "ManifestError"
+    },
+    {
+      "kind": "scenario",
+      "item": "A sends to revoked B key",
+      "actor": "A",
+      "outcome": "rejected",
+      "layer": "RegistryError"
+    },
+    {
+      "kind": "scenario",
+      "item": "registry rollback v7(revoked) -> v6(active)",
+      "actor": "A",
+      "outcome": "rejected",
+      "layer": "RegistryError"
+    },
+    {
+      "kind": "metric",
+      "item": "container_bytes (stub PNG)",
+      "unit": "B",
+      "n": 20,
+      "mean": 61789.4,
+      "median": 61980.0,
+      "min": 60789.0,
+      "max": 62373.0
+    },
+    {
+      "kind": "metric",
+      "item": "png_bytes (stub: quantized protected latent, not a real anon image)",
+      "unit": "B",
+      "n": 20,
+      "mean": 61397.4,
+      "median": 61588.0,
+      "min": 60397.0,
+      "max": 61981.0
+    },
+    {
+      "kind": "metric",
+      "item": "header_bytes",
+      "unit": "B",
+      "n": 20,
+      "mean": 242.0,
+      "median": 242.0,
+      "min": 242.0,
+      "max": 242.0
+    },
+    {
+      "kind": "metric",
+      "item": "non_png_overhead_bytes",
+      "unit": "B",
+      "n": 20,
+      "mean": 392.0,
+      "median": 392.0,
+      "min": 392.0,
+      "max": 392.0
+    },
+    {
+      "kind": "metric",
+      "item": "hpke_wrap_ms",
+      "unit": "ms",
+      "n": 100,
+      "mean": 0.05728860152885318,
+      "median": 0.05016749491915107,
+      "min": 0.04372000694274902,
+      "max": 0.11233997065573931
+    },
+    {
+      "kind": "metric",
+      "item": "hpke_unwrap_ms",
+      "unit": "ms",
+      "n": 100,
+      "mean": 0.03655999316833913,
+      "median": 0.03310397733002901,
+      "min": 0.03042607568204403,
+      "max": 0.05761801730841398
+    },
+    {
+      "kind": "metric",
+      "item": "dphd_encrypt_incl_stream_gen_ms",
+      "unit": "ms",
+      "n": 20,
+      "mean": 73.69752111262642,
+      "median": 38.182078511454165,
+      "min": 36.479567061178386,
+      "max": 232.4959320249036
+    },
+    {
+      "kind": "metric",
+      "item": "dphd_decrypt_incl_stream_gen_ms",
+      "unit": "ms",
+      "n": 20,
+      "mean": 49.8043704952579,
+      "median": 39.932554005645216,
+      "min": 38.4854479925707,
+      "max": 108.46953897271305
+    },
+    {
+      "kind": "metric",
+      "item": "sender_total_stub_pipeline_ms",
+      "unit": "ms",
+      "n": 20,
+      "mean": 51.81870600790717,
+      "median": 41.1764815216884,
+      "min": 40.1131910039112,
+      "max": 177.67292202915996
+    },
+    {
+      "kind": "metric",
+      "item": "receiver_total_stub_pipeline_ms",
+      "unit": "ms",
+      "n": 20,
+      "mean": 60.424366034567356,
+      "median": 41.80746397469193,
+      "min": 41.016770992428064,
+      "max": 120.65865099430084
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+kind,item,actor,outcome,layer,unit,n,mean,median,min,max
+scenario,A->B normal recovery,B,accepted,-,,,,,,
+scenario,C intercepts B's container,C,rejected,RecipientError,,,,,,
+scenario,re-addressed to C and re-signed (test signer),C,rejected,UnwrapError,,,,,,
+scenario,"PNG byte changed, re-signed (test signer)",B,rejected,MacError,,,,,,
+scenario,"meta_ct changed, tag recomputed + re-signed (fault injection)",B,rejected,MetadataError,,,,,,
+scenario,signature forged by non-registered key,B,rejected,SignatureError,,,,,,
+scenario,unknown signing_key_id_A,B,rejected,RegistryError,,,,,,
+scenario,off-profile manifest (steps=50),B,rejected,ManifestError,,,,,,
+scenario,A sends to revoked B key,A,rejected,RegistryError,,,,,,
+scenario,registry rollback v7(revoked) -> v6(active),A,rejected,RegistryError,,,,,,
+metric,container_bytes (stub PNG),,,,B,20,61789.4,61980.0,60789.0,62373.0
+metric,"png_bytes (stub: quantized protected latent, not a real anon image)",,,,B,20,61397.4,61588.0,60397.0,61981.0
+metric,header_bytes,,,,B,20,242.0,242.0,242.0,242.0
+metric,non_png_overhead_bytes,,,,B,20,392.0,392.0,392.0,392.0
+metric,hpke_wrap_ms,,,,ms,100,0.05728860152885318,0.05016749491915107,0.04372000694274902,0.11233997065573931
+metric,hpke_unwrap_ms,,,,ms,100,0.03655999316833913,0.03310397733002901,0.03042607568204403,0.05761801730841398
+metric,dphd_encrypt_incl_stream_gen_ms,,,,ms,20,73.69752111262642,38.182078511454165,36.479567061178386,232.4959320249036
+metric,dphd_decrypt_incl_stream_gen_ms,,,,ms,20,49.8043704952579,39.932554005645216,38.4854479925707,108.46953897271305
+metric,sender_total_stub_pipeline_ms,,,,ms,20,51.81870600790717,41.1764815216884,40.1131910039112,177.67292202915996
+metric,receiver_total_stub_pipeline_ms,,,,ms,20,60.424366034567356,41.80746397469193,41.016770992428064,120.65865099430084
