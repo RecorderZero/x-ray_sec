@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 from src.crypto.errors import AuthenticationError
 
 from .container import decode_anon_png, open_metadata, parse, verify_signature, verify_tag
-from .errors import RecipientError, ShareFormatError
+from .errors import ManifestError, RecipientError, ShareFormatError
 from .keys import build_info, derive_subkeys, unwrap_image_key, wipe_all
 from .manifest import Manifest, verify_manifest
 from .registry import TrustStore
@@ -48,7 +48,12 @@ def recover_image(
     fetch_manifest: Callable[[bytes], bytes],
     pipeline_factory: PipelineFactory,
 ) -> torch.Tensor:
-    """Internal flow; raises the layer-specific error that fired (for tests / audit)."""
+    """Internal flow; raises the layer-specific error that fired (for tests / audit).
+
+    ``fetch_manifest(digest)`` returns the signed manifest blob, raises ``LookupError``
+    if the digest is unknown and ``OSError`` if the store is unavailable. Other
+    exceptions (programming errors, cancellation) are deliberately not converted.
+    """
     if not isinstance(registry, TrustStore):
         raise ShareFormatError("registry must be a TrustStore (use-time freshness checks, AF-052)")
     parsed = parse(container)                                                      # 1
@@ -57,8 +62,13 @@ def recover_image(
     verify_signature(sender_pub, parsed.h_bytes, parsed.meta_ct, parsed.png, parsed.tag, parsed.sig)
     if header.inst_id_b != recipient.inst_id or header.key_id_b != recipient.key_id:   # 3
         raise RecipientError("container is not addressed to this recipient")
-    manifest = verify_manifest(fetch_manifest(header.manifest_digest), header.manifest_digest,
-                               sender_pub, header.profile_id)                      # 4
+    try:
+        manifest_blob = fetch_manifest(header.manifest_digest)
+    except (LookupError, OSError):
+        # AF-055 contract: fetch_manifest raises LookupError when the digest is unknown and
+        # OSError when the store is unreachable; both are a controlled, fail-closed rejection.
+        raise ManifestError("manifest for this container is unavailable") from None
+    manifest = verify_manifest(manifest_blob, header.manifest_digest, sender_pub, header.profile_id)   # 4
     info = build_info(header.profile_id, header.nonce, header.inst_id_b, header.key_id_b,
                       header.inst_id_a, header.signing_key_id_a)
     image_key = subkeys = None

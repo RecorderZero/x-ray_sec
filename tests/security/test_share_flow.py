@@ -248,3 +248,30 @@ def test_af053_normal_paths_still_wipe_everything(tmp_path, monkeypatch) -> None
     blob = _share(world)
     _recover(world, blob)
     assert len(created) == 12 and all(k.wiped and k.buffer_is_zero() for k in created)
+
+
+# ------------------------------------------------------------------ AF-055 manifest fetch contract
+@pytest.mark.parametrize("failure", [KeyError, LookupError, FileNotFoundError, ConnectionError])
+def test_af055_unavailable_manifest_is_a_controlled_rejection(tmp_path, failure) -> None:
+    world = World(tmp_path)
+    blob = _share(world)
+
+    def missing(digest):
+        raise failure("not available")
+    spy = FactorySpy()
+    with pytest.raises(ManifestError):
+        recover_image(blob, recipient=world.b, registry=world.registry, fetch_manifest=missing, pipeline_factory=spy)
+    service = ReceiverService(world.b, world.registry, missing, spy)
+    with pytest.raises(AuthenticationError) as info:
+        service.recover(blob)
+    assert type(info.value) is AuthenticationError and spy.calls == 0
+
+
+def test_af055_programming_errors_and_cancellation_are_not_swallowed(tmp_path) -> None:
+    world = World(tmp_path)
+    blob = _share(world)
+    for exc in (TypeError, KeyboardInterrupt):
+        def broken(digest, exc=exc):
+            raise exc("bug or cancel")
+        with pytest.raises(exc):
+            ReceiverService(world.b, world.registry, broken, FactorySpy()).recover(blob)
