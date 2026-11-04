@@ -13,24 +13,19 @@ import io
 import logging
 import struct
 import traceback
-from dataclasses import replace
 
 import numpy as np
 import pytest
 import torch
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from PIL import Image
 
 import src.share.receiver as receiver_mod
 import src.share.sender as sender_mod
-from src.crypto.prng import inverse_permutation, permutation_from_key, sign_vector_from_key
 from src.share.container import Header, parse
-from src.share.encoding import PROFILE_M1_PRIVATE_RANGE_V2 as PROFILE
 from src.share.keys import SecretKey, TestFixtureStream
 from src.share.receiver import recover_image
 from src.share.sender import share_image
+from tests.security import _share_reference as ref
 from tests.security._share_world import MANIFEST, FactorySpy, World, identity, x0_fixture
 
 
@@ -48,90 +43,91 @@ def _recover(world: World, blob: bytes, factory=None):
                          pipeline_factory=factory or FactorySpy())
 
 
-# ===================================================================== P3 independent reference
-def _lp(b: bytes) -> bytes:
-    return len(b).to_bytes(4, "big") + b
+# ===================================================================== P3 independent reference (AF-054)
+def p3_check(world: World, x0: torch.Tensor, label: str) -> dict:
+    """Raise AssertionError unless the service agrees with the from-x0 reference.
 
-
-def _ref_subkey(k: bytes, nonce: bytes, label: str) -> bytes:
-    return HKDF(algorithm=hashes.SHA256(), length=32, salt=nonce,
-                info=_lp(PROFILE.encode()) + _lp(label.encode())).derive(k)
-
-
-def _ref_fwht(v: np.ndarray) -> np.ndarray:
-    out = v.astype(np.float64).copy()
-    h = 1
-    while h < out.size:
-        out = out.reshape(-1, 2, h)
-        a, b = out[:, 0, :].copy(), out[:, 1, :].copy()
-        out[:, 0, :], out[:, 1, :] = a + b, a - b
-        out = out.reshape(-1)
-        h *= 2
-    return out / np.sqrt(out.size)
-
-
-def _ref_streams(label: str):
-    stream = TestFixtureStream(label)
-    k, nonce = stream.read(32), stream.read(16)
-    pre = sign_vector_from_key(_ref_subkey(k, nonce, "round/0/sign-pre"), 65536).astype(np.float64)
-    post = sign_vector_from_key(_ref_subkey(k, nonce, "round/0/sign-post"), 65536).astype(np.float64)
-    perm = permutation_from_key(_ref_subkey(k, nonce, "round/0/perm"), 65536)
-    return k, nonce, pre, perm, post
-
-
-def _reference_encode(x0: np.ndarray, label: str) -> np.ndarray:
-    """Spec-level encode half (float64 transform, float32 quantization as §8.4.1 (8)); returns q."""
-    _, _, pre, perm, post = _ref_streams(label)
-    z = x0.reshape(-1).astype(np.float64)
-    c = (_ref_fwht(z * (FIXED_NORM / float(np.linalg.norm(z))) * pre)[perm] * post).astype(np.float32).reshape(256, 256)
-    lo, hi = np.float32(c.min()), np.float32(c.max())
-    return np.clip(np.rint((c - lo) / np.float32(hi - lo) * np.float32(255)), 0, 255).astype(np.uint8)
-
-
-def _reference_decode(blob: bytes, label: str) -> np.ndarray:
-    """Spec-level decode half fed with the service's public q; metadata opened with an independently derived key."""
-    k, nonce, pre, perm, post = _ref_streams(label)
-    p = parse(blob)
-    meta_key = _ref_subkey(k, nonce, "private-metadata-aead")
-    pt = ChaCha20Poly1305(meta_key).decrypt(bytes(12), p.meta_ct, b"SOTERIA\x00\x00\x02" + _lp(p.h_bytes))
-    norm = struct.unpack("<d", pt[:8])[0]
-    lo, hi = np.frombuffer(pt[8:12], "<f4")[0], np.frombuffer(pt[12:16], "<f4")[0]
-    with Image.open(io.BytesIO(p.png)) as im:
-        q = np.asarray(im, dtype=np.uint8)
-    deq = (q.astype(np.float32) / np.float32(255) * np.float32(hi - lo) + lo).reshape(-1).astype(np.float64)
-    u = _ref_fwht((deq * post)[inverse_permutation(perm)]) * pre
-    return (u * (norm / FIXED_NORM)).astype(np.float32).reshape(256, 256)
-
-
-@pytest.mark.parametrize("seed", [1911, 7, 42, 3, 5])
-def test_p3_service_matches_independent_reference(tmp_path, seed: int) -> None:
-    """P3 (§8.8). Decode half keeps the pre-registered max-abs < 1e-5 gate.
-
-    Encode half: two independent float paths (torch float32 vs numpy float64 FWHT) can
-    land a value on opposite sides of a rint .5 boundary, flipping q by exactly 1 at a
-    handful of pixels (observed <= 1/65536 on 8 fixtures, 2026-11-04). The encode
-    check is therefore max |dq| <= 1 with <= 1e-3 of pixels differing -- added after
-    that observation and recorded as such in PROGRESS; a wrong rounding mode or scale
-    would differ on ~half the pixels.
+    (a) metadata: the service's norm/lo/hi (opened with an independent key) must
+        equal the reference's own values computed from x0 -- catches sender
+        metadata faults such as norm x 1.01;
+    (b) encode half: max|dq| <= 1 and <= 1e-3 of pixels differ (POST-HOC criterion,
+        see module notes; validated on held-out seeds by the P3 report script);
+    (c) decode half: the service output equals the reference decode of the
+        service's public q with the REFERENCE's own norm/lo/hi, max-abs < 1e-5
+        (the pre-registered P3 gate).
+    Returns the lossy error vs x0 for reporting (no quality gate).
     """
-    world = World(tmp_path)
-    x0 = x0_fixture(seed)
-    label = f"P3/{seed}"
     blob = _share(world, label, x0=x0)
-    with Image.open(io.BytesIO(parse(blob).png)) as im:
-        q_service = np.asarray(im, dtype=np.int16)
-    dq = np.abs(q_service - _reference_encode(x0.numpy(), label).astype(np.int16))
-    assert int(dq.max()) <= 1 and float((dq > 0).mean()) <= 1e-3
+    expected = ref.encode(x0.numpy(), label)
+    norm_s, lo_s, hi_s = ref.service_metadata(blob, label)
+    assert abs(norm_s - expected["norm"]) <= 1e-9 * expected["norm"], "sender norm disagrees with reference"
+    assert abs(float(lo_s) - float(expected["lo"])) <= 1e-5 and abs(float(hi_s) - float(expected["hi"])) <= 1e-5, \
+        "sender lo/hi disagree with reference"
+    q_s = ref.service_q(blob)
+    dq = np.abs(q_s.astype(np.int16) - expected["q"].astype(np.int16))
+    assert int(dq.max()) <= 1 and float((dq > 0).mean()) <= 1e-3, "encode half disagrees beyond rint-boundary flips"
     out = _recover(world, blob).numpy().reshape(256, 256)
-    assert float(np.abs(out - _reference_decode(blob, label)).max()) < 1e-5    # pre-registered P3 tolerance
-    assert float(np.abs(out - x0.numpy().reshape(256, 256)).max()) > 0          # PNG path is genuinely lossy (reported)
+    oracle = ref.decode(q_s, expected["norm"], expected["lo"], expected["hi"], label)
+    assert float(np.abs(out - oracle).max()) < 1e-5, "service output disagrees with reference decode"
+    diff = out.astype(np.float64) - x0.numpy().reshape(256, 256).astype(np.float64)
+    return {"dq_pixels": int((dq > 0).sum()), "dq_max": int(dq.max()),
+            "lossy_max_abs": float(np.abs(diff).max()), "lossy_rmse": float(np.sqrt((diff ** 2).mean()))}
+
+
+@pytest.mark.parametrize("seed", ref.THRESHOLD_SETTING_SEEDS[:5])
+def test_p3_service_matches_independent_reference(tmp_path, seed: int) -> None:
+    stats = p3_check(World(tmp_path), x0_fixture(seed), f"P3/{seed}")
+    assert stats["lossy_max_abs"] > 0          # PNG path is genuinely lossy; values are reported, not gated
+
+
+def test_p3_quantizer_is_bit_identical_on_identical_float32_input() -> None:
+    """Isolate rounding from FWHT precision: same float32 input -> same q, incl. exact .5 boundaries."""
+    from src.share.container import encode_anon_png
+    rng = np.random.default_rng(1911)
+    for trial in range(4):
+        x = rng.normal(0, 1, (256, 256)).astype(np.float32)
+        lo, hi = np.float32(-3), np.float32(5)
+        x[0, 0], x[0, 1] = lo, hi
+        # place values exactly on k + 0.5 quantization boundaries
+        x[1, :10] = lo + (np.arange(10, dtype=np.float32) + np.float32(0.5)) / np.float32(255) * np.float32(hi - lo)
+        x = np.clip(x, lo, hi)
+        png, s_lo, s_hi = encode_anon_png(x)
+        q_ref, r_lo, r_hi = ref.quantize(x)
+        with Image.open(io.BytesIO(png)) as im:
+            assert np.array_equal(np.asarray(im, dtype=np.uint8), q_ref)
+        assert (s_lo, s_hi) == (r_lo, r_hi)
+    png, s_lo, s_hi = encode_anon_png(np.full((256, 256), 0.5, dtype=np.float32))
+    q_ref, *_ = ref.quantize(np.full((256, 256), 0.5, dtype=np.float32))
+    with Image.open(io.BytesIO(png)) as im:
+        assert np.array_equal(np.asarray(im, dtype=np.uint8), q_ref) and not q_ref.any()
+
+
+@pytest.mark.parametrize("mutation", ["norm_x1.01", "lo_shift", "hi_shift", "lo_hi_swap_scale"])
+def test_p3_catches_sender_metadata_faults(tmp_path, monkeypatch, mutation: str) -> None:
+    """AF-054 acceptance: faults in what the sender writes must fail P3."""
+    real = sender_mod.seal_metadata
+
+    def faulty(key, h, norm, lo, hi):
+        span = float(hi) - float(lo)
+        if mutation == "norm_x1.01":
+            norm = norm * 1.01
+        elif mutation == "lo_shift":
+            lo = float(lo) - 0.01 * span
+        elif mutation == "hi_shift":
+            hi = float(hi) + 0.01 * span
+        else:
+            lo, hi = float(lo) * 1.001, float(hi) * 1.001
+        return real(key, h, norm, lo, hi)
+    monkeypatch.setattr(sender_mod, "seal_metadata", faulty)
+    with pytest.raises(AssertionError):
+        p3_check(World(tmp_path), x0_fixture(1911), f"P3/mut/{mutation}")
 
 
 # ===================================================================== V7 leak monitoring
 def _secret_patterns(label: str) -> list[bytes]:
     stream = TestFixtureStream(label)
     k, nonce = stream.read(32), stream.read(16)
-    secrets = [k] + [_ref_subkey(k, nonce, lab) for lab in
+    secrets = [k] + [ref.subkey(k, nonce, lab) for lab in
                      ("round/0/sign-pre", "round/0/perm", "round/0/sign-post", "mac", "private-metadata-aead")]
     pats = []
     for s in secrets:
