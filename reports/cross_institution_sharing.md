@@ -2,7 +2,7 @@
 
 > 2026-11-02。起因：教授提醒本系統的初衷是「多院系把加密版上傳雲端，跨院系要共享時怎麼存取」。
 > 本檔做兩件事：(1) 整理文獻裡已有的解法；(2) 把它們對到 SOTERIA 現有的金鑰結構，提出可行設計。
-> **2026-11-04：定案方案見 §8**（M1 接收方綁定共享；§6–§7 已被取代）。
+> **2026-11-04：定案方案見 §8**（M1 接收方綁定共享；§6–§7 已被取代）。**病人層金鑰的 v3 規劃見 §9**（尚未實作）。
 > 2026-11-03：§6、§7 已依審閱意見 `reports/opinion.md` 修訂（浮點容差、輪替層級、L3 邊界、CPA 引用更正、追查移至 future work、v1/v2 證據分離）；§6.6 新增「M2 是否外包 AEAD／S2 角色」待裁決項。根目錄同名文件 `cross_institution_sharing.md` 是另一輪研究紀錄，依使用者裁決不合併。
 > 標記：`[事實]` 已查證／已讀程式碼，`[推論]` 尚未驗證的分析，`[建議]` 設計提案，`[待辦]` 尚未做。
 
@@ -830,6 +830,200 @@ sig = Ed25519_A(LP("soteria-share/v2/sig") ‖ preamble ‖ LP(H) ‖ LP(meta_ct
 
 **一句話**：在同樣的 x0、模型與 sampler 下，接收方綁定的 v2 與原始 master key DPHD 的平均還原品質沒有可偵測的差異（ΔPSNR −0.01 dB，CI ±0.25 dB 內）；同一張圖分給不同院所的兩個版本，用這三種 scorer 連不起來。
 
+
+## 9. 病人層金鑰：v3 規劃（2026-11-04；⏸ 尚未實作）
+
+> 在 §8（v2，每張影像一把隨機鎖）的基礎上，加入「**以病人為單位分享**」：A 院為「這位病人目前的所有影像」產生**一把**只有 B 打得開的隨機病人金鑰 k_pat_B，再從它推導每張影像的金鑰。
+> v2 **保留**，單張分享仍走 §8；v3 是新的 profile。§8 的威脅模型、不落地規則、註冊表、manifest、private-range PNG、opinion／稽核意見的原則（浮點容差、分層測試、v1/v2/v3 證據分離、不過度宣稱）**全部沿用**，本章只寫差異。
+
+### 9.1 已定案的設計 `[決定]`（使用者 11-04）
+
+| # | 項目 | 內容 |
+|---|---|---|
+| G1 | k_pat_B 的壽命 | **每次分享一把**：每次 B 申請某位病人的影像，A 就為「當下現有的影像」產生新的隨機 k_pat_B，打包完立刻丟棄。之後 A 本地新增的照片，B 用舊鑰匙打不開，因為 A 從未用舊鑰匙加密過它們；B 要新照片就重新申請，由 A 重新打包。**不需要 epoch** |
+| G2 | 容器如何對應到信封 | **key hint**：每個容器帶一個只有持有 k_pat_B 才算得出的 16 B 提示值，對外人看起來是隨機值，因此無法分組 |
+| G3 | 與 v2 的關係 | v2（單張）與 v3（病人層）並存，兩者使用不同的 profile 與容器版本 |
+| G4 | 單次使用要成為結構保證 | A 端只提供 `share_patient(影像清單) → (信封, 容器清單)` 這種「一次完成整批」的介面；函式在 finally 中清除 k_pat_B，**沒有任何介面能接受既有的 k_pat 或信封再追加容器** |
+| G5 | 信封的私有 metadata（新增） | 影像張數與 hint 清單的 SHA-256 摘要放在信封內，**以 k_pat_B 推導的金鑰加密**。外人看不到病人有幾張影像，B 則可以檢查整批是否完整（沒有被刪掉或混進其他容器） |
+
+### 9.2 金鑰階層
+
+```
+k_pat_B（CSPRNG 32 B；每位病人 × 每個接收方 × 每次分享一把；研究實驗用標示為測試用途的 fixture）
+ │  grant_id ← CSPRNG 16 B（每次分享一個）
+ ├─ hint_key  = HKDF(k_pat_B, salt = grant_id, info = LP(profile_id) ‖ LP("hint"))
+ ├─ envmeta_key = HKDF(k_pat_B, salt = grant_id, info = LP(profile_id) ‖ LP("envelope-meta-aead"))
+ ├─ wrap_pat = HPKE.encrypt(k_pat_B, pk_B, info_env)            → 放在信封裡
+ └─ 對每張影像 i（nonce_i ← CSPRNG 16 B，同一批內不可重複）：
+      k_img_i  = HKDF(k_pat_B, salt = nonce_i, info = LP(profile_id) ‖ LP("image"))
+      key_hint_i = HMAC-SHA256(hint_key, LP("soteria-share/v3/hint") ‖ nonce_i) 取前 16 B
+      子金鑰    = HKDF(k_img_i, salt = nonce_i, info = LP(profile_id) ‖ LP(label))     ← 與 v2 相同
+                  label ∈ {round/0/sign-pre, round/0/perm, round/0/sign-post, mac, private-metadata-aead}
+```
+
+- 所有推導都以 profile_id 開頭，和 v2 的網域分離：同樣的 bytes 在 v2 與 v3 中推導出的金鑰不會相同。
+- **外洩的影響範圍**：k_pat_B 外洩，會讓**這一次分享**中這位病人的所有影像曝光。這是「以病人為單位分享」本身的代價；因為 G1，影響範圍不會延伸到之後的影像，也不會延伸到其他接收方或其他批次。
+
+### 9.3 流程
+
+```
+【A 院：share_patient(x0_list, recipient)】整段包在 try/finally 中
+ 1. 註冊表查詢 B 的 X25519 公鑰（每次使用時都檢查，同 AF-052）；fail closed
+ 2. k_pat_B、grant_id ← CSPRNG；推導 hint_key、envmeta_key
+ 3. 對每張影像：nonce_i ← CSPRNG（同一批內不可重複）→ k_img_i → 子金鑰
+    → x0 → 反演 → fixed-norm → DPHD → 生成 → private-range PNG → metadata AEAD
+    → 計算 key_hint_i → 組 H3 → MAC → Ed25519 → 影像容器 i；清除 k_img_i 與子金鑰
+ 4. envmeta_pt = u32 影像張數 ‖ SHA-256(依 bytes 排序後串接的所有 key_hint)
+    envmeta_ct = ChaCha20-Poly1305(envmeta_key, nonce = 12 個 0, aad = 信封 preamble ‖ LP(E))
+ 5. info_env = LP(profile_id) ‖ LP(grant_id) ‖ LP(inst_id_B) ‖ LP(key_id_B) ‖ LP(inst_id_A) ‖ LP(signing_key_id_A)
+    wrap_pat = HPKE.encrypt(k_pat_B, pk_B, info_env)
+ 6. 組信封 E → A 的 Ed25519 簽章 → 回傳（信封, [容器…]）
+ 7. finally：清除 k_pat_B、hint_key、envmeta_key，以及任何尚未清除的 k_img／子金鑰
+
+【傳送】信封與容器可以一起或分開，經雲端（TLS）或直接傳送
+
+【B 院：open_envelope(信封)】
+ 1. 有大小上限的解析 → 從註冊表取得 A 的簽章公鑰 → 驗證信封簽章 → 確認收件方是自己
+ 2. 取得並驗證 manifest（digest、簽章、profile）
+ 3. 解封 k_pat_B → 推導 envmeta_key → 解開 envmeta → 取得張數與 hint 摘要 → 清除金鑰
+ 4. 回傳一個**不含金鑰**的 EnvelopeHandle（只保存信封 bytes 與已驗證的公開欄位）
+
+【B 院：recover_patient_image(容器, handles)】整段包在 try/finally 中
+ 1. 解析容器 → 驗證 A 的簽章 → 確認收件方 → 驗證 manifest（必須與信封的 manifest 相同）
+ 2. 篩選候選信封：同一個發送方、接收方、profile、manifest，而且數量 ≤ 64
+ 3. 對每個候選：解封 k_pat_B → 計算 hint_key → 以固定時間比對 key_hint；對上就停止
+    → 都對不上：HintError（不呼叫模型）
+ 4. k_img_i → 子金鑰 → MAC → metadata AEAD → 解碼 PNG → pipeline_factory → 還原（之後與 v2 相同）
+ 5. finally：清除 k_pat_B、hint_key、k_img_i、子金鑰
+
+【B 院：verify_bundle(handle, 容器清單)】
+ 張數與 hint 摘要必須和信封內加密的值一致 → 檢查整批完整，沒有被刪除或混入
+```
+
+### 9.4 位元組層級契約（延伸 §8.4.1；這裡沒寫到的規則與 §8.4.1 相同）
+
+**(1) v3 前導區**
+
+`preamble3 = b"SOTERIA\x00" ‖ u16_BE(3) ‖ u8 kind`，共 11 B。kind 0x01 表示病人授權信封，0x02 表示影像容器。版本與種類不認得的一律拒絕。
+
+**(2) 病人授權信封**
+
+```
+envelope = preamble3(kind=0x01) ‖ LP(E) ‖ LP(envmeta_ct) ‖ sig(64)
+E = LP(profile_id) ‖ LP(grant_id[16]) ‖ LP(manifest_digest[32]) ‖ LP(inst_id_A) ‖ LP(signing_key_id_A)
+    ‖ LP(inst_id_B) ‖ LP(key_id_B) ‖ LP(wrap_pat[80])          （固定 8 個欄位、固定順序，不允許尾端 bytes）
+envmeta_pt = u32_BE(image_count) ‖ hint_set_digest[32]          （36 B；密文 52 B）
+sig = Ed25519_A(LP("soteria-share/v3/envelope-sig") ‖ preamble3 ‖ LP(E) ‖ LP(envmeta_ct))
+```
+
+- 上限：|E| ≤ 4096、image_count 介於 1 與 10 000 之間。
+- hint_set_digest = SHA-256(依 bytes 排序後的所有 key_hint 串接)。
+
+**(3) v3 影像容器**
+
+```
+container3 = preamble3(kind=0x02) ‖ LP(H3) ‖ LP(meta_ct) ‖ LP(PNG) ‖ tag(32) ‖ sig(64)
+H3 = LP(profile_id) ‖ LP(manifest_digest) ‖ LP(inst_id_A) ‖ LP(signing_key_id_A) ‖ LP(inst_id_B) ‖ LP(key_id_B)
+     ‖ LP(nonce_i[16]) ‖ LP(key_hint[16])                     （固定 8 個欄位；不含 wrap，也不含 grant_id）
+```
+
+- MAC 與簽章的網域字串改為 `soteria-share/v3/mac`、`soteria-share/v3/sig`；涵蓋範圍的寫法同 §8.4.1 (7)，但以 preamble3 取代原本的 preamble。
+- metadata、PNG、量化、latent 的規則與 §8.4.1 (6)、(8)、(9) 相同。
+
+**(4) profile**
+
+`soteria-share/m1-private-range-patient/v3`。它對應的 manifest 欄位內容與 v2 相同，只有 profile_id 欄位不同。
+
+### 9.5 公開欄位與隱私
+
+- **影像容器**：header 中**沒有任何同一位病人共用、又能讓外人分組的欄位**。key_hint 是以 PRF 輸出的值，同一位病人的各張影像 hint 互不相同。inst/key/manifest/profile 這類欄位允許重複，理由同 §8.4。
+- **信封**：公開欄位只有 profile、grant_id、manifest digest、雙方身分與 wrap_pat；**影像張數不公開**（G5）。
+  - 信封本身會透露「某位病人的資料被分享給了 B」，但不透露是哪位病人、有幾張影像。
+  - 信封與容器若一起傳送，傳送批次本身會讓兩者被關聯起來（與光碟相同）；這屬於流量分析，列為 non-goal。
+- **不落地**：k_pat_B、hint_key、envmeta_key 比照 k_img 處理。B 保存的是信封（封裝後的形式），每次需要時重新解封；`EnvelopeHandle` 裡不保存任何金鑰。
+
+### 9.6 威脅模型的差異（其餘同 §8.2）
+
+| 項目 | v3 的處理 |
+|---|---|
+| 外人把同一位病人的影像分組 | 範圍內：header 不放 grant_id，hint 看起來是隨機值。是否真的連不起來由 E4 實測 |
+| 把某位病人的容器混進另一位病人的信封 | 範圍內：hint 對不上，就算 hint 被照抄，MAC 也會失敗（k_img 不同） |
+| 刪除或增加整批中的容器 | 範圍內：verify_bundle 比對加密的張數與 hint 摘要 |
+| 往舊授權追加新影像 | 結構上不可能（G4）；之後的影像不會被舊的 k_pat_B 打開 |
+| k_pat_B 外洩 | 影響這一批的所有影像（已接受的代價） |
+| 重複還原、重放信封 | 不處理（同 §8.2 non-goal） |
+
+### 9.7 預先登記的判準
+
+- **P1**：沿用（DPHD 轉換本身沒有改變）。
+- **P2'**：v3 信封與容器的序列化往返，bytes 完全一致。
+- **P3'**：延伸 §8.8 P3 與 AF-054 的獨立 reference。參考流程**自己**依 §9.2 從 x0、k_pat_B、grant_id 推導出 k_img_i、key_hint、envmeta，並與服務產出的結果比對。
+  - 解碼端：max-abs < 1e-5。
+  - 編碼端：max|Δq| ≤ 1，且差異比例 ≤ 1e-3（沿用已採用的事後門檻，引用時同樣要註明是事後訂的）。
+  - metadata、hint、hint 摘要：必須逐位元一致。
+- **E3**：判準同 E1。v3 與 v1 S2fn 逐樣本配對，ΔPSNR 的 95% CI 完全落在 ±0.5 dB 內。
+- **E4**：不設通過門檻；AUC 與 Top-k 是科學結果，CI 含 0.5 不等於證明連不起來。
+
+### 9.8 確定性測試（CPU；W 系列；每項都要打到它要驗證的那一層）
+
+| # | 測試 | 通過條件 |
+|---|---|---|
+| W1 | v2 迴歸 | 既有的 v2 測試全部不需修改就通過；v2 的容器在 v3 解析器中被拒絕，反之亦然（kind 與版本不同） |
+| W2 | 整批往返 | B 用一份信封還原整批 N 張影像；P2'、P3' 成立 |
+| W3 | HPKE／信封層（直接測函式庫） | 錯誤的私鑰、錯誤的 info_env（換掉 grant_id 或任一身分欄位）、截斷或格式錯誤的 wrap_pat → 解封失敗。被改寄給 C 並重新簽章的信封，C 也解不開 |
+| W4 | 竄改（分層觸發） | 信封簽章層；以測試 signer 重新簽章後，envmeta AEAD 層失敗；容器的簽章、MAC、metadata 層同 v2 的 V4；key_hint 被改後重新簽章 → HintError |
+| W5 | 跨授權混用 | 把病人 p1 的容器拿去配 p2 的信封 → HintError；把 p2 某個容器的 hint 照抄到 p1 的容器上並重新簽章 → hint 對上 p2，但 **MAC 失敗**。兩種情況都不呼叫模型 |
+| W6 | 整批完整性 | 少一個容器、多一個其他批次的容器、重複同一個容器 → verify_bundle 失敗；張數與摘要只存在加密的 envmeta 裡 |
+| W7 | 單次使用（結構性檢查） | 公開 API 中沒有任何函式接受既有的 k_pat 或信封來產生容器；每次呼叫的 grant_id 與 k_pat_B 都是新的；同一批內 nonce 不重複；結束後所有受控 buffer 都已歸零（含 k_pat_B、hint_key、envmeta_key） |
+| W8 | 不落地（受監控路徑） | 比照 V7 與 AF-053：在信封封裝、每張影像的每個步驟、hint 計算、envmeta 處理各處注入一般例外與取消類例外，sender／receiver 兩端所有**曾經建立**的 SecretKey 都已歸零；traceback、log、stdout/stderr、檔案中找不到 k_pat_B、hint_key、envmeta_key、k_img_i、子金鑰（raw／hex／base64） |
+| W9 | 公開視角 | 容器 header 符合 allowlist，不含 grant_id 或任何病人欄位；同一位病人的 N 張影像，key_hint 兩兩不同，而且除了允許重複的欄位之外沒有相同的值；信封的公開欄位符合 allowlist，張數不公開 |
+| W10 | 註冊表與 manifest | 信封與容器都走 TrustStore 的每次使用檢查（含過期與新版撤銷，同 AF-052）；信封與容器的 manifest digest 不一致 → 拒絕；查不到 manifest → 受控的拒絕（同 AF-055） |
+| W11 | 資源限制 | 信封或容器的 framing 超過大小上限、image_count 超出範圍、候選信封超過 64 個 → 在大量配置記憶體或載入模型之前就拒絕 |
+
+### 9.9 實驗（GPU；先 smoke；推算超過 30 分鐘就先問）
+
+| # | 實驗 | 設計 | 估時（規劃用） | 建議 |
+|---|---|---|---|---|
+| E3 | v3 的還原保真度 | 同 E1：security_v1 N=200，與 v1 S2fn 逐樣本配對。每位病人一張影像，因此每份信封只有一張；目的是確認 v3 的金鑰推導不影響品質 | 約 21 分鐘 | 選做（DPHD 數學沒有改變；做了可以完整回答「v3 與 v1 的差異」） |
+| E4 | **同一位病人不同影像之間的連結**（v3 才有的新風險） | 使用 `splits/t2bb_inner_n200_v1.csv`：200 位病人，每人 2 次不同檢查。每位病人的 2 張影像**以同一份病人信封**分享給 B。gallery 放第 1 張、query 放第 2 張；攻擊者只看得到公開 PNG（q/255）與公開 header；scorer 用 cos、norm、DenseNet121；CI 以固定 gallery 為條件（同 F3 = (a)）；正控制用原圖。另做對照：同一批影像改用 v2（每張各自獨立的 k_img），比較 v3 與 v2 的差異 | v3 與 v2 對照各 400 張 × 3.2 s ≈ 21 分鐘 ×2，約 43 分鐘，**超過 30 分鐘，要先問** | **必做**（共用 k_pat 是 v3 唯一新增的連結風險） |
+
+### 9.10 實作步驟（新檔為主；v1、v2 行為不變；每個子任務通過就原子 commit）
+
+| 步驟 | 檔案 | 內容 | 對應驗證 |
+|---|---|---|---|
+| T1 | `src/share/encoding.py`、`keys.py` | v3 前導區與 kind、v3 profile；`derive_patient_keys()`、`derive_image_key()`、`compute_hint()`、`build_envelope_info()`；中途失敗時自己清理（同 AF-053） | W1、W7、W8 |
+| T2 | `src/share/envelope.py` | 信封的編碼與解碼、envmeta AEAD、Ed25519 | P2'、W3、W4、W6、W11 |
+| T3 | `src/share/container.py` | v3 的 Header3 與 container3（保留 v2）；PNG 與 metadata 重用 | P2'、W4、W9 |
+| T4 | `src/share/sender.py` | `share_patient()`：一次完成整批，結束時清除 k_pat_B（G4） | W2、W7、W8 |
+| T5 | `src/share/receiver.py` | `open_envelope()`（回傳不含金鑰的 handle）、`recover_patient_image()`（hint 搜尋、候選上限）、`verify_bundle()`；ReceiverService 支援 v3，錯誤一律統一 | W2–W6、W10、W11 |
+| T6 | `src/share/manifest.py` | 加入 v3 profile 的 manifest | W10 |
+| T7 | `tests/security/test_share_patient.py`、`_share_reference.py` | W1–W11，以及 P3'（獨立推導 k_pat → k_img、hint、envmeta） | 全部 |
+| T8 | `scripts/soteria_share_demo.py` | 加入 v3 情境 → `table_share_patient_protocol.{csv,json}` | W 系列示範 |
+| T9 | `scripts/soteria_share_experiments.py` | `--mode e3`、`--mode e4`（E4 需先取得 GPU 裁決） | E3、E4 |
+
+### 9.11 治理
+
+- 同 §8.10：每個子任務通過就 commit，稽核方事後複驗；不寫入任何真實金鑰材料；GPU 先跑 smoke，推算超過 30 分鐘就先問。
+- v1、v2 的凍結結果都不變。**E3、E4 完成之前，不宣稱 v3 的品質或連結風險與 v2 相同**。
+
+### 9.12 待裁決
+
+| 問題 | 選項 | 建議 |
+|---|---|---|
+| Q9 | E3 做不做 | 建議做：成本約 21 分鐘，可以完整回答「v3 與 v1 的差異」 |
+| Q10 | E4 是否含 v2 對照（總計約 43 分鐘，超過 30 分鐘） | 建議做：沒有 v2 對照，就無法判斷 v3 共用 k_pat 是否多出連結風險 |
+
+### 9.13 裁決紀錄
+
+| 日期 | 項目 | 裁決 |
+|---|---|---|
+| 11-04 | G1 | ✅ 每次分享產生一把新的 k_pat_B；不需要 epoch |
+| 11-04 | G2 | ✅ 使用 key hint |
+| — | Q9、Q10 | ⏸ 待裁決 |
+
+**狀態**：規劃完成，**尚未實作**。等使用者與稽核方看過之後，依 T1→T9 執行。
+
+---
 
 ### 參考文獻
 
