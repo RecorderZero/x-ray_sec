@@ -908,9 +908,14 @@ k_pat_B（CSPRNG 32 B；研究實驗用標示為測試用途的 fixture）     g
  2. 驗證 manifest（digest、簽章、profile）
  3. 解封 k_pat_B → 推導 envmeta_key → 解開 envmeta → 檢查 1 ≤ N ≤ MAX_IMAGES
 
-【B 院：recover_patient_bundle(handle, containers) → 還原影像清單】整批交付的唯一入口（R4）
- 1. verify_bundle(handle, containers) 必須成功；失敗就整批拒絕，**不交付任何一張影像**
- 2. 逐張還原（同 v2 的 B 端步驟 6–8：pipeline_factory → 反演 → DPHD⁻¹ → 生成）；第 k 張失敗 → 整批失敗，不回傳部分結果
+【B 院：recover_patient_bundle(handle, containers, previous=None) → BundleRecovery】整批交付的唯一入口（R4；11-04 修訂：驗證全有全無，計算可續跑）
+ 1. **驗證關卡，全有全無**：verify_bundle(handle, containers) 必須成功；失敗就整批拒絕，**不交付任何一張影像**。每次呼叫（包含續跑）都重新驗證，不沿用上一次的驗證結果
+ 2. **計算，可以續跑**：通過驗證後逐張還原（同 v2 的 B 端步驟 6–8：pipeline_factory → 反演 → DPHD⁻¹ → 生成）
+    - 第 k 張因為運作環境出錯而失敗（GPU OOM、CUDA 錯誤、非有限值輸出、I/O 錯誤）→ 停止，回傳 BundleRecovery(status = "partial", 已完成的影像, 失敗的索引, 錯誤類型)
+    - 狀態只有在全部 N 張都還原成功時才是 "complete"；**"partial" 不得被當成整批完成**
+    - 續跑：把上一次的 BundleRecovery 傳入 previous，先重新執行步驟 1，再只還原尚未完成的索引；previous 必須和本批相符（grant_id、N、各容器的 SHA-256），否則拒絕
+    - 取消訊號（KeyboardInterrupt 等）與程式錯誤照常往外拋，不轉成 partial
+    - BundleRecovery 只保存還原影像與狀態，**不保存任何金鑰**
 
 【B 院：verify_bundle(handle, containers)】整批**內容**驗證；不呼叫 GPU pipeline（R4）
  1. _verify_envelope(handle 的信封 bytes)
@@ -971,7 +976,9 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 - MAX_BUNDLE_BYTES = 64 MiB（所有容器加總）。
 - 候選信封 ≤ 64 個。
 - sender 依序處理每張影像，並累計 bytes，一超過上限就整批失敗。receiver 在解析任何容器之前，先檢查張數與總 bytes。
-- 本原型**不支援串流交付**：一個 Bundle 只有「整批完成」或「整批失敗」兩種狀態。
+- 本原型**不支援串流交付**。
+- **A 端（share_patient）維持全有全無**：一個 Bundle 只有「整批完成」或「整批失敗」兩種狀態，因為整批共用同一把只用一次的 k_pat 與張數摘要，失敗就用新的 k_pat 重新打包。使用者 11-04 決定**不做**「A 端暫存反演 latent」的加速。
+- **B 端**：驗證全有全無、計算可以續跑（9.3）。
 
 ### 9.5 公開欄位與隱私
 
@@ -1017,8 +1024,8 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 | W3 | HPKE／信封層（直接測函式庫） | 錯誤的私鑰、錯誤的 info_env（換掉 grant_id 或任一身分欄位）、截斷或格式錯誤的 wrap_pat → 解封失敗；改寄給 C 並重新簽章的信封，C 解不開 |
 | W4 | 竄改（分層觸發） | 信封簽章層；用測試 signer 重新簽章後，envmeta AEAD 層失敗；容器的簽章／MAC／metadata 層同 v2 的 V4；改了 key_hint 並重新簽章 → hint 不符 |
 | W5 | 跨批次混用 | p1 的容器配 p2 的信封 → 拒絕；把 p2 某容器的 hint 照抄到 p1 容器上並重新簽章 → hint 對上 p2，但 **MAC 失敗**；兩種情況都不呼叫模型 |
-| W6 | 整批驗證（R4） | 少一個容器、多一個其他批次的容器、重複同一個容器、兩個不同的容器使用相同的 hint、**hint 不變但 PNG 或簽章被改**、sender／recipient 欄位混用 → verify_bundle 失敗，而且 recover_patient_bundle **不交付任何一張影像**；張數與摘要只存在加密的 envmeta 中；只呼叫單張取用時無法偵測刪除，這點以文件說明，並用測試記錄這個行為 |
-| W7 | 單次使用與批次失敗（G4、R2、R7） | 公開 API 沒有任何函式接受既有的 k_pat 或信封來產生容器；每次呼叫的 grant_id 與 k_pat 都是新的；同批內 nonce 與 hint 都不重複（以注入碰撞測試：nonce 重抽上限、hint 碰撞 → 整批失敗）；空清單、N 超過上限、累計 bytes 超過上限 → 拒絕；**第 k 張失敗或被取消時，沒有任何成功的回傳值**；重試一定會產生新的 k_pat 與 grant_id |
+| W6 | 整批驗證（R4） | 少一個容器、多一個其他批次的容器、重複同一個容器、兩個不同的容器使用相同的 hint、**hint 不變但 PNG 或簽章被改**、sender／recipient 欄位混用 → verify_bundle 失敗，而且 recover_patient_bundle **不交付任何一張影像**（續跑時也一樣）；張數與摘要只存在加密的 envmeta 中；只呼叫單張取用時無法偵測刪除，這點以文件說明，並用測試記錄這個行為 |
+| W7 | 單次使用與批次失敗（G4、R2、R7） | 公開 API 沒有任何函式接受既有的 k_pat 或信封來產生容器；每次呼叫的 grant_id 與 k_pat 都是新的；同批內 nonce 與 hint 都不重複（以注入碰撞測試：nonce 重抽上限、hint 碰撞 → 整批失敗）；空清單、N 超過上限、累計 bytes 超過上限 → 拒絕；A 端第 k 張失敗或被取消時，**沒有任何成功的回傳值**，重試一定會產生新的 k_pat 與 grant_id。**B 端續跑**：在第 k 張注入運作環境錯誤 → 回傳 status = "partial"，只含前 k−1 張，不是 complete；用 previous 續跑時會重新驗證整批，只補還原剩下的影像，最後狀態才是 complete，而且結果與一次跑完的結果相同（stub pipeline）；previous 不屬於本批（grant_id、N 或容器 SHA-256 不符）→ 拒絕；續跑前竄改容器 → 驗證關卡拒絕；取消訊號照常往外拋；BundleRecovery 中沒有金鑰 |
 | W8 | 不落地（受監控路徑） | 比照 V7 與 AF-053：在信封封裝、第 1／中間／最後一張影像的每個步驟、hint 計算、envmeta、**第 1／中間／最後一個候選信封**的解封與比對處，分別注入一般例外與取消類例外；sender／receiver 所有**曾經建立**的 SecretKey 都已歸零；traceback、log、stdout/stderr、檔案中找不到 k_pat、hint_key、envmeta_key、k_img、子金鑰（raw／hex／base64） |
 | W9 | 公開視角 | 容器 header 符合 allowlist，不含 grant_id 或病人欄位；同一位病人的 N 張影像，key_hint 兩兩不同，除了允許重複的欄位之外沒有相同的值；信封公開欄位符合 allowlist，張數不公開 |
 | W10 | 註冊表、manifest 與 handle（R3） | 信封與容器都走 TrustStore 的每次使用檢查：取得 handle 之後時鐘過期，或註冊表更新為撤銷 → 再使用該 handle 時被拒絕；handle 內的信封 bytes 被改 → 被拒絕；**自行建構或反序列化出來的 handle** 也會被重新驗證；信封與容器的 manifest 不一致 → 拒絕；查不到 manifest → 受控的拒絕 |
@@ -1074,6 +1081,8 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 | 候選信封中有一個驗證失敗 | **整個請求 fail closed**（行為最單純，避免模糊授權） | 跳過失效的候選、繼續搜尋 |
 | hint 有 0 個或 2 個以上命中 | 一律拒絕 | 採用第一個命中（不建議） |
 | verify_bundle 的角色 | 做**完整內容驗證**（簽章、MAC、metadata AEAD、hint、張數、摘要），而且是 `recover_patient_bundle` **必須先通過的關卡**；另外保留單張取用，但註明它無法偵測刪除 | 只做成員清單驗證 |
+| B 端逐張還原失敗（✅ 11-04 使用者裁決） | **驗證全有全無，計算可以續跑**：運作環境錯誤時回傳 partial 並保留已完成的影像，續跑時重新驗證並只補剩下的影像；只有全部完成才是 complete | 整批失敗（原第二版，已放棄） |
+| A 端暫存反演 latent（✅ 11-04 使用者裁決） | **不做** | — |
 | 整批上限 | 每批最多 256 張、所有容器合計 64 MiB；不串流；只有「整批完成」或「整批失敗」兩種狀態 | 調整數值，或支援串流 |
 | nonce 碰撞與 hint 碰撞 | nonce 最多重抽 3 次；hint 碰撞 → 整批失敗，用新的 k_pat 重新打包 | — |
 
@@ -1086,6 +1095,8 @@ sig        = Ed25519_A(LP("soteria-share/v3/sig") ‖ preamble3(0x02) ‖ LP(H3)
 | 11-04 | Q9 | ✅ **做** E3（v3 的保真度，與 v1 S2fn 逐樣本配對；第二版另外報告 v3−v2） |
 | 11-04 | Q10 | ✅ **做** E4，**包含 v2 對照**。使用者已同意約 43 分鐘的 GPU 時間 |
 | 11-04 | 第二版 | ✅ 依 opinion §10（V3-R1～R7）修訂；9.12 的設計選項待使用者確認 |
+| 11-04 | B 端還原 | ✅ 驗證全有全無、計算可以續跑（partial／complete 狀態、續跑時重新驗證） |
+| 11-04 | A 端 latent 暫存 | ✅ 不做；A 端打包維持全有全無 |
 
 **狀態**：第二版規劃完成，**尚未實作**。等 9.12 確認後，依 T1→T9 執行。
 
